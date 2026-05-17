@@ -1,0 +1,82 @@
+[
+  {
+    "id": 1,
+    "name": "Neverti",
+    "name_ar": "نيفرتي",
+    "name_en": "Neverti",
+    "code": "NP",
+    "image": "assets/brands/neverti.jpg"
+  },
+  {
+    "id": 2,
+    "name": "Beauty Formulas",
+    "name_ar": "بيوتي فورمولاس",
+    "name_en": "Beauty Formulas",
+    "code": "BF",
+    "image": "assets/brands/beauty-formulas.jpg"
+  },
+  {
+    "id": 3,
+    "name": "Amazing Shine",
+    "name_ar": "اميزينج شاين",
+    "name_en": "Amazing Shine",
+    "code": "AMZ",
+    "image": "assets/brands/amazing-shine.jpg"
+  },
+  {
+    "id": 4,
+    "name": "Nascita",
+    "name_ar": "ناسيتا",
+    "name_en": "Nascita",
+    "code": "NAS",
+    "image": "assets/brands/nascita.jpg"
+  },
+  {
+    "id": 5,
+    "name": "Face Facts",
+    "name_ar": "فيس فاكتس",
+    "name_en": "Face Facts",
+    "code": "FF",
+    "image": "assets/brands/face-facts.jpg"
+  },
+  {
+    "id": 6,
+    "name": "Laser",
+    "name_ar": "ليزر",
+    "name_en": "Laser",
+    "code": "LASER",
+    "image": "assets/brands/laser.jpg"
+  },
+  {
+    "id": 7,
+    "name": "Cleanic",
+    "name_ar": "كلينيك",
+    "name_en": "Cleanic",
+    "code": "C",
+    "image": "assets/brands/cleanic.jpg"
+  },
+  {
+    "id": 8,
+    "name": "Urban Care",
+    "name_ar": "اربان كير",
+    "name_en": "Urban Care",
+    "code": "UC",
+    "image": "assets/brands/urban-care.jpg"
+  },
+  {
+    "id": 9,
+    "name": "Babaria",
+    "name_ar": "باباريا",
+    "name_en": "Babaria",
+    "code": "BAB",
+    "image": "assets/brands/babaria.jpg"
+  },
+  {
+    "id": 10,
+    "name": "Damita",
+    "name_ar": "داميتا",
+    "name_en": "Damita",
+    "code": "DAM",
+    "image": "assets/brands/damita.jpg"
+  }
+]

@@ -1,0 +1,142 @@
+[
+  { "id": 1, "name_ar": "مكياج", "name_en": "Makeup", "parent_id": null, "image": "assets/categories/makeup.jpg" },
+
+  { "id": 2, "name_ar": "الوجه", "name_en": "Face", "parent_id": 1, "sort_order": 1 },
+  { "id": 3, "name_ar": "العيون", "name_en": "Eyes", "parent_id": 1, "sort_order": 2 },
+  { "id": 4, "name_ar": "الشفاه", "name_en": "Lips", "parent_id": 1, "sort_order": 3 },
+
+  { "id": 5, "name_ar": "بودرة", "name_en": "Powder", "parent_id": 2, "sort_order": 1 },
+  { "id": 6, "name_ar": "فاونديشن", "name_en": "Foundation", "parent_id": 2, "sort_order": 2 },
+  { "id": 7, "name_ar": "كونسيلر", "name_en": "Concealer", "parent_id": 2, "sort_order": 3 },
+  { "id": 8, "name_ar": "بلش", "name_en": "Blush", "parent_id": 2, "sort_order": 4 },
+  { "id": 9, "name_ar": "هايلايتر", "name_en": "Highlighter", "parent_id": 2, "sort_order": 5 },
+
+  { "id": 10, "name_ar": "ماسكارا", "name_en": "Mascara", "parent_id": 3, "sort_order": 1 },
+  { "id": 11, "name_ar": "ايلاينر", "name_en": "Eyeliner", "parent_id": 3, "sort_order": 2 },
+  { "id": 12, "name_ar": "الحواجب", "name_en": "Eyebrow", "parent_id": 3, "sort_order": 3 },
+  { "id": 13, "name_ar": "الرموش", "name_en": "False Eyelashes", "parent_id": 3, "sort_order": 4 },
+
+  { "id": 14, "name_ar": "احمر شفاه", "name_en": "Lipstick", "parent_id": 4, "sort_order": 1 },
+  { "id": 15, "name_ar": "ملمع شفاه", "name_en": "Lip Gloss", "parent_id": 4, "sort_order": 2 },
+  { "id": 16, "name_ar": "محدد الشفاه", "name_en": "Lip Liner", "parent_id": 4, "sort_order": 3 },
+
+
+  { "id": 17, "name_ar": "منتجات العناية بالبشرة", "name_en": "Skin Care", "parent_id": null, "image": "assets/categories/skin-care.jpg" },
+
+  { "id": 18, "name_ar": "منظف", "name_en": "Cleanser", "parent_id": 17, "sort_order": 1 },
+  { "id": 19, "name_ar": "مرطب", "name_en": "Moisturizer", "parent_id": 17, "sort_order": 2 },
+  { "id": 20, "name_ar": "سيروم", "name_en": "Serum", "parent_id": 17, "sort_order": 3 },
+  { "id": 21, "name_ar": "عناية بالعين", "name_en": "Eye Care", "parent_id": 17, "sort_order": 4 },
+  { "id": 22, "name_ar": "تونر", "name_en": "Toner", "parent_id": 17, "sort_order": 5 },
+  { "id": 23, "name_ar": "مقشر", "name_en": "Scrub & Exfoliator", "parent_id": 17, "sort_order": 6 },
+  { "id": 24, "name_ar": "ماسكات", "name_en": "Masks", "parent_id": 17, "sort_order": 7 },
+  { "id": 25, "name_ar": "واقي الشمس", "name_en": "Sun Care", "parent_id": 17, "sort_order": 8 },
+  { "id": 26, "name_ar": "علاج الشوائب", "name_en": "Blemish Treatment", "parent_id": 17, "sort_order": 9 },
+  { "id": 27, "name_ar": "عناية بالشفاه", "name_en": "Lip Care", "parent_id": 17, "sort_order": 10 },
+  { "id": 28, "name_ar": "العناية بالمسام", "name_en": "Pore Care", "parent_id": 17, "sort_order": 11 },
+  { "id": 29, "name_ar": "مزيل المكياج", "name_en": "Makeup Remover", "parent_id": 17, "sort_order": 12 },
+  { "id": 30, "name_ar": "مناديل مبللة", "name_en": "Wipes", "parent_id": 17, "sort_order": 13 },
+
+
+  { "id": 31, "name_ar": "منتجات العناية بالاسنان", "name_en": "Oral Care", "parent_id": null, "image": "assets/categories/oral-care.jpg" },
+
+  { "id": 32, "name_ar": "معجون أسنان", "name_en": "Toothpaste", "parent_id": 31, "sort_order": 1 },
+  { "id": 33, "name_ar": "فراشي أسنان", "name_en": "Toothbrush", "parent_id": 31, "sort_order": 2 },
+  { "id": 34, "name_ar": "خيط أسنان", "name_en": "Dental Floss", "parent_id": 31, "sort_order": 3 },
+  { "id": 35, "name_ar": "تنظيف ما بين الأسنان", "name_en": "Interdental Care", "parent_id": 31, "sort_order": 4 },
+  { "id": 36, "name_ar": "غسول فم", "name_en": "Mouthwash", "parent_id": 31, "sort_order": 5 },
+  { "id": 37, "name_ar": "تبييض أسنان", "name_en": "Whitening", "parent_id": 31, "sort_order": 6 },
+
+
+  { "id": 38, "name_ar": "منتجات العناية باليد والقدم", "name_en": "Hand & Foot Care", "parent_id": null, "image": "assets/categories/hands-and-feet-care.jpg" },
+
+  { "id": 39, "name_ar": "العناية باليد", "name_en": "Hand Care", "parent_id": 38, "sort_order": 1 },
+  { "id": 40, "name_ar": "العناية بالقدم", "name_en": "Foot Care", "parent_id": 38, "sort_order": 2 },
+
+  { "id": 41, "name_ar": "كريمات يد", "name_en": "Hand Cream", "parent_id": 39, "sort_order": 1 },
+  { "id": 42, "name_ar": "ماسك لليد", "name_en": "Hand Mask", "parent_id": 39, "sort_order": 2 },
+  { "id": 43, "name_ar": "ماسك للقدم", "name_en": "Foot Mask", "parent_id": 40, "sort_order": 1 },
+  { "id": 44, "name_ar": "لوشن او كريم للقدم", "name_en": "Foot Lotion", "parent_id": 40, "sort_order": 2 },
+  { "id": 45, "name_ar": "بودرة قدمين", "name_en": "Foot Powder", "parent_id": 40, "sort_order": 3 },
+  { "id": 46, "name_ar": "بخاخ قدمين", "name_en": "Foot Spray", "parent_id": 40, "sort_order": 4 },
+
+
+  { "id": 47, "name_ar": "منتجات ازالة الشعر والعناية الخاصة", "name_en": "Hair Removal", "parent_id": null, "image": "assets/categories/hair-removal.jpg" },
+
+  { "id": 48, "name_ar": "شفرات حلاقة", "name_en": "Razors", "parent_id": 47, "sort_order": 1 },
+  { "id": 49, "name_ar": "كريم ازالة شعر", "name_en": "Hair Removal Cream", "parent_id": 47, "sort_order": 2 },
+  { "id": 50, "name_ar": "منتجات الواكس او الشمع", "name_en": "Wax Products", "parent_id": 47, "sort_order": 3 },
+  { "id": 51, "name_ar": "منتجات العناية في المناطق الحساسة", "name_en": "Intimate Care", "parent_id": 47, "sort_order": 4 },
+
+
+  { "id": 52, "name_ar": "قطن", "name_en": "Cotton", "parent_id": null, "image": "assets/categories/cotton.jpg" },
+
+  { "id": 53, "name_ar": "قطن ازالة المكياج", "name_en": "Cotton Pads", "parent_id": 52, "sort_order": 1 },
+  { "id": 54, "name_ar": "أعواد قطن", "name_en": "Cotton Buds", "parent_id": 52, "sort_order": 2 },
+
+
+  { "id": 55, "name_ar": "أدوات ولوازم", "name_en": "Tools & Accessories", "parent_id": null, "image": "assets/categories/tools.jpg" },
+
+  { "id": 56, "name_ar": "أدوات الشعر", "name_en": "Hair Tools", "parent_id": 55, "sort_order": 1 },
+  { "id": 57, "name_ar": "أدوات الوجه", "name_en": "Face Tools", "parent_id": 55, "sort_order": 2 },
+  { "id": 58, "name_ar": "أدوات العناية بالقدم", "name_en": "Foot Care Tools", "parent_id": 55, "sort_order": 3 },
+  { "id": 59, "name_ar": "أدوات الاستحمام و الجسم", "name_en": "Bath & Body Accessories", "parent_id": 55, "sort_order": 4 },
+  { "id": 60, "name_ar": "أدوات السفر والتخزين", "name_en": "Travel & Storage", "parent_id": 55, "sort_order": 5 },
+  { "id": 61, "name_ar": "مجموعات وأطقم", "name_en": "Sets & Kits", "parent_id": 55, "sort_order": 6 },
+  { "id": 62, "name_ar": "معدات الصالون", "name_en": "Salon Equipment", "parent_id": 55, "sort_order": 7 },
+
+
+  { "id": 63, "name_ar": "مستلزمات الأظافر", "name_en": "Nails Tools", "parent_id": null, "image": "assets/categories/nails-tools.jpg" },
+
+  { "id": 64, "name_ar": "أظافر صناعية", "name_en": "Artificial Nails", "parent_id": 63, "sort_order": 1 },
+  { "id": 65, "name_ar": "غراء الأظافر", "name_en": "Nail Glue", "parent_id": 63, "sort_order": 2 },
+  { "id": 66, "name_ar": "علاج وعناية الأظافر", "name_en": "Nail Treatment & Care", "parent_id": 63, "sort_order": 3 },
+  { "id": 67, "name_ar": "أدوات فن الأظافر", "name_en": "Nail Art Tools", "parent_id": 63, "sort_order": 4 },
+
+
+  { "id": 68, "name_ar": "مستلزمات الرموش", "name_en": "Eyelashes Tools", "parent_id": null, "image": "assets/categories/eyelashes-tools.jpg" },
+
+  { "id": 69, "name_ar": "رموش صناعية", "name_en": "False Eyelashes", "parent_id": 68, "sort_order": 1 },
+  { "id": 70, "name_ar": "غراء الرموش", "name_en": "Eyelashes Adhesive", "parent_id": 68, "sort_order": 2 },
+  { "id": 71, "name_ar": "أدوات الرموش", "name_en": "Eyelashes Tools", "parent_id": 68, "sort_order": 3 },
+
+
+  { "id": 72, "name_ar": "فراشي مكياج", "name_en": "Makeup Brushes", "parent_id": null, "image": "assets/categories/makeup-brushes.jpg" },
+
+  { "id": 73, "name_ar": "فراشي للوجه", "name_en": "Face Brushes", "parent_id": 72, "sort_order": 1 },
+  { "id": 74, "name_ar": "فراشي للعين", "name_en": "Eye Brushes", "parent_id": 72, "sort_order": 2 },
+  { "id": 75, "name_ar": "فراشي للشفاه", "name_en": "Lip Brushes", "parent_id": 72, "sort_order": 3 },
+  { "id": 76, "name_ar": "مجموعات فرش المكياج", "name_en": "Makeup Brush Sets", "parent_id": 72, "sort_order": 4 },
+  { "id": 77, "name_ar": "فراشي ذات وجهين", "name_en": "Double-Sided Brushes", "parent_id": 72, "sort_order": 5 },
+
+
+  { "id": 78, "name_ar": "بيوتي بلندر", "name_en": "Beauty Blender", "parent_id": null, "image": "assets/categories/beauty-blender.jpg" },
+
+  { "id": 79, "name_ar": "بيوتي بلندر", "name_en": "Beauty Blenders", "parent_id": 78, "sort_order": 1 },
+  { "id": 80, "name_ar": "مجموعة اسفنجات ميك اب", "name_en": "Makeup Sponge Sets", "parent_id": 78, "sort_order": 2 },
+  { "id": 81, "name_ar": "اسفنجات مخصصة", "name_en": "Specialty Sponges", "parent_id": 78, "sort_order": 3 },
+  { "id": 82, "name_ar": "أداة تطبيق", "name_en": "Applicators", "parent_id": 78, "sort_order": 4 },
+
+
+  { "id": 83, "name_ar": "العناية بالشعر", "name_en": "Hair Care", "parent_id": null, "image": "assets/categories/hair-care.jpg" },
+
+  { "id": 84, "name_ar": "الشامبو", "name_en": "Shampoo", "parent_id": 83, "sort_order": 1 },
+  { "id": 85, "name_ar": "البلسم", "name_en": "Conditioner", "parent_id": 83, "sort_order": 2 },
+  { "id": 86, "name_ar": "الماسكات والعلاج", "name_en": "Hair Masks & Treatments", "parent_id": 83, "sort_order": 3 },
+  { "id": 87, "name_ar": "علاجات بدون شطف", "name_en": "Leave-In & Hair Milk", "parent_id": 83, "sort_order": 4 },
+  { "id": 88, "name_ar": "السيروم و الزيوت", "name_en": "Serums & Oils", "parent_id": 83, "sort_order": 5 },
+  { "id": 89, "name_ar": "فروة الرأس والعلاج", "name_en": "Scalp & Tonic", "parent_id": 83, "sort_order": 6 },
+  { "id": 90, "name_ar": "التصفيف", "name_en": "Styling Products", "parent_id": 83, "sort_order": 7 },
+  { "id": 91, "name_ar": "الشامبو الجاف", "name_en": "Dry Shampoo", "parent_id": 83, "sort_order": 8 },
+  { "id": 92, "name_ar": "عطور الشعر", "name_en": "Hair Perfume", "parent_id": 83, "sort_order": 9 },
+
+
+  { "id": 93, "name_ar": "العناية بالجسم", "name_en": "Body Care", "parent_id": null, "image": "assets/categories/body-care.jpg" },
+
+  { "id": 94, "name_ar": "غسول الجسم", "name_en": "Body Wash", "parent_id": 93, "sort_order": 1 },
+  { "id": 95, "name_ar": "لوشن الجسم", "name_en": "Body Lotion", "parent_id": 93, "sort_order": 2 },
+  { "id": 96, "name_ar": "زبدة الجسم", "name_en": "Body Butter", "parent_id": 93, "sort_order": 3 },
+  { "id": 97, "name_ar": "تقشير الجسم", "name_en": "Body Scrub", "parent_id": 93, "sort_order": 4 },
+  { "id": 98, "name_ar": "علاجات وترطيب الجسم", "name_en": "Body Treatment & Creams", "parent_id": 93, "sort_order": 5 },
+  { "id": 99, "name_ar": "منتجات استحمام", "name_en": "Bath & Scent Products", "parent_id": 93, "sort_order": 6 }
+]
