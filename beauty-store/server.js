@@ -1,4 +1,4 @@
-// server.js - النسخة المُصححة لـ Render (بدون أخطاء path-to-regexp)
+// server.js - النسخة النهائية 100% ✅
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -31,7 +31,7 @@ app.use(helmet({
   crossOriginOpenerPolicy: false
 }));
 
-// ✅ CORS - بسيط وموثوق
+// ✅ CORS - بسيط وموثوق (يتعامل مع preflight تلقائياً)
 const corsOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()).filter(Boolean)
   : ['http://localhost:5173', 'http://localhost:3000'];
@@ -45,13 +45,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// ✅ ✅ ✅ إصلاح مشكلة path-to-regexp: استخدام '/*' بدلاً من '*'
-app.options('/*', (req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.sendStatus(200);
-});
+// ✅ ✅ ✅ لا نستخدم app.options مع أي wildcard - CORS يتكفل بذلك!
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -219,7 +213,7 @@ app.get("/products/:id", async (req, res) => {
       options: variants,
     });
   } catch (err) {
-    console.error("Error fetching product:", err);
+    console.error("Error fetching product details:", err);
     res.status(500).json({ message: "Server Error", error: err.message });
   }
 });
