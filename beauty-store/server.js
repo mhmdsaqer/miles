@@ -1,4 +1,4 @@
-// server.js - النسخة النهائية لـ Render/Production ✅
+// server.js - النسخة المُصححة لـ Render (بدون أخطاء path-to-regexp)
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -8,15 +8,14 @@ const path = require("path");
 const http = require("http");
 const { Server } = require("socket.io");
 const connectDB = require("./config/db");
-const { validate, schemas } = require("./middleware/validate");
 
-// 1️⃣ استيراد الموديلات
+// استيراد الموديلات
 const Brand = require("./models/Brand");
 const Category = require("./models/Category");
 const Product = require("./models/Product");
 const Variant = require("./models/Variant");
 
-// 2️⃣ استيراد الـ Routes
+// استيراد الـ Routes
 const adminRoutes = require("./routes/admin");
 const authRoutes = require("./routes/auth");
 
@@ -25,29 +24,34 @@ const app = express();
 // 🔗 الاتصال بقاعدة البيانات
 connectDB();
 
-// 🛡️ إعدادات الأمان - مع استثناء CORS من helmet
+// 🛡️ إعدادات الأمان
 app.use(helmet({
   crossOriginResourcePolicy: false,
   crossOriginEmbedderPolicy: false,
   crossOriginOpenerPolicy: false
 }));
 
-// ✅ ✅ ✅ CORS بسيط وموثوق لـ Render + Vercel
+// ✅ CORS - بسيط وموثوق
 const corsOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()).filter(Boolean)
-  : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'];
+  : ['http://localhost:5173', 'http://localhost:3000'];
 
 const isProd = process.env.NODE_ENV === 'production';
 
 app.use(cors({
-  origin: isProd ? '*' : corsOrigins, // ✅ في الإنتاج: نسمح للكل (Render يتطلب ذلك)
+  origin: isProd ? '*' : corsOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// ✅ معالجة preflight OPTIONS requests صراحةً
-app.options('*', cors());
+// ✅ ✅ ✅ إصلاح مشكلة path-to-regexp: استخدام '/*' بدلاً من '*'
+app.options('/*', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.sendStatus(200);
+});
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -65,27 +69,19 @@ app.use(
     max: isDev ? 500 : 100,
     message: { error: "⚠️ Too many requests, please slow down." },
     standardHeaders: true,
-    legacyHeaders: false,
-    skip: isDev ? (req) => req.ip === '127.0.0.1' : undefined
+    legacyHeaders: false
   })
 );
 
-// 📁 خدمة الصور - مع CORS headers صريحة
+// 📁 خدمة الصور
 app.use("/assets", (req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   next();
 });
 app.use("/assets", express.static(path.join(__dirname, "data/assets")));
 
-app.use("/assets/uploads", (req, res, next) => {
-  res.setHeader('Access-Origin-Allow', '*');
-  next();
-});
-app.use("/assets/uploads", express.static(path.join(__dirname, "data/assets/uploads")));
-
-// 🧠 دالة مساعدة للبحث في التصنيفات (شجرية)
+// 🧠 دالة مساعدة للبحث في التصنيفات
 async function getCategoryAndChildrenIds(catId) {
   let ids = [catId];
   const children = await Category.find({ parent_id: catId }).select("id");
@@ -108,7 +104,7 @@ const getCached = async (key, fetchFn) => {
 };
 
 // 🌐 الروابط العامة
-app.get("/", (req, res) => res.send("Beauty Store API 🚀"));
+app.get("/", (req, res) => res.send("Miles Beauty API 🚀"));
 
 app.get("/brands", async (req, res) => {
   try {
@@ -164,13 +160,13 @@ app.get("/products", async (req, res) => {
       .limit(Number(limit))
       .select('-__v');
 
-    const allBrands = await getCached("brands", () => Brand.find());
-    const allCategories = await getCached("categories", () => Category.find());
+    const [allBrands, allCategories] = await Promise.all([
+      getCached("brands", () => Brand.find()),
+      getCached("categories", () => Category.find())
+    ]);
 
-    const brandMap = {};
-    allBrands.forEach(b => brandMap[b.id] = b);
-    const catMap = {};
-    allCategories.forEach(c => catMap[c.id] = c);
+    const brandMap = Object.fromEntries(allBrands.map(b => [b.id, b]));
+    const catMap = Object.fromEntries(allCategories.map(c => [c.id, c]));
 
     const enrichedProducts = await Promise.all(
       products.map(async (p) => {
@@ -182,8 +178,8 @@ app.get("/products", async (req, res) => {
         }
         return {
           ...p.toObject(),
-          brand_name: brandDoc ? brandDoc.name : "Unknown",
-          category_name: catDoc ? catDoc.name_en : "General",
+          brand_name: brandDoc?.name || "Unknown",
+          category_name: catDoc?.name_en || "General",
           options: opts
         };
       })
@@ -193,8 +189,8 @@ app.get("/products", async (req, res) => {
       products: enrichedProducts,
       pagination: {
         currentPage: Number(page),
-        totalPages: totalPages,
-        totalProducts: totalProducts,
+        totalPages,
+        totalProducts,
         hasNextPage: Number(page) < totalPages
       }
     });
@@ -223,7 +219,7 @@ app.get("/products/:id", async (req, res) => {
       options: variants,
     });
   } catch (err) {
-    console.error("Error fetching product details:", err);
+    console.error("Error fetching product:", err);
     res.status(500).json({ message: "Server Error", error: err.message });
   }
 });
@@ -262,7 +258,6 @@ app.post("/api/orders", async (req, res) => {
     const io = app.get('io');
     if (io) {
       io.emit("new-order", order.toObject());
-      console.log(`📡 Real-time notification sent for order #${order.id}`);
     }
     
     res.status(201).json({
@@ -271,11 +266,8 @@ app.post("/api/orders", async (req, res) => {
     });
     
   } catch (err) {
-    console.error("❌ Error saving public order:", err);
-    res.status(500).json({ 
-      message: "❌ فشل حفظ الطلب", 
-      error: err.message 
-    });
+    console.error("❌ Error saving order:", err);
+    res.status(500).json({ message: "❌ فشل حفظ الطلب", error: err.message });
   }
 });
 
@@ -292,38 +284,21 @@ const io = new Server(server, {
     credentials: true
   },
   transports: ['polling', 'websocket'],
-  allowEIO3: true,
-  pingTimeout: 60000,
-  pingInterval: 25000
+  allowEIO3: true
 });
 
 app.set('io', io);
 
 io.on("connection", (socket) => {
-  console.log("🔌 Admin connected:", socket.id);
-  socket.emit("connected", { message: "✅ Connected to real-time notifications" });
-
-  socket.on("disconnect", (reason) => {
-    console.log(`🔌 Admin disconnected: ${socket.id} - Reason: ${reason}`);
-  });
-
-  socket.on("error", (err) => {
-    console.error(`⚠️ Socket error for ${socket.id}:`, err.message);
-  });
+  console.log("🔌 Connected:", socket.id);
+  socket.on("disconnect", () => console.log(`🔌 Disconnected: ${socket.id}`));
 });
-
-const sendNotification = (event, data) => {
-  io.emit(event, data);
-  console.log(`📡 Notification sent: ${event}`);
-};
 
 // 🚀 تشغيل السيرفر
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🌐 Listening on 0.0.0.0 for Render`);
-  console.log(`📡 Socket.io ready`);
-  console.log(`🔗 CORS: ${isProd ? '* (Production)' : corsOrigins.join(', ')}`);
+  console.log(`🌐 Environment: ${isProd ? 'Production' : 'Development'}`);
 });
 
-module.exports = { io, sendNotification, app };
+module.exports = { io, app };
