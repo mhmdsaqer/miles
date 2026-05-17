@@ -2,6 +2,7 @@
 import { useState, useCallback, useRef } from "react";
 import { useLang } from "../context/LanguageContext";
 import { toast } from "sonner";
+import { getImageUrl as getPublicImageUrl } from "../utils/imageUtils";
 
 const ImageUploader = ({ 
   onImageSelect, 
@@ -64,7 +65,7 @@ const ImageUploader = ({
       if (!response.ok) throw new Error(data.message);
       
       // ✅ إرجاع مسار الصورة للمكون الأب
-      onImageSelect(data.path);
+      onImageSelect(data.path || data.secure_url);
       toast.success(lang === "ar" ? "✅ تم رفع الصورة" : "✅ Image uploaded");
       
     } catch (err) {
@@ -107,11 +108,24 @@ const ImageUploader = ({
   };
 
   // ✅ تنظيف الـ preview URL عند الفك
-  const getImageUrl = (path) => {
-    if (!path) return null;
-    if (path.startsWith("blob:") || path.startsWith("data:")) return path;
-    return `${API_URL}/${path}`;
-  };
+// ✅ تحديث دالة getImageUrl للتعامل مع روابط Cloudinary
+	// ✅ تحديث دالة getImageUrl للتعامل مع Cloudinary + imageUtils
+	const getImageUrl = (path) => {
+	  if (!path) return null;
+	  
+	  // ✅ إذا كانت معاينة محلية (blob/data)، اعرضها مباشرة
+	  if (path.startsWith("blob:") || path.startsWith("data:")) {
+	    return path;
+	  }
+	  
+	  // ✅ إذا كانت من Cloudinary، نرجعها كما هي
+	  if (path.startsWith("https://res.cloudinary.com/")) {
+	    return path;
+	  }
+	  
+	  // ✅ إذا كانت من الداتابيس، استخدم الدالة المركزية
+	  return getPublicImageUrl(path);
+	};
 
   return (
     <div className="space-y-3" dir={lang === "ar" ? "rtl" : "ltr"}>

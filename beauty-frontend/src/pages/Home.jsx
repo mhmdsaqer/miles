@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import axios from "axios";
 import { useLang } from "../context/LanguageContext";
+import { getImageUrl } from "../utils/imageUtils";
 
 const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
 
@@ -17,12 +18,7 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ✅ دالة ذكية لمعالجة مسار الصورة
-  const getImageUrl = useCallback((imagePath) => {
-    if (!imagePath) return "";
-    const cleanPath = imagePath.replace(/^assets\//i, "");
-    return `${API_URL}/assets/${cleanPath}`;
-  }, []);
+
 
   // ✅ جلب البيانات - مع معالجة أخطاء منفصلة
   useEffect(() => {

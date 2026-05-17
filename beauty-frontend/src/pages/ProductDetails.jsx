@@ -7,6 +7,7 @@ import { useCart } from "../context/CartContext";
 import { useLang } from "../context/LanguageContext";
 import LuxuryCard from "../components/LuxuryCard";
 import { toast } from "sonner";
+import { getImageUrl } from "../utils/imageUtils";
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -36,11 +37,7 @@ const ProductDetails = () => {
     };
   }, [product, selectedVariant, lang]);
 
-  const getImageUrl = useCallback((imagePath) => {
-    if (!imagePath) return "";
-    const cleanPath = imagePath.replace(/^assets\//i, "");
-    return `${API_URL}/assets/${cleanPath}`;
-  }, [API_URL]);
+
 
   const getProductName = (p) => p?.[lang === "ar" ? "name_ar" : "name_en"] || p?.name_ar || "";
   const getProductDescription = (p) => p?.[lang === "ar" ? "description_ar" : "description_en"] || p?.description_ar || "";

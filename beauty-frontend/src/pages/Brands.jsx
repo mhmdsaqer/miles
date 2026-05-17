@@ -5,6 +5,8 @@ import axios from "axios";
 import { useLang } from "../context/LanguageContext";
 import SEO from "../components/SEO"; // ✅ استيراد مكون الـ SEO
 
+import { getImageUrl } from "../utils/imageUtils";
+
 const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
 
 // ألوان خلفية مميزة لكل كارت براند بالتناوب
@@ -24,12 +26,7 @@ const Brands = () => {
   const [hoveredId, setHoveredId] = useState(null);
   const [loadedImages, setLoadedImages] = useState({});
 
-  // ✅ دالة ذكية لمعالجة مسار الصورة (تجنب تكرار /assets/)
-  const getImageUrl = useCallback((imagePath) => {
-    if (!imagePath) return "";
-    const cleanPath = imagePath.replace(/^assets\//i, "");
-    return `${API_URL}/assets/${cleanPath}`;
-  }, []);
+
 
   // ✅ جلب البيانات من MongoDB - مع دعم هيكلية الاستجابة الجديدة
   useEffect(() => {

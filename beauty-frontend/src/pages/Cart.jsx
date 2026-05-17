@@ -4,6 +4,7 @@ import { useCart } from "../context/CartContext";
 import { useLang } from "../context/LanguageContext";
 import { useState, useMemo, useCallback } from "react";
 import { toast } from "sonner";
+import { getImageUrl } from "../utils/imageUtils";
 
 const Cart = () => {
   const { cartItems, removeFromCart, updateQuantity, cartCount, cartTotal } = useCart();
@@ -12,11 +13,6 @@ const Cart = () => {
   const [removingId, setRemovingId] = useState(null);
   const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
 
-  const getImageUrl = useCallback((imagePath) => {
-    if (!imagePath) return "";
-    const cleanPath = imagePath.replace(/^assets\//i, "");
-    return `${API_URL}/assets/${cleanPath}`;
-  }, []);
 
   const total = useMemo(() => cartTotal, [cartTotal]);
 

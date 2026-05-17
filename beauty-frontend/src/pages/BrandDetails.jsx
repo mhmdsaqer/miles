@@ -5,6 +5,9 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useLang } from "../context/LanguageContext";
 import ProductCard from "../components/ProductCard";
+import { getImageUrl } from "../utils/imageUtils";
+
+
 
 const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
 
@@ -21,11 +24,7 @@ const BrandDetails = () => {
   const [sortBy, setSortBy] = useState("default");
 
   // ✅ دالة ذكية لمعالجة مسار الصورة (تجنب تكرار /assets/)
-  const getImageUrl = useCallback((imagePath) => {
-    if (!imagePath) return "";
-    const cleanPath = imagePath.replace(/^assets\//i, "");
-    return `${API_URL}/assets/${cleanPath}`;
-  }, []);
+
 
   // ✅ جلب البيانات من MongoDB - مع دعم هيكلية الاستجابة الجديدة
   useEffect(() => {

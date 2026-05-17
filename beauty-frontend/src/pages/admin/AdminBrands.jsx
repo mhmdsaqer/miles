@@ -6,6 +6,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext"; // ✅ إضافة جديدة
 import { toast } from "sonner";
 import ImageUploader from "../../components/ImageUploader";
+import { getImageUrl } from "../../utils/imageUtils";
 
 const AdminBrands = () => {
   const { lang } = useLang();
@@ -307,7 +308,7 @@ const AdminBrands = () => {
                     <td className="px-6 py-4">
                       {b.image ? (
                         <img 
-                          src={`http://localhost:3000/${b.image}`} 
+                          src={getImageUrl(b.image)} 
                           alt={b.name} 
                           className="w-12 h-12 object-contain rounded-lg bg-gray-50 dark:bg-gray-700" 
                           loading="lazy"

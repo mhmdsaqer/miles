@@ -10,16 +10,16 @@ const Product = require("../models/Product");
 const Variant = require("../models/Variant");
 const Order = require("../models/Order");
 const User = require("../models/User");
-const AuditLog = require("../models/AuditLog"); // ✅ ✅ ✅ لإضافة Routes الـ Audit Logs
+const AuditLog = require("../models/AuditLog");
 
-// ✅ استيراد الميديلوير الجديد
+// ✅ استيراد الميديلوير
 const authMiddleware = require("../middleware/auth");
 const { checkPermission, PERMISSIONS } = require("../middleware/authorize");
 
 // ✅ استيراد دالة رفع الصور المضغوطة
 const { uploadCompressed } = require("../middleware/upload");
 
-// ✅ ✅ ✅ استيراد Audit Logger
+// ✅ استيراد Audit Logger
 const audit = require("../utils/auditLogger");
 
 // ================= 📊 DASHBOARD =================
@@ -134,11 +134,11 @@ const generateSKU = async (formData, brands) => {
   return `${brandCode}-${String(formData.id).padStart(5, '0')}`.toUpperCase();
 };
 
-// ✅ إضافة منتج - مع Audit Log ✅ ✅ ✅ استخدام .toObject()
+// ✅ إضافة منتج - مع Audit Log
 router.post("/products", 
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.CREATE),
-  validate(schemas.product, "body"), // ✅ التحقق من المدخلات
+  validate(schemas.product, "body"),
   uploadCompressed("image"), 
   async (req, res) => {
     try {
@@ -174,7 +174,7 @@ router.post("/products",
       });
       await newProduct.save();
 
-      // ✅ ✅ ✅ تسجيل إنشاء المنتج في Audit Log - استخدام .toObject()
+      // ✅ تسجيل إنشاء المنتج في Audit Log
       await audit.create(req.user, "product", newProduct.toObject(), req);
 
       if (variants && Array.isArray(variants) && variants.length > 0) {
@@ -220,13 +220,12 @@ router.post("/products",
   }
 );
 
-// ✅ تعديل منتج - مع Audit Log ✅ ✅ ✅ استخدام .toObject()
+// ✅ تعديل منتج - مع Audit Log ✅ ✅ ✅ الترتيب الصحيح: (القديم، الجديد)
 router.put("/products/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.UPDATE),
   uploadCompressed("image"), 
   (req, res, next) => {
-    // ✅ للتحديث: نجعل بعض الحقول اختيارية
     const updateSchema = schemas.product.fork(
       ["id", "sku", "name_ar", "name_en", "image", "price"],
       (field) => field.optional()
@@ -254,27 +253,25 @@ router.put("/products/:id",
 
       if (req.uploadedPath) productData.image = req.uploadedPath;
 
-      // ✅ حفظ القيم القديمة قبل التحديث (لـ Audit Log)
-      // ✅ حفظ القيم القديمة قبل التحديث (لـ Audit Log) - مع .lean() لمنع المراجع الدائرية
-	const oldProduct = await Product.findOne({ id: productId }).lean();
+      // ✅ حفظ القيم القديمة قبل التحديث (لـ Audit Log) - مع .lean()
+      const oldProduct = await Product.findOne({ id: productId }).lean();
 
-	const product = await Product.findOneAndUpdate(
-	  { id: productId },
-	  { $set: productData },
-	  { returnDocument: 'after', runValidators: true }
-	).lean();  // ✅ إضافة .lean() هنا أيضاً
+      const product = await Product.findOneAndUpdate(
+        { id: productId },
+        { $set: productData },
+        { returnDocument: 'after', runValidators: true }
+      ).lean();
 
-	if (!product) return res.status(404).json({ message: "Product not found" });
+      if (!product) return res.status(404).json({ message: "Product not found" });
 
-	// ✅ ✅ ✅ تسجيل التحديث في Audit Log - مع الترتيب الصحيح للوسائط
-	await audit.update(
-	  req.user, 
-	  "product", 
-	  oldProduct || {},      // ✅ البيانات القديمة (قبل التحديث)
-	  product,               // ✅ البيانات الجديدة (بعد التحديث)
-	  req                    // ✅ الـ Request
-	  // ✅ لا تضع product.toObject() مرتين!
-	);
+      // ✅ ✅ ✅ تسجيل التحديث في Audit Log - الترتيب الصحيح: (القديم، الجديد)
+      await audit.update(
+        req.user, 
+        "product", 
+        oldProduct || {},      // ✅ البيانات القديمة أولاً
+        product,               // ✅ البيانات الجديدة ثانياً
+        req                    // ✅ الـ Request
+      );
     
       if (variants && Array.isArray(variants)) {
         const permanentIds = variants
@@ -365,7 +362,7 @@ router.put("/products/:id",
   }
 );
 
-// ✅ حذف منتج - مع Audit Log ✅ ✅ ✅ استخدام .toObject()
+// ✅ حذف منتج - مع Audit Log
 router.delete("/products/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.DELETE),
@@ -379,7 +376,7 @@ router.delete("/products/:id",
         return res.status(404).json({ message: "Product not found" });
       }
       
-      // ✅ ✅ ✅ تسجيل الحذف في Audit Log - استخدام .toObject()
+      // ✅ تسجيل الحذف في Audit Log
       await audit.delete(req.user, "product", product.toObject(), req);
       
       res.json({
@@ -438,7 +435,7 @@ router.post("/products/:productId/variants",
         { $set: { has_variants: true } }
       );
 
-      // ✅ تسجيل إضافة متغير - استخدام .toObject()
+      // ✅ تسجيل إضافة متغير
       await audit.create(req.user, "variant", newVariant.toObject(), req);
 
       res.status(201).json({ 
@@ -455,6 +452,7 @@ router.post("/products/:productId/variants",
   }
 );
 
+// ✅ ✅ ✅ تصحيح ترتيب الوسائط في audit.update للـ Variants
 router.put("/variants/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.UPDATE),
@@ -498,14 +496,13 @@ router.put("/variants/:id",
         return res.status(404).json({ message: "Variant not found" });
       }
 
-      // ✅ تسجيل تحديث المتغير - استخدام .toObject()
+      // ✅ ✅ ✅ الترتيب الصحيح: (القديم، الجديد)
       await audit.update(
         req.user, 
         "variant", 
-        updatedVariant.toObject(), 
-        oldVariant?.toObject() || {}, 
-        updatedVariant.toObject(), 
-        req
+        oldVariant?.toObject() || {},      // ✅ القديم أولاً
+        updatedVariant.toObject(),         // ✅ الجديد ثانياً
+        req                                 // ✅ الـ Request
       );
 
       res.json({ 
@@ -538,7 +535,7 @@ router.delete("/variants/:id",
         );
       }
       
-      // ✅ تسجيل حذف المتغير - استخدام .toObject()
+      // ✅ تسجيل حذف المتغير
       await audit.delete(req.user, "variant", variant.toObject(), req);
       
       res.json({ message: "✅ تم حذف المتغير بنجاح" });
@@ -565,7 +562,7 @@ router.post("/whatsapp-orders",
       });
       await order.save();
 
-      // ✅ تسجيل إنشاء طلب - استخدام .toObject()
+      // ✅ تسجيل إنشاء طلب
       await audit.create(req.user, "order", order.toObject(), req);
 
       const io = req.app.get('io');
@@ -664,7 +661,7 @@ router.put("/whatsapp-orders/:id",
         return res.status(404).json({ message: "Order not found" });
       }
 
-      // ✅ ✅ ✅ تسجيل تغيير حالة الطلب في Audit Log - استخدام .toObject()
+      // ✅ تسجيل تغيير حالة الطلب في Audit Log
       if (status) {
         await audit.statusChange(
           req.user, 
@@ -709,7 +706,7 @@ router.delete("/whatsapp-orders/:id",
         return res.status(404).json({ message: "Order not found" });
       }
       
-      // ✅ تسجيل حذف الطلب - استخدام .toObject()
+      // ✅ تسجيل حذف الطلب
       await audit.delete(req.user, "order", order.toObject(), req);
       
       res.json({ 
@@ -803,7 +800,7 @@ router.post("/brands",
         id, name, code, image: brandImage
       });
       
-      // ✅ تسجيل إنشاء براند - استخدام .toObject()
+      // ✅ تسجيل إنشاء براند
       await audit.create(req.user, "brand", newBrand.toObject(), req);
       
       res.status(201).json({ 
@@ -817,6 +814,7 @@ router.post("/brands",
   }
 );
 
+// ✅ ✅ ✅ تصحيح ترتيب الوسائط في audit.update للـ Brands
 router.put("/brands/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.BRANDS.UPDATE),
@@ -838,14 +836,13 @@ router.put("/brands/:id",
       
       if (!brand) return res.status(404).json({ message: "Brand not found" });
       
-      // ✅ تسجيل تحديث براند - استخدام .toObject()
+      // ✅ ✅ ✅ الترتيب الصحيح: (القديم، الجديد)
       await audit.update(
         req.user, 
         "brand", 
-        brand.toObject(), 
-        oldBrand?.toObject() || {}, 
-        brand.toObject(), 
-        req
+        oldBrand?.toObject() || {},        // ✅ القديم أولاً
+        brand.toObject(),                  // ✅ الجديد ثانياً
+        req                                 // ✅ الـ Request
       );
       
       res.json({ 
@@ -880,7 +877,7 @@ router.delete("/brands/:id",
         return res.status(404).json({ message: "Brand not found" });
       }
 
-      // ✅ تسجيل حذف براند - استخدام .toObject()
+      // ✅ تسجيل حذف براند
       await audit.delete(req.user, "brand", brand.toObject(), req);
 
       res.json({
@@ -934,7 +931,7 @@ router.post("/categories",
         image: catImage, sort_order: sort_order || 0
       });
       
-      // ✅ تسجيل إنشاء تصنيف - استخدام .toObject()
+      // ✅ تسجيل إنشاء تصنيف
       await audit.create(req.user, "category", newCat.toObject(), req);
       
       res.status(201).json({ 
@@ -948,6 +945,7 @@ router.post("/categories",
   }
 );
 
+// ✅ ✅ ✅ تصحيح ترتيب الوسائط في audit.update للـ Categories
 router.put("/categories/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.CATEGORIES.UPDATE),
@@ -968,14 +966,13 @@ router.put("/categories/:id",
       
       if (!cat) return res.status(404).json({ message: "Category not found" });
       
-      // ✅ تسجيل تحديث تصنيف - استخدام .toObject()
+      // ✅ ✅ ✅ الترتيب الصحيح: (القديم، الجديد)
       await audit.update(
         req.user, 
         "category", 
-        cat.toObject(), 
-        oldCat?.toObject() || {}, 
-        cat.toObject(), 
-        req
+        oldCat?.toObject() || {},          // ✅ القديم أولاً
+        cat.toObject(),                    // ✅ الجديد ثانياً
+        req                                 // ✅ الـ Request
       );
       
       res.json({ 
@@ -1033,7 +1030,7 @@ router.delete("/categories/:id",
 
       await Category.deleteMany({ id: { $in: idsToDelete } });
 
-      // ✅ تسجيل حذف التصنيف - استخدام .toObject()
+      // ✅ تسجيل حذف التصنيف
       await audit.delete(req.user, "category", category.toObject(), req);
 
       const lang = req.query.lang || 'ar';
@@ -1095,7 +1092,7 @@ router.post("/users",
       
       await newUser.save();
       
-      // ✅ ✅ ✅ تسجيل إنشاء مستخدم في Audit Log - استخدام .toObject()
+      // ✅ تسجيل إنشاء مستخدم
       await audit.create(req.user, "user", newUser.toObject(), req);
       
       res.status(201).json({
@@ -1117,6 +1114,7 @@ router.post("/users",
   }
 );
 
+// ✅ ✅ ✅ تصحيح ترتيب الوسائط في audit.update للـ Users
 router.put("/users/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.USERS.UPDATE),
@@ -1124,13 +1122,11 @@ router.put("/users/:id",
     try {
       const { password, ...updateData } = req.body;
       
-      // إذا تم تغيير كلمة المرور، تشفيرها
       if (password) {
         const bcrypt = require("bcryptjs");
         updateData.password = await bcrypt.hash(password, 10);
       }
       
-      // ✅ حفظ القيم القديمة قبل التحديث
       const oldUser = await User.findById(req.params.id);
       
       const updatedUser = await User.findOneAndUpdate(
@@ -1143,7 +1139,7 @@ router.put("/users/:id",
         return res.status(404).json({ message: "User not found" });
       }
       
-      // ✅ ✅ ✅ تسجيل تحديث المستخدم في Audit Log - استخدام .toObject()
+      // ✅ تسجيل تحديث المستخدم - مع الترتيب الصحيح
       if (JSON.stringify(oldUser?.permissions) !== JSON.stringify(updateData.permissions)) {
         await audit.permissionChange(
           req.user, 
@@ -1153,13 +1149,13 @@ router.put("/users/:id",
           req
         );
       } else {
+        // ✅ ✅ ✅ الترتيب الصحيح: (القديم، الجديد)
         await audit.update(
           req.user, 
           "user", 
-          updatedUser.toObject(), 
-          oldUser?.toObject() || {}, 
-          updatedUser.toObject(), 
-          req
+          oldUser?.toObject() || {},       // ✅ القديم أولاً
+          updatedUser.toObject(),          // ✅ الجديد ثانياً
+          req                               // ✅ الـ Request
         );
       }
       
@@ -1193,7 +1189,7 @@ router.delete("/users/:id",
         return res.status(404).json({ message: "User not found" });
       }
       
-      // ✅ تسجيل حذف مستخدم - استخدام .toObject()
+      // ✅ تسجيل حذف مستخدم
       await audit.delete(req.user, "user", deletedUser.toObject(), req);
       
       res.json({
@@ -1247,7 +1243,7 @@ router.get("/audit-logs",
   checkPermission("settings:read"),
   async (req, res) => {
     try {
-      // ✅ ✅ إضافة: استخراج اللغة من الـ query
+      // ✅ استخراج اللغة من الـ query
       const { 
         page = 1, 
         limit = 50, 
@@ -1280,7 +1276,7 @@ router.get("/audit-logs",
         ];
       }
       
-      // ✅ ✅ فلترة حسب اللغة - الآن تعمل لأن lang مُعرّف
+      // ✅ فلترة حسب اللغة
       if (lang && ["ar", "en"].includes(lang)) {
         query["metadata.lang"] = lang;
       }
@@ -1325,6 +1321,7 @@ router.get("/audit-logs/:id",
     }
   }
 );
+
 // ================= 🗑️ DELETE AUDIT LOG (Super Admin Only) =================
 /**
  * حذف سجل نشاط - لـ Super Admin فقط
@@ -1349,15 +1346,8 @@ router.delete("/audit-logs/:id",
         return res.status(404).json({ message: "Log not found" });
       }
       
-   
-// ❌ ❌ ❌ قم بحذف أو تعليق هذا السطر لمنع التسجيل المتداخل:
-// ✅ تسجيل عملية الحذف في الـ Audit Log نفسه (Meta-log)
-// await audit.delete(req.user, "audit_log", {  // ← ← ← احذف هذا السطر
-//   _id: log._id,
-//   action: log.action,
-//   resource: log.resource,
-//   description: log.description
-// }, req);
+      // ✅ ✅ ✅ تم حذف تسجيل الحذف المتداخل لمنع الحلقة اللانهائية
+      // لا نسجل حذف سجل الـ Audit Log نفسه في الـ Audit Log
       
       res.json({
         message: lang === "ar" 
@@ -1380,4 +1370,5 @@ router.delete("/audit-logs/:id",
     }
   }
 );
+
 module.exports = router;

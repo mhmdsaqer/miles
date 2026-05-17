@@ -12,6 +12,11 @@ const LuxuryCard = ({ item }) => {
   // ✅ دالة معالجة مسار الصورة
   const getImageUrl = useMemo(() => (imagePath) => {
     if (!imagePath) return "";
+     // ✅ إذا كان رابط Cloudinary، نستخدمه مباشرة
+    if (imagePath.startsWith("https://res.cloudinary.com/")) {
+    return imagePath;
+  }
+  
     const cleanPath = imagePath.replace(/^assets\//i, "");
     return `${API_URL}/assets/${cleanPath}`;
   }, [API_URL]);

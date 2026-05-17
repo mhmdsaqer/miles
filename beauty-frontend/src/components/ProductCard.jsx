@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useLang } from "../context/LanguageContext";
 import { toast } from "sonner";
+import { getImageUrl } from "../utils/imageUtils";
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
@@ -10,11 +11,6 @@ const ProductCard = ({ product }) => {
   const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
   const variantsCount = product.options?.length || 0;
 
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return "";
-    const cleanPath = imagePath.replace(/^assets\//i, "");
-    return `${API_URL}/assets/${cleanPath}`;
-  };
 
   const productName = lang === "ar" ? product.name_ar : product.name_en;
 
