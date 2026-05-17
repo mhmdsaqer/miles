@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 
 const LuxuryCard = ({ item }) => {
   const { lang } = useLang();
-  const API_URL = "http://localhost:3000";
+  const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 

@@ -5,7 +5,7 @@ import axios from "axios";
 import { useLang } from "../context/LanguageContext";
 import SEO from "../components/SEO"; // ✅ استيراد مكون الـ SEO
 
-const API_URL = "http://localhost:3000";
+const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
 
 // ألوان خلفية مميزة لكل كارت براند بالتناوب
 const BG_PALETTE = [

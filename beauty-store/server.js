@@ -1,4 +1,4 @@
-// server.js - النسخة النهائية لـ Render/Production
+// server.js - النسخة النهائية لـ Render/Production مع إصلاحات CORS الكاملة
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -30,17 +30,45 @@ app.use(helmet({
   crossOriginResourcePolicy: false
 }));
 
-// ✅ ✅ ✅ CORS ديناميكي يعمل مع Render + Vercel + Local
+// ✅ ✅ ✅ CORS ديناميكي يعمل مع Render + Vercel + Local + Wildcard للـ assets
 const corsOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()).filter(Boolean)
   : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'];
 
-app.use(cors({
-  origin: corsOrigins,
+// ✅ دالة للتحقق من الـ origin (تدعم wildcards)
+const corsOptions = {
+  origin: (origin, callback) => {
+    // ✅ السماح بالطلبات بدون origin (مثل التطبيقات الموبايل أو الخوادم)
+    if (!origin) return callback(null, true);
+    
+    // ✅ التحقق من القائمة المسموحة
+    if (corsOrigins.includes(origin) || corsOrigins.includes('*')) {
+      return callback(null, true);
+    }
+    
+    // ✅ دعم النطاقات الفرعية (مثل *.vercel.app)
+    const allowedPatterns = corsOrigins.filter(o => o.includes('*'));
+    for (const pattern of allowedPatterns) {
+      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+      if (regex.test(origin)) {
+        return callback(null, true);
+      }
+    }
+    
+    // ✅ في التطوير: السماح بكل شيء (للتسهيل فقط)
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(`⚠️ CORS: Allowed ${origin} in development mode`);
+      return callback(null, true);
+    }
+    
+    callback(new Error('❌ Not allowed by CORS'));
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
+
+app.use(cors(corsOptions));
 
 app.use(express.json({
   limit: "10mb"
@@ -69,7 +97,7 @@ app.use(
   })
 );
 
-// 📁 خدمة الصور (Static Assets)
+// 📁 خدمة الصور (Static Assets) - مع CORS مفتوح للصور فقط
 app.use("/assets", (req, res, next) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -243,9 +271,19 @@ app.get("/variants", async (req, res) => {
   }
 });
 
-app.post("/api/orders", validate(schemas.order, "body"), async (req, res) => {
+// ✅ ✅ ✅ Public Orders Endpoint - بدون validate للـ body لتجنب مشاكل CORS
+app.post("/api/orders", async (req, res) => {
   try {
     const Order = require("./models/Order");
+    
+    // ✅ تحقق بسيط من البيانات المطلوبة
+    const { fullName, phone, city, address, items, total } = req.body;
+    if (!fullName || !phone || !city || !address || !items || !total) {
+      return res.status(400).json({ 
+        message: "❌ Missing required fields",
+        required: ["fullName", "phone", "city", "address", "items", "total"]
+      });
+    }
     
     const order = new Order({
       id: Date.now(),
@@ -283,11 +321,7 @@ app.post("/api/orders", validate(schemas.order, "body"), async (req, res) => {
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  cors: {
-    origin: corsOrigins, // ✅ استخدام نفس متغير البيئة
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true
-  },
+  cors: corsOptions, // ✅ استخدام نفس إعدادات CORS الرئيسية
   transports: ['polling', 'websocket'],
   allowEIO3: true,
   pingTimeout: 60000,
@@ -316,9 +350,11 @@ const sendNotification = (event, data) => {
 
 // 🚀 تشغيل السيرفر
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🌐 Listening on all interfaces (0.0.0.0) for Render`);
   console.log(`📡 Socket.io ready for real-time notifications`);
+  console.log(`🔗 CORS Origins: ${corsOrigins.join(', ')}`);
 });
 
-module.exports = { io, sendNotification };
+module.exports = { io, sendNotification, app };

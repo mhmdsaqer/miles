@@ -11,7 +11,7 @@ import { useLang } from "../context/LanguageContext";
 
 // ===== إعدادات النظام =====
 const WHATSAPP_NUMBER = "970595761050";
-const API_URL = "http://localhost:3000";
+const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
 
 // ✅ دالة مساعدة عادية (ليست هوك) - يمكن تعريفها خارج المكون
 const extractSkuFromImage = (imagePath) => {

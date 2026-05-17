@@ -10,7 +10,7 @@ const Cart = () => {
   const { lang, t } = useLang();
   const navigate = useNavigate();
   const [removingId, setRemovingId] = useState(null);
-  const API_URL = "http://localhost:3000";
+  const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
 
   const getImageUrl = useCallback((imagePath) => {
     if (!imagePath) return "";

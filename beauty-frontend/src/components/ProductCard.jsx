@@ -7,7 +7,7 @@ import { toast } from "sonner";
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
   const { lang, t } = useLang();
-  const API_URL = "http://localhost:3000";
+  const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
   const variantsCount = product.options?.length || 0;
 
   const getImageUrl = (imagePath) => {

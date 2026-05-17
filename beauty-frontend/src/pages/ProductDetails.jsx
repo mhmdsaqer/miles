@@ -23,7 +23,7 @@ const ProductDetails = () => {
   const [mainImage, setMainImage] = useState(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
-  const API_URL = "http://localhost:3000";
+  const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
 
   const productSeoData = useMemo(() => {
     if (!product) return null;

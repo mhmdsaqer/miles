@@ -6,7 +6,7 @@ import axios from "axios";
 import { useLang } from "../context/LanguageContext";
 import ProductCard from "../components/ProductCard";
 
-const API_URL = "http://localhost:3000";
+const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
 
 const BrandDetails = () => {
   const { lang, t } = useLang();
