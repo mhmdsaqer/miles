@@ -1,4 +1,4 @@
-// server.js - النسخة النهائية لـ Render/Production مع إصلاحات CORS الكاملة
+// server.js - النسخة النهائية لـ Render/Production ✅
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -25,66 +25,39 @@ const app = express();
 // 🔗 الاتصال بقاعدة البيانات
 connectDB();
 
-// 🛡️ إعدادات الأمان والـ Middleware
+// 🛡️ إعدادات الأمان - مع استثناء CORS من helmet
 app.use(helmet({
-  crossOriginResourcePolicy: false
+  crossOriginResourcePolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: false
 }));
 
-// ✅ ✅ ✅ CORS ديناميكي يعمل مع Render + Vercel + Local + Wildcard للـ assets
+// ✅ ✅ ✅ CORS بسيط وموثوق لـ Render + Vercel
 const corsOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()).filter(Boolean)
+  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()).filter(Boolean)
   : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'];
 
-// ✅ دالة للتحقق من الـ origin (تدعم wildcards)
-const corsOptions = {
-  origin: (origin, callback) => {
-    // ✅ السماح بالطلبات بدون origin (مثل التطبيقات الموبايل أو الخوادم)
-    if (!origin) return callback(null, true);
-    
-    // ✅ التحقق من القائمة المسموحة
-    if (corsOrigins.includes(origin) || corsOrigins.includes('*')) {
-      return callback(null, true);
-    }
-    
-    // ✅ دعم النطاقات الفرعية (مثل *.vercel.app)
-    const allowedPatterns = corsOrigins.filter(o => o.includes('*'));
-    for (const pattern of allowedPatterns) {
-      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
-      if (regex.test(origin)) {
-        return callback(null, true);
-      }
-    }
-    
-    // ✅ في التطوير: السماح بكل شيء (للتسهيل فقط)
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn(`⚠️ CORS: Allowed ${origin} in development mode`);
-      return callback(null, true);
-    }
-    
-    callback(new Error('❌ Not allowed by CORS'));
-  },
+const isProd = process.env.NODE_ENV === 'production';
+
+app.use(cors({
+  origin: isProd ? '*' : corsOrigins, // ✅ في الإنتاج: نسمح للكل (Render يتطلب ذلك)
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-};
-
-app.use(cors(corsOptions));
-
-app.use(express.json({
-  limit: "10mb"
 }));
 
-app.use(express.urlencoded({ 
-  extended: true, 
-  limit: "10mb" 
-}));
+// ✅ معالجة preflight OPTIONS requests صراحةً
+app.options('*', cors());
+
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(require("./middleware/sanitize"));
 
 // ✅ تسجيل الـ Routes
 app.use("/api/admin", adminRoutes);
 app.use("/api/auth", authRoutes);
 
-// ✅ معدل الحد من الطلبات
+// ✅ Rate Limiting
 const isDev = process.env.NODE_ENV !== 'production';
 app.use(
   rateLimit({
@@ -97,9 +70,8 @@ app.use(
   })
 );
 
-// 📁 خدمة الصور (Static Assets) - مع CORS مفتوح للصور فقط
+// 📁 خدمة الصور - مع CORS headers صريحة
 app.use("/assets", (req, res, next) => {
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -108,8 +80,7 @@ app.use("/assets", (req, res, next) => {
 app.use("/assets", express.static(path.join(__dirname, "data/assets")));
 
 app.use("/assets/uploads", (req, res, next) => {
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Origin-Allow', '*');
   next();
 });
 app.use("/assets/uploads", express.static(path.join(__dirname, "data/assets/uploads")));
@@ -125,22 +96,19 @@ async function getCategoryAndChildrenIds(catId) {
   return ids;
 }
 
-// 🗄️ Caching بسيط للبيانات الثابتة
+// 🗄️ Caching بسيط
 const cache = new Map();
 const CACHE_TTL = 5 * 60 * 1000;
-
 const getCached = async (key, fetchFn) => {
   const cached = cache.get(key);
-  if (cached && Date.now() - cached.time < CACHE_TTL) {
-    return cached.data;
-  }
+  if (cached && Date.now() - cached.time < CACHE_TTL) return cached.data;
   const data = await fetchFn();
   cache.set(key, { data, time: Date.now() });
   return data;
 };
 
-// 🌐 الروابط العامة (Public Routes)
-app.get("/", (req, res) => res.send("Beauty Store API (MongoDB + Pagination + Cache + Socket.io) 🚀"));
+// 🌐 الروابط العامة
+app.get("/", (req, res) => res.send("Beauty Store API 🚀"));
 
 app.get("/brands", async (req, res) => {
   try {
@@ -148,7 +116,7 @@ app.get("/brands", async (req, res) => {
     res.json(brands);
   } catch (err) {
     console.error("Error fetching brands:", err);
-    res.status(500).json({ message: "Error fetching brands" });
+    res.status(500).json({ message: "Error fetching brands", error: err.message });
   }
 });
 
@@ -160,7 +128,7 @@ app.get("/categories", async (req, res) => {
     res.json(categories);
   } catch (err) {
     console.error("Error fetching categories:", err);
-    res.status(500).json({ message: "Error fetching categories" });
+    res.status(500).json({ message: "Error fetching categories", error: err.message });
   }
 });
 
@@ -201,7 +169,6 @@ app.get("/products", async (req, res) => {
 
     const brandMap = {};
     allBrands.forEach(b => brandMap[b.id] = b);
-
     const catMap = {};
     allCategories.forEach(c => catMap[c.id] = c);
 
@@ -234,7 +201,7 @@ app.get("/products", async (req, res) => {
 
   } catch (err) {
     console.error("❌ Error in /products:", err);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({ message: "Server Error", error: err.message });
   }
 });
 
@@ -257,7 +224,7 @@ app.get("/products/:id", async (req, res) => {
     });
   } catch (err) {
     console.error("Error fetching product details:", err);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({ message: "Server Error", error: err.message });
   }
 });
 
@@ -267,17 +234,16 @@ app.get("/variants", async (req, res) => {
     res.json(variants);
   } catch (err) {
     console.error("Error fetching variants:", err);
-    res.status(500).json({ message: "Error fetching variants" });
+    res.status(500).json({ message: "Error fetching variants", error: err.message });
   }
 });
 
-// ✅ ✅ ✅ Public Orders Endpoint - بدون validate للـ body لتجنب مشاكل CORS
+// ✅ Public Orders Endpoint
 app.post("/api/orders", async (req, res) => {
   try {
     const Order = require("./models/Order");
-    
-    // ✅ تحقق بسيط من البيانات المطلوبة
     const { fullName, phone, city, address, items, total } = req.body;
+    
     if (!fullName || !phone || !city || !address || !items || !total) {
       return res.status(400).json({ 
         message: "❌ Missing required fields",
@@ -293,11 +259,10 @@ app.post("/api/orders", async (req, res) => {
     
     await order.save();
     
-    // ✅ إرسال إشعار عبر Socket.io للأدمن
     const io = app.get('io');
     if (io) {
       io.emit("new-order", order.toObject());
-      console.log(`📡 Real-time notification sent for public order #${order.id}`);
+      console.log(`📡 Real-time notification sent for order #${order.id}`);
     }
     
     res.status(201).json({
@@ -321,7 +286,11 @@ app.post("/api/orders", async (req, res) => {
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  cors: corsOptions, // ✅ استخدام نفس إعدادات CORS الرئيسية
+  cors: {
+    origin: isProd ? '*' : corsOrigins,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
+  },
   transports: ['polling', 'websocket'],
   allowEIO3: true,
   pingTimeout: 60000,
@@ -352,9 +321,9 @@ const sendNotification = (event, data) => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🌐 Listening on all interfaces (0.0.0.0) for Render`);
-  console.log(`📡 Socket.io ready for real-time notifications`);
-  console.log(`🔗 CORS Origins: ${corsOrigins.join(', ')}`);
+  console.log(`🌐 Listening on 0.0.0.0 for Render`);
+  console.log(`📡 Socket.io ready`);
+  console.log(`🔗 CORS: ${isProd ? '* (Production)' : corsOrigins.join(', ')}`);
 });
 
 module.exports = { io, sendNotification, app };
