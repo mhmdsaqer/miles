@@ -1,4 +1,4 @@
-// server.js - النسخة المصححة والنهائية
+// server.js - النسخة النهائية لـ Render/Production
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -9,7 +9,6 @@ const http = require("http");
 const { Server } = require("socket.io");
 const connectDB = require("./config/db");
 const { validate, schemas } = require("./middleware/validate");
-
 
 // 1️⃣ استيراد الموديلات
 const Brand = require("./models/Brand");
@@ -31,22 +30,27 @@ app.use(helmet({
   crossOriginResourcePolicy: false
 }));
 
+// ✅ ✅ ✅ CORS ديناميكي يعمل مع Render + Vercel + Local
+const corsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+  : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'];
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'https://snout-quarterly-childless.ngrok-free.dev'],
+  origin: corsOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json({
-	limit: "10mb" // منع هجمات الـ DoS عبر طلبات ضخمة
+  limit: "10mb"
 }));
 
 app.use(express.urlencoded({ 
   extended: true, 
   limit: "10mb" 
 }));
-app.use(require("./middleware/sanitize")); // ✅ بعد json وقبل الـ routes
+app.use(require("./middleware/sanitize"));
 
 // ✅ تسجيل الـ Routes
 app.use("/api/admin", adminRoutes);
@@ -280,7 +284,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
+    origin: corsOrigins, // ✅ استخدام نفس متغير البيئة
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
   },
