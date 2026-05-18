@@ -1,4 +1,4 @@
-// beauty-store/middleware/upload.js
+// beauty-store/middleware/upload.js - النسخة مع Logging ومعالجة أخطاء محسّنة
 const cloudinary = require("cloudinary").v2;
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const multer = require("multer");
@@ -11,83 +11,68 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// ✅ دالة مساعدة: تحويل النص إلى slug (لإنشاء أسماء مجلدات صديقة للـ URL)
+// ✅ دالة مساعدة: تحويل النص إلى slug
 const slugify = (str) => {
   if (!str) return "";
   return str
     .toLowerCase()
     .trim()
-    .replace(/[^\w\s-]/g, '')          // إزالة الرموز الخاصة
-    .replace(/[\s_-]+/g, '-')          // استبدال المسافات والشرطات المتعددة بشرطة واحدة
-    .replace(/^-+|-+$/g, '');          // إزالة الشرطات من البداية والنهاية
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 };
 
-// ✅ دالة مساعدة: جلب اسم البراند وتحويله لـ slug بناءً على brand_id
+// ✅ دالة مساعدة: جلب اسم البراند وتحويله لـ slug
 const getBrandSlugById = async (brandId) => {
   try {
     if (!brandId) return null;
     const Brand = require("../models/Brand");
-    
-    // البحث عن البراند باستخدام الـ id الرقمي (كما هو مخزن في الداتابيس)
     const brand = await Brand.findOne({ id: Number(brandId) }).select("name").lean();
-    
     if (brand?.name) {
-      return slugify(brand.name);  // تحويل "Amazing Shine" → "amazing-shine"
+      return slugify(brand.name);
     }
     return null;
   } catch (err) {
-    console.warn("⚠️ Could not fetch brand for folder organization:", err.message);
+    console.warn("⚠️ Could not fetch brand for folder:", err.message);
     return null;
   }
 };
 
-// ✅ إعداد التخزين في Cloudinary - مع تنظيم المجلدات حسب نوع المورد
+// ✅ إعداد التخزين في Cloudinary - مع تنظيم المجلدات
 const storage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => {
+    console.log("📤 Cloudinary upload params called:", {
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      url: req.originalUrl,
+      body: req.body
+    });
+
     const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty-store";
     let resourceFolder = "assets";
     let subFolder = "";
     let filename = "";
-    
-    // 🔍 تحديد نوع المورد من مسار الـ API
+
     const url = req.originalUrl || req.url || "";
-    
-    // === 🏷️ حالة البراندات ===
+
     if (url.includes("/brands")) {
       resourceFolder = "brands";
-      // استخدام اسم البراند من الـ body لإنشاء مجلد فرعي
-      if (req.body?.name) {
-        subFolder = slugify(req.body.name);
-      }
-      // اسم الملف: اسم البراند + وقت
+      if (req.body?.name) subFolder = slugify(req.body.name);
       filename = req.body?.name ? slugify(req.body.name) : "brand";
-    }
-    
-    // === 🗂️ حالة التصنيفات ===
-    else if (url.includes("/categories")) {
+    } else if (url.includes("/categories")) {
       resourceFolder = "categories";
-      // استخدام الاسم العربي أولاً، ثم الإنجليزي
       const categoryName = req.body?.name_ar || req.body?.name_en || "category";
       subFolder = slugify(categoryName);
       filename = slugify(categoryName);
-    }
-    
-    // === 📦 حالة المنتجات ===
-    else if (url.includes("/products")) {
+    } else if (url.includes("/products")) {
       resourceFolder = "products";
-      
-      // 1️⃣ الحصول على slug البراند من الـ brand_id
       if (req.body?.brand_id) {
         const brandSlug = await getBrandSlugById(req.body.brand_id);
-        if (brandSlug) {
-          subFolder = brandSlug;  // amazing-shine, urban-care, etc.
-        }
+        if (brandSlug) subFolder = brandSlug;
       }
-      
-      // 2️⃣ تحديد اسم الملف: أولوية لـ SKU، ثم اسم المنتج، ثم وقت
       if (req.body?.sku) {
-        filename = req.body.sku.toUpperCase().trim();  // AMZ00000000060
+        filename = req.body.sku.toUpperCase().trim();
       } else if (req.body?.name_en) {
         filename = `${slugify(req.body.name_en)}-${Date.now()}`;
       } else if (req.body?.name_ar) {
@@ -96,27 +81,29 @@ const storage = new CloudinaryStorage({
         filename = `product-${Date.now()}`;
       }
     }
-    
-    // 🎯 بناء المسار النهائي في Cloudinary
+
     let finalFolder = `${baseUrl}/${resourceFolder}`;
-    if (subFolder) {
-      finalFolder += `/${subFolder}`;
-    }
-    
-    // ✅ إضافة طابع زمني لاسم الملف لتجنب التكرار (إلا إذا كان SKU)
+    if (subFolder) finalFolder += `/${subFolder}`;
+
     if (!req.body?.sku) {
       filename = `${filename}-${Date.now()}`;
     }
-    
+
+    console.log("✅ Cloudinary params result:", {
+      folder: finalFolder,
+      public_id: filename,
+      format: "webp"
+    });
+
     return {
-      folder: finalFolder,                    // miles-beauty-store/products/amazing-shine
-      format: "webp",                         // ✅ تحويل تلقائي لـ WebP
-      public_id: filename,                    // AMZ00000000060 (بدون امتداد)
+      folder: finalFolder,
+      format: "webp",
+      public_id: filename,
       resource_type: file.mimetype.startsWith("image/") ? "image" : "raw",
       transformation: [
-        { width: 1200, height: 1200, crop: "limit" },  // ✅ حد أقصى للأبعاد
-        { quality: "auto:good" },                       // ✅ ضغط ذكي
-        { fetch_format: "auto" }                        // ✅ تنسيق تلقائي
+        { width: 1200, height: 1200, crop: "limit" },
+        { quality: "auto:good" },
+        { fetch_format: "auto" }
       ],
     };
   },
@@ -124,13 +111,15 @@ const storage = new CloudinaryStorage({
 
 // ✅ فلتر أنواع الملفات المسموحة
 const fileFilter = (req, file, cb) => {
+  console.log("🔍 fileFilter:", { originalname: file.originalname, mimetype: file.mimetype });
   const allowed = /jpeg|jpg|png|webp|gif/;
   const ext = allowed.test(path.extname(file.originalname).toLowerCase());
   const mime = allowed.test(file.mimetype);
-  
+
   if (ext && mime) {
     cb(null, true);
   } else {
+    console.warn("⚠️ File rejected by filter:", { ext, mime });
     cb(new Error("⚠️ فقط صور JPG, PNG, WebP, GIF مسموحة"), false);
   }
 };
@@ -138,62 +127,64 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB كحد أقصى
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
 });
 
 // 🎯 ✅ Middleware للرفع إلى Cloudinary
 const uploadCompressed = (fieldName) => {
   return (req, res, next) => {
-    upload.single(fieldName)(req, res, (err) => {
+    console.log("📤 uploadCompressed called with fieldName:", fieldName);
+    console.log("📋 req.body:", req.body);
+    console.log("📋 req.file (before):", req.file);
+
+    upload.single(fieldName)(req, res, async (err) => {
+      console.log("📋 req.file (after):", req.file);
+      console.log("📋 Error:", err);
+
       if (err) {
+        console.error("❌ Multer/Cloudinary error:", err);
         if (err instanceof multer.MulterError) {
           return res.status(400).json({ message: `❌ Upload error: ${err.message}` });
         }
         return res.status(400).json({ message: `❌ ${err.message}` });
       }
-      
+
       if (req.file) {
-        // ✅ الرابط الآمن من Cloudinary
+        console.log("✅ File uploaded successfully:", {
+          secure_url: req.file.secure_url,
+          public_id: req.file.public_id,
+          folder: req.file.folder
+        });
+
         req.uploadedPath = req.file.secure_url;
-        
-        // ✅ public_id الكامل مع المجلد: "miles-beauty-store/products/amazing-shine/AMZ00000000060"
         req.cloudinaryPublicId = req.file.public_id;
-        
-        // ✅ معلومات إضافية للاستخدام لاحقاً
         req.cloudinaryInfo = {
-          public_id: req.file.public_id,      // مع المجلد الكامل
-          secure_url: req.file.secure_url,    // الرابط النهائي
+          public_id: req.file.public_id,
+          secure_url: req.file.secure_url,
           width: req.file.width,
           height: req.file.height,
           format: req.file.format,
-          folder: req.file.folder             // المجلد فقط
+          folder: req.file.folder
         };
+      } else {
+        console.warn("⚠️ No file in req.file after upload");
       }
-      
+
       next();
     });
   };
 };
 
-// 🗑️ دالة لحذف صورة من Cloudinary - تدعم المجلدات المتداخلة
+// 🗑️ دالة لحذف صورة من Cloudinary
 const deleteFromCloudinary = async (publicId) => {
   try {
     if (!publicId) return false;
-    
-    // ✅ publicId قد يكون:
-    // - كامل: "miles-beauty-store/products/amazing-shine/AMZ00000000060"
-    // - أو اسم الملف فقط: "AMZ00000000060"
-    
     let fullPublicId = publicId;
-    
-    // إذا لم يحتوي على "/"، نعتبره اسم ملف فقط ونضيف المجلد الافتراضي
     if (!publicId.includes("/")) {
       const folder = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty-store";
       fullPublicId = `${folder}/${publicId}`;
     }
-    
     const result = await cloudinary.uploader.destroy(fullPublicId);
-    
     if (result.result === "ok") {
       console.log(`🗑️ Deleted from Cloudinary: ${fullPublicId}`);
       return true;
@@ -206,11 +197,11 @@ const deleteFromCloudinary = async (publicId) => {
 };
 
 // ✅ ✅ ✅ التصدير
-module.exports = { 
-  uploadCompressed,              // ✅ الاسم المستخدم في admin.js
-  uploadCloudinary: uploadCompressed, // ✅ للتوافق
-  cloudinary,                    // ✅ للوصول المباشر
-  deleteFromCloudinary,          // ✅ للحذف
-  slugify,                       // ✅ دالة مساعدة خارجية
-  getBrandSlugById               // ✅ دالة مساعدة خارجية
+module.exports = {
+  uploadCompressed,
+  uploadCloudinary: uploadCompressed,
+  cloudinary,
+  deleteFromCloudinary,
+  slugify,
+  getBrandSlugById
 };
