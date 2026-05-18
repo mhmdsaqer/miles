@@ -441,13 +441,12 @@ const AdminCategories = () => {
               <ImageUploader
                 label={lang === "ar" ? "صورة التصنيف *" : "Category Image *"}
                 currentImage={formData.image}
-                resourceType="categories"  // ✅ لتحديد مجلد Cloudinary الصحيح
-                resourceData={{ 
+                resourceType="categories"
+                resourceData={{
                   name_ar: formData.name_ar,
-                  name_en: formData.name_en.
-                  name: formData.name_ar || formData.name_en
-
-                }}
+                  name_en: formData.name_en,
+                  name: formData.name_ar || formData.name_en  // ✅ أضف فاصلة هنا إذا كان هناك المزيد
+                }}  // ✅ تأكد من إغلاق الكائن بـ }}
                 onImageSelect={(path) => setFormData(prev => ({ ...prev, image: path }))}
               />
               
