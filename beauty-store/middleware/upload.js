@@ -4,14 +4,13 @@ const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const multer = require("multer");
 const path = require("path");
 
-// ✅ تهيئة Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// ✅ دالة مساعدة: تحويل النص إلى slug
+// ✅ دالة مساعدة: slugify
 const slugify = (str) => {
   if (!str) return "";
   return str
@@ -42,24 +41,21 @@ const getBrandSlugById = async (brandId) => {
 const storage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => {
-    console.log("📤 Cloudinary params called:", {
-      originalname: file.originalname,
-      mimetype: file.mimetype,
-      resourceType: req.body.resourceType,
-      url: req.originalUrl
-    });
-
     const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
     let resourceFolder = "assets";
     let subFolder = "";
     let filename = "";
 
-    // ✅ 1. أولاً: نتحقق من resourceType في الـ body (من الفرونت إند)
+    // ✅ 1. قراءة resourceType من الـ body (من الفرونت إند)
     const resourceType = req.body.resourceType;
 
     if (resourceType === "brands") {
       resourceFolder = "brands";
-      if (req.body?.name) subFolder = slugify(req.body.name);
+      // استخدام اسم البراند لإنشاء مجلد فرعي
+      if (req.body?.name) {
+        subFolder = slugify(req.body.name);
+      }
+      // اسم الملف: اسم البراند + وقت
       filename = req.body?.name ? slugify(req.body.name) : "brand";
     } 
     else if (resourceType === "categories") {
@@ -70,10 +66,14 @@ const storage = new CloudinaryStorage({
     } 
     else if (resourceType === "products") {
       resourceFolder = "products";
+      // الحصول على slug البراند من الـ brand_id
       if (req.body?.brand_id) {
         const brandSlug = await getBrandSlugById(req.body.brand_id);
-        if (brandSlug) subFolder = brandSlug;
+        if (brandSlug) {
+          subFolder = brandSlug;
+        }
       }
+      // تحديد اسم الملف: أولوية لـ SKU، ثم اسم المنتج، ثم وقت
       if (req.body?.sku) {
         filename = req.body.sku.toUpperCase().trim();
       } else if (req.body?.name_en) {
@@ -84,7 +84,7 @@ const storage = new CloudinaryStorage({
         filename = `product-${Date.now()}`;
       }
     }
-    // ✅ 2. Fallback: نتحقق من الـ URL (للتوافق مع الكود القديم)
+    // ✅ 2. Fallback: التحقق من الـ URL (للتوافق مع الكود القديم)
     else {
       const url = req.originalUrl || req.url || "";
       if (url.includes("/brands")) {
@@ -112,24 +112,26 @@ const storage = new CloudinaryStorage({
 
     // ✅ بناء المسار النهائي
     let finalFolder = `${baseUrl}/${resourceFolder}`;
-    if (subFolder) finalFolder += `/${subFolder}`;
+    if (subFolder) {
+      finalFolder += `/${subFolder}`;
+    }
 
     // ✅ إضافة طابع زمني لاسم الملف (إلا إذا كان SKU)
     if (!req.body?.sku) {
       filename = `${filename}-${Date.now()}`;
     }
 
-    console.log("✅ Cloudinary result:", { folder: finalFolder, public_id: filename });
+    console.log("✅ Cloudinary params:", { folder: finalFolder, public_id: filename });
 
     return {
-      folder: finalFolder,
-      format: "webp",
-      public_id: filename,
+      folder: finalFolder,              // miles-beauty/brands/amazing-shine
+      format: "webp",                   // ✅ تحويل تلقائي لـ WebP
+      public_id: filename,              // amazing-shine-123456 (بدون امتداد)
       resource_type: file.mimetype.startsWith("image/") ? "image" : "raw",
       transformation: [
-        { width: 1200, height: 1200, crop: "limit" },
-        { quality: "auto:good" },
-        { fetch_format: "auto" }
+        { width: 1200, height: 1200, crop: "limit" },  // ✅ حد أقصى للأبعاد
+        { quality: "auto:good" },                       // ✅ ضغط ذكي
+        { fetch_format: "auto" }                        // ✅ تنسيق تلقائي
       ],
     };
   },
@@ -150,10 +152,10 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
 });
 
-// 🎯 ✅ Middleware للرفع إلى Cloudinary - النسخة المُصححة
+// 🎯 ✅ Middleware للرفع إلى Cloudinary
 const uploadCompressed = (fieldName) => {
   return (req, res, next) => {
     upload.single(fieldName)(req, res, async (err) => {
@@ -167,18 +169,15 @@ const uploadCompressed = (fieldName) => {
 
       if (req.file) {
         console.log("✅ File uploaded:", {
-          path: req.file.path,        // ✅ هذا هو الرابط الصحيح
-          filename: req.file.filename // ✅ هذا هو الـ public_id
+          path: req.file.path,
+          filename: req.file.filename
         });
 
-        // ✅ ✅ ✅ الإصلاح هنا: نستخدم req.file.path بدلاً من secure_url
-        req.uploadedPath = req.file.path;  // ✅ هذا هو الرابط الكامل من Cloudinary
-        
+        req.uploadedPath = req.file.path;  // ✅ الرابط الكامل من Cloudinary
         req.cloudinaryPublicId = req.file.filename;
-        
         req.cloudinaryInfo = {
           public_id: req.file.filename,
-          secure_url: req.file.path,  // ✅ نستخدم path بدلاً من secure_url
+          secure_url: req.file.path,
           width: req.file.width,
           height: req.file.height,
           format: req.file.format,
@@ -212,7 +211,6 @@ const deleteFromCloudinary = async (publicId) => {
   }
 };
 
-// ✅ ✅ ✅ التصدير
 module.exports = { 
   uploadCompressed,
   uploadCloudinary: uploadCompressed,
