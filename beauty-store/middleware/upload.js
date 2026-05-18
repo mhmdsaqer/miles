@@ -59,76 +59,97 @@ const extractPublicIdFromUrl = (url) => {
 // ✅ إعداد التخزين في Cloudinary - مع دعم resourceType + Logging للتشخيص
 const storage = new CloudinaryStorage({
   cloudinary,
-  params: async (req, file) => {
-    const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
-    let resourceFolder = "assets";
-    let subFolder = "";
-    let filename = "";
+	// ✅ middleware/upload.js - النسخة المُصححة نهائياً ✅
+	params: async (req, file) => {
+	  const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
+	  
+	  // ✅ قراءة resourceType من عدة مصادر (مهم جداً!)
+	  const resourceType = (
+	    req.body?.resourceType || 
+	    req.query?.resourceType ||
+	    "assets"
+	  ).toLowerCase().trim();
+	  
+	  let resourceFolder = "assets";
+	  let subFolder = "";
+	  let filename = "";
 
-    const resourceType = req.body?.resourceType?.toLowerCase()?.trim();
+	  // ✅ Logging للتشخيص - سيساعدك في معرفة ما يصل من الفرونت إند
+	  console.log("🔍 Upload Debug:", {
+	    resourceType,
+	    bodyKeys: Object.keys(req.body || {}),
+	    fileName: file?.originalname,
+	    hasName: !!req.body?.name,
+	    hasNameAr: !!req.body?.name_ar,
+	    hasNameEn: !!req.body?.name_en
+	  });
 
-    // 🔹 تحديد نوع المورد وبناء المجلدات
-    if (resourceType === "brands") {
-      resourceFolder = "brands";
-      const brandName = req.body?.name || req.body?.name_en || req.body?.name_ar;
-      if (brandName) {
-        subFolder = slugify(brandName);
-        filename = slugify(brandName);
-      }
-    }
-    else if (resourceType === "categories") {
-      resourceFolder = "categories";
-      const categoryName = req.body?.name_ar || req.body?.name_en || req.body?.name || "category";
-      subFolder = slugify(categoryName);
-      filename = slugify(categoryName);
-    }
-    else if (resourceType === "products") {
-      resourceFolder = "products";
-      if (req.body?.brand_id) {
-        const brandSlug = await getBrandSlugById(req.body.brand_id);
-        if (brandSlug) subFolder = brandSlug;
-      }
-      if (req.body?.sku?.trim()) {
-        filename = req.body.sku.toUpperCase().trim();
-      } else if (req.body?.name_en || req.body?.name_ar) {
-        filename = slugify(req.body.name_en || req.body.name_ar);
-      } else {
-        filename = `product-${Date.now()}`;
-      }
-    }
+	  // 🔹 تحديد نوع المورد وبناء المجلدات
+	  if (resourceType === "brands") {
+	    resourceFolder = "brands";
+	    const brandName = req.body?.name || req.body?.name_en || req.body?.name_ar;
+	    if (brandName) {
+	      // ✅ للبراندات: الاسم هو الـ filename مباشرة (بدون subFolder منفصل)
+	      filename = slugify(brandName);
+	    }
+	  }
+	  else if (resourceType === "categories") {
+	    resourceFolder = "categories";
+	    const categoryName = req.body?.name_ar || req.body?.name_en || req.body?.name || "category";
+	    // ✅ للتصنيفات: نفس منطق البراندات
+	    filename = slugify(categoryName);
+	  }
+	  else if (resourceType === "products") {
+	    resourceFolder = "products";
+	    // ✅ للمنتجات: نستخدم subFolder لاسم البراند
+	    if (req.body?.brand_id) {
+	      const brandSlug = await getBrandSlugById(req.body.brand_id);
+	      if (brandSlug) subFolder = brandSlug;
+	    }
+	    // ✅ توليد filename من SKU أو اسم المنتج
+	    if (req.body?.sku?.trim()) {
+	      filename = req.body.sku.toUpperCase().trim();
+	    } else if (req.body?.name_en || req.body?.name_ar) {
+	      filename = slugify(req.body.name_en || req.body.name_ar);
+	    } else {
+	      filename = `product-${Date.now()}`;
+	    }
+	  }
 
-    // ✅ Fallback آمن للاسم
-    if (!filename || filename === "-" || filename.trim() === "") {
-      filename = `img-${Date.now()}`;
-    }
+	  // ✅ Fallback آمن للاسم (منع القيم الفارغة أو "-")
+	  if (!filename || filename === "-" || filename.trim() === "") {
+	    filename = `img-${Date.now()}`;
+	  }
 
-    // 🎯 ✅ التعديل الجوهري: دمج resourceFolder في الـ public_id لمطابقة الترحيل
-    // هذا سيخلق الهيكلية: miles-beauty/brands/brands/slug
-    let finalFolder = `${baseUrl}/${resourceFolder}`;
-    
-    // ✅ بناء الـ public_id ليشمل تكرار المجلد (مطابقة لسكربت الترحيل)
-    let finalPublicId = `${resourceFolder}`; // نبدأ باسم المجلد (brands, categories, products)
-    if (subFolder) finalPublicId += `/${subFolder}`;
-    finalPublicId += `/${filename}`;
+	  // ✅ ✅ ✅ بناء المسار النهائي مطابقاً لسكربت الترحيل
+	  // الهيكلية المطلوبة: miles-beauty/{folder}/{folder}/{subFolder}/{filename}
+	  // folder في Cloudinary: miles-beauty/{folder}
+	  // public_id: {folder}/{subFolder}/{filename}
+	  
+	  const finalFolder = `${baseUrl}/${resourceFolder}`;
+	  
+	  let finalPublicId = `${resourceFolder}`; // نبدأ بـ: brands أو categories أو products
+	  if (subFolder) finalPublicId += `/${subFolder}`; // للمنتجات فقط: amazing-shine
+	  finalPublicId += `/${filename}`; // الاسم النهائي: famous أو AMZ001
 
-    console.log("📁 Cloudinary Upload Path:", {
-      folder: finalFolder,
-      public_id: finalPublicId,
-      fullUrl: `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/${finalFolder}/${finalPublicId}`
-    });
+	  console.log("📁 Cloudinary Upload Path:", {
+	    folder: finalFolder,
+	    public_id: finalPublicId,
+	    fullUrl: `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/${finalFolder}/${finalPublicId}`
+	  });
 
-    return {
-      folder: finalFolder,        // miles-beauty/brands
-      format: "webp",
-      public_id: finalPublicId,   // brands/famous (هذا يخلق التكرار المطلوب)
-      resource_type: file.mimetype.startsWith("image/") ? "image" : "raw",
-      transformation: [
-        { width: 1200, height: 1200, crop: "limit" },
-        { quality: "auto:good" },
-        { fetch_format: "auto" }
-      ],
-    };
-  },
+	  return {
+	    folder: finalFolder,        // مثال: miles-beauty/brands
+	    format: "webp",
+	    public_id: finalPublicId,   // مثال: brands/famous
+	    resource_type: file.mimetype.startsWith("image/") ? "image" : "raw",
+	    transformation: [
+	      { width: 1200, height: 1200, crop: "limit" },
+	      { quality: "auto:good" },
+	      { fetch_format: "auto" }
+	    ],
+	  };
+	},
 
 });
 
