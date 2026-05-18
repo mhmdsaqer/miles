@@ -1,33 +1,29 @@
-// beauty-store/middleware/validate.js
+// beauty-store/middleware/validate.js - النسخة المُحدثة لدعم Cloudinary ✅
 const Joi = require("joi");
 
 /**
- * Middleware عام للتحقق من المدخلات باستخدام Joi
- * @param {Object} schema - مخطط Joi للتحقق
- * @param {string} source - مصدر البيانات: 'body' | 'query' | 'params'
- */
+* Middleware عام للتحقق من المدخلات باستخدام Joi
+* @param {Object} schema - مخطط Joi للتحقق
+* @param {string} source - مصدر البيانات: 'body' | 'query' | 'params'
+*/
 const validate = (schema, source = "body") => {
   return (req, res, next) => {
     const data = req[source];
-    
     const { error, value } = schema.validate(data, {
       abortEarly: false, // إرجاع كل الأخطاء دفعة واحدة
       stripUnknown: true, // إزالة الحقول غير المعروفة
       allowUnknown: source === "query" // السماح بحقول غير معروفة في الـ query
     });
-
     if (error) {
       const errors = error.details.map((detail) => ({
         field: detail.path.join("."),
         message: detail.message,
       }));
-      
       return res.status(400).json({
         message: "❌ Validation failed",
         errors,
       });
     }
-
     // ✅ تحديث الـ req بالبيانات المُتحقق منها والمُنظفة
     req[source] = value;
     next();
@@ -53,12 +49,15 @@ const productSchema = Joi.object({
   name_en: Joi.string().min(2).max(200).required(),
   description_ar: Joi.string().min(10).max(2000).allow(""),
   description_en: Joi.string().min(10).max(2000).allow(""),
+  
+  // ✅ ✅ ✅ تحديث: قبول مسار محلي أو رابط Cloudinary
   image: Joi.string()
-    .pattern(/^assets\/.+\.(jpg|jpeg|png|webp|gif)$/i)
+    .pattern(/^(assets\/.+\.(jpg|jpeg|png|webp|gif)|https:\/\/res\.cloudinary\.com\/.+)$/i)
     .required()
     .messages({
-      "string.pattern.base": "مسار الصورة غير صحيح",
+      "string.pattern.base": "مسار الصورة يجب أن يكون إما مسار محلي (assets/...) أو رابط Cloudinary صحيح",
     }),
+  
   price: Joi.number().min(0).max(10000).precision(2).required(),
   has_variants: Joi.boolean().default(false),
   variants: Joi.array()
@@ -70,7 +69,12 @@ const productSchema = Joi.object({
         ),
         sku: Joi.string().uppercase().trim().pattern(/^[A-Z0-9\-]{3,50}$/),
         price: Joi.number().min(0).max(10000).precision(2),
-        image: Joi.string().pattern(/^assets\/.+\.(jpg|jpeg|png|webp|gif)$/i),
+        
+        // ✅ نفس التحديث لحقل image في المتغيرات
+        image: Joi.string()
+          .pattern(/^(assets\/.+\.(jpg|jpeg|png|webp|gif)|https:\/\/res\.cloudinary\.com\/.+)$/i)
+          .allow(""),
+        
         attributes: Joi.object().pattern(Joi.string(), Joi.any()),
       })
     )
@@ -91,9 +95,14 @@ const brandSchema = Joi.object({
     .messages({
       "string.pattern.base": "Code يجب أن يكون 2-10 أحرف كبيرة",
     }),
+  
+  // ✅ ✅ ✅ تحديث: قبول مسار محلي أو رابط Cloudinary
   image: Joi.string()
-    .pattern(/^assets\/.+\.(jpg|jpeg|png|webp|gif)$/i)
-    .required(),
+    .pattern(/^(assets\/.+\.(jpg|jpeg|png|webp|gif)|https:\/\/res\.cloudinary\.com\/.+)$/i)
+    .required()
+    .messages({
+      "string.pattern.base": "مسار الصورة يجب أن يكون إما مسار محلي (assets/...) أو رابط Cloudinary صحيح",
+    }),
 });
 
 // ============================================
@@ -104,10 +113,13 @@ const categorySchema = Joi.object({
   name_ar: Joi.string().min(2).max(100).required(),
   name_en: Joi.string().min(2).max(100).required(),
   parent_id: Joi.number().integer().positive().allow(null).default(null),
+  
+  // ✅ ✅ ✅ تحديث: قبول مسار محلي أو رابط Cloudinary (أو فارغ)
   image: Joi.string()
-    .pattern(/^assets\/.+\.(jpg|jpeg|png|webp|gif)$/i)
+    .pattern(/^(assets\/.+\.(jpg|jpeg|png|webp|gif)|https:\/\/res\.cloudinary\.com\/.+)?$/i)
     .allow("")
     .default(""),
+  
   sort_order: Joi.number().integer().min(0).default(0),
 });
 
@@ -157,8 +169,7 @@ const userSchema = Joi.object({
     .min(6)
     .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
     .messages({
-      "string.pattern.base":
-        "كلمة المرور يجب أن تحتوي على حرف كبير، صغير، ورقم",
+      "string.pattern.base": "كلمة المرور يجب أن تحتوي على حرف كبير، صغير، ورقم",
     })
     .required(),
   name: Joi.string().min(2).max(100).required(),
