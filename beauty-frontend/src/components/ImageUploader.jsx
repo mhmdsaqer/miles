@@ -81,11 +81,8 @@ const ImageUploader = ({
 
       // ✅ استخدام adminApi (يضيف التوكن تلقائياً)
       // ✅ لا نحدد Content-Type - Axios يحدده تلقائياً مع FormData
-      const response = await adminApi.post("/upload", formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+	const response = await adminApi.post("/upload", formData);
+
       
       onImageSelect(response.data.path || response.data.secure_url);
       toast.success(lang === "ar" ? "✅ تم رفع الصورة" : "✅ Image uploaded");
