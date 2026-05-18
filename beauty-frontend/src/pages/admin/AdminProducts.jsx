@@ -847,6 +847,13 @@ const AdminProducts = () => {
                 <ImageUploader
                   label={t("productImage")}
                   currentImage={formData.image}
+                  resourceType="products"
+		  resourceData={{ 
+		    brand_id: formData.brand_id,
+		    sku: formData.sku,
+		    name_en: formData.name_en,
+		    name_ar: formData.name_ar
+		  }}
                   onImageSelect={(path) => setFormData(prev => ({ ...prev, image: path }))}
                 />
               </div>

@@ -1,4 +1,4 @@
-// beauty-store/middleware/upload.js - النسخة مع Logging ومعالجة أخطاء محسّنة
+// beauty-store/middleware/upload.js - النسخة المُصححة ✅
 const cloudinary = require("cloudinary").v2;
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const multer = require("multer");
@@ -38,34 +38,37 @@ const getBrandSlugById = async (brandId) => {
   }
 };
 
-// ✅ إعداد التخزين في Cloudinary - مع تنظيم المجلدات
+// ✅ إعداد التخزين في Cloudinary - مع دعم resourceType من الـ Frontend
 const storage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => {
-    console.log("📤 Cloudinary upload params called:", {
+    console.log("📤 Cloudinary params called:", {
       originalname: file.originalname,
       mimetype: file.mimetype,
-      url: req.originalUrl,
-      body: req.body
+      resourceType: req.body.resourceType,
+      url: req.originalUrl
     });
 
-    const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty-store";
+    const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
     let resourceFolder = "assets";
     let subFolder = "";
     let filename = "";
 
-    const url = req.originalUrl || req.url || "";
+    // ✅ 1. أولاً: نتحقق من resourceType في الـ body (من الفرونت إند)
+    const resourceType = req.body.resourceType;
 
-    if (url.includes("/brands")) {
+    if (resourceType === "brands") {
       resourceFolder = "brands";
       if (req.body?.name) subFolder = slugify(req.body.name);
       filename = req.body?.name ? slugify(req.body.name) : "brand";
-    } else if (url.includes("/categories")) {
+    } 
+    else if (resourceType === "categories") {
       resourceFolder = "categories";
       const categoryName = req.body?.name_ar || req.body?.name_en || "category";
       subFolder = slugify(categoryName);
       filename = slugify(categoryName);
-    } else if (url.includes("/products")) {
+    } 
+    else if (resourceType === "products") {
       resourceFolder = "products";
       if (req.body?.brand_id) {
         const brandSlug = await getBrandSlugById(req.body.brand_id);
@@ -81,19 +84,42 @@ const storage = new CloudinaryStorage({
         filename = `product-${Date.now()}`;
       }
     }
+    // ✅ 2. Fallback: نتحقق من الـ URL (للتوافق مع الكود القديم)
+    else {
+      const url = req.originalUrl || req.url || "";
+      if (url.includes("/brands")) {
+        resourceFolder = "brands";
+        if (req.body?.name) subFolder = slugify(req.body.name);
+        filename = req.body?.name ? slugify(req.body.name) : "brand";
+      } else if (url.includes("/categories")) {
+        resourceFolder = "categories";
+        const categoryName = req.body?.name_ar || req.body?.name_en || "category";
+        subFolder = slugify(categoryName);
+        filename = slugify(categoryName);
+      } else if (url.includes("/products")) {
+        resourceFolder = "products";
+        if (req.body?.brand_id) {
+          const brandSlug = await getBrandSlugById(req.body.brand_id);
+          if (brandSlug) subFolder = brandSlug;
+        }
+        if (req.body?.sku) {
+          filename = req.body.sku.toUpperCase().trim();
+        } else {
+          filename = `product-${Date.now()}`;
+        }
+      }
+    }
 
+    // ✅ بناء المسار النهائي
     let finalFolder = `${baseUrl}/${resourceFolder}`;
     if (subFolder) finalFolder += `/${subFolder}`;
 
+    // ✅ إضافة طابع زمني لاسم الملف (إلا إذا كان SKU)
     if (!req.body?.sku) {
       filename = `${filename}-${Date.now()}`;
     }
 
-    console.log("✅ Cloudinary params result:", {
-      folder: finalFolder,
-      public_id: filename,
-      format: "webp"
-    });
+    console.log("✅ Cloudinary result:", { folder: finalFolder, public_id: filename });
 
     return {
       folder: finalFolder,
@@ -111,15 +137,12 @@ const storage = new CloudinaryStorage({
 
 // ✅ فلتر أنواع الملفات المسموحة
 const fileFilter = (req, file, cb) => {
-  console.log("🔍 fileFilter:", { originalname: file.originalname, mimetype: file.mimetype });
   const allowed = /jpeg|jpg|png|webp|gif/;
   const ext = allowed.test(path.extname(file.originalname).toLowerCase());
   const mime = allowed.test(file.mimetype);
-
   if (ext && mime) {
     cb(null, true);
   } else {
-    console.warn("⚠️ File rejected by filter:", { ext, mime });
     cb(new Error("⚠️ فقط صور JPG, PNG, WebP, GIF مسموحة"), false);
   }
 };
@@ -127,22 +150,15 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+  limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-// 🎯 ✅ Middleware للرفع إلى Cloudinary
+// 🎯 ✅ Middleware للرفع إلى Cloudinary - النسخة المُصححة
 const uploadCompressed = (fieldName) => {
   return (req, res, next) => {
-    console.log("📤 uploadCompressed called with fieldName:", fieldName);
-    console.log("📋 req.body:", req.body);
-    console.log("📋 req.file (before):", req.file);
-
     upload.single(fieldName)(req, res, async (err) => {
-      console.log("📋 req.file (after):", req.file);
-      console.log("📋 Error:", err);
-
       if (err) {
-        console.error("❌ Multer/Cloudinary error:", err);
+        console.error("❌ Multer error:", err);
         if (err instanceof multer.MulterError) {
           return res.status(400).json({ message: `❌ Upload error: ${err.message}` });
         }
@@ -150,24 +166,24 @@ const uploadCompressed = (fieldName) => {
       }
 
       if (req.file) {
-        console.log("✅ File uploaded successfully:", {
-          secure_url: req.file.secure_url,
-          public_id: req.file.public_id,
-          folder: req.file.folder
+        console.log("✅ File uploaded:", {
+          path: req.file.path,        // ✅ هذا هو الرابط الصحيح
+          filename: req.file.filename // ✅ هذا هو الـ public_id
         });
 
-        req.uploadedPath = req.file.secure_url;
-        req.cloudinaryPublicId = req.file.public_id;
+        // ✅ ✅ ✅ الإصلاح هنا: نستخدم req.file.path بدلاً من secure_url
+        req.uploadedPath = req.file.path;  // ✅ هذا هو الرابط الكامل من Cloudinary
+        
+        req.cloudinaryPublicId = req.file.filename;
+        
         req.cloudinaryInfo = {
-          public_id: req.file.public_id,
-          secure_url: req.file.secure_url,
+          public_id: req.file.filename,
+          secure_url: req.file.path,  // ✅ نستخدم path بدلاً من secure_url
           width: req.file.width,
           height: req.file.height,
           format: req.file.format,
           folder: req.file.folder
         };
-      } else {
-        console.warn("⚠️ No file in req.file after upload");
       }
 
       next();
@@ -181,23 +197,23 @@ const deleteFromCloudinary = async (publicId) => {
     if (!publicId) return false;
     let fullPublicId = publicId;
     if (!publicId.includes("/")) {
-      const folder = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty-store";
+      const folder = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
       fullPublicId = `${folder}/${publicId}`;
     }
     const result = await cloudinary.uploader.destroy(fullPublicId);
     if (result.result === "ok") {
-      console.log(`🗑️ Deleted from Cloudinary: ${fullPublicId}`);
+      console.log(`🗑️ Deleted: ${fullPublicId}`);
       return true;
     }
     return false;
   } catch (err) {
-    console.error("❌ Error deleting from Cloudinary:", err.message);
+    console.error("❌ Delete error:", err.message);
     return false;
   }
 };
 
 // ✅ ✅ ✅ التصدير
-module.exports = {
+module.exports = { 
   uploadCompressed,
   uploadCloudinary: uploadCompressed,
   cloudinary,

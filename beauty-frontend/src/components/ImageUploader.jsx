@@ -40,37 +40,40 @@ const ImageUploader = ({
   }, [maxSize, lang]);
 
   // ✅ معالجة اختيار الملف - ✅ ✅ ✅ النسخة المُصححة
-  const handleFileSelect = useCallback(async (file) => {
-    if (!validateFile(file)) return;
-    
-    generatePreview(file);
-    setUploading(true);
-    
-    try {
-      // 📤 رفع الصورة باستخدام adminApi (بدلاً من fetch)
-      const formData = new FormData();
-      formData.append("image", file);
-      
-      // ✅ adminApi يضيف التوكن تلقائياً ويعالج الأخطاء
-      const response = await adminApi.post("/upload", formData);
-      
-      // ✅ إرجاع مسار الصورة للمكون الأب
-      onImageSelect(response.data.path || response.data.secure_url);
-      toast.success(lang === "ar" ? "✅ تم رفع الصورة" : "✅ Image uploaded");
-      
-    } catch (err) {
-      console.error("Upload error:", err);
-      
-      // ✅ عرض رسالة الخطأ من الـ backend إذا وجدت
-      const errorMsg = err.response?.data?.message || err.message || (lang === "ar" ? "❌ فشل الرفع" : "❌ Upload failed");
-      toast.error(errorMsg);
-      
-      // fallback: استخدام المعاينة المحلية فقط (للتجربة)
-      // onImageSelect(URL.createObjectURL(file)); // ⚠️ احذف هذا السطر لتجنب حفظ صور محلية
-    } finally {
-      setUploading(false);
-    }
-  }, [validateFile, generatePreview, onImageSelect, lang]);
+// ✅ داخل ImageUploader.jsx
+	const handleFileSelect = useCallback(async (file) => {
+	  if (!validateFile(file)) return;
+	  generatePreview(file);
+	  setUploading(true);
+
+	  try {
+	    const formData = new FormData();
+	    formData.append("image", file);
+	    
+	    // ✅ ✅ ✅ نضيف resourceType وبيانات المورد لتحديد المجلد الصحيح
+	    if (resourceType) {
+	      formData.append("resourceType", resourceType);
+	      // نضيف أي بيانات إضافية من resourceData
+	      Object.entries(resourceData || {}).forEach(([key, value]) => {
+		if (value) formData.append(key, value);
+	      });
+	    }
+
+	    const response = await adminApi.post("/upload", formData, {
+	      headers: { "Content-Type": "multipart/form-data" },
+	    });
+
+	    // ✅ نستخدم المسار الذي يرجعه الـ backend
+	    onImageSelect(response.data.path || response.data.secure_url);
+	    toast.success(lang === "ar" ? "✅ تم رفع الصورة" : "✅ Image uploaded");
+	  } catch (err) {
+	    console.error("Upload error:", err);
+	    const errorMsg = err.response?.data?.message || err.message || (lang === "ar" ? "❌ فشل الرفع" : "❌ Upload failed");
+	    toast.error(errorMsg);
+	  } finally {
+	    setUploading(false);
+	  }
+	}, [validateFile, generatePreview, onImageSelect, lang, resourceType, resourceData]);
 
   // ✅ Drag & Drop handlers
   const handleDrag = useCallback((e) => {
