@@ -1,16 +1,18 @@
-// src/components/ImageUploader.jsx - النسخة المُصححة ✅
-import { useState, useCallback, useRef } from "react";
+// src/components/ImageUploader.jsx - النسخة المُحدثة ✅
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useLang } from "../context/LanguageContext";
 import { toast } from "sonner";
 import { getImageUrl as getPublicImageUrl } from "../utils/imageUtils";
-import { adminApi } from "../utils/adminAuth"; // ✅ استيراد adminApi
+import { adminApi } from "../utils/adminAuth"; // ✅ استخدام adminApi بدلاً من fetch
 
 const ImageUploader = ({
   onImageSelect,
   currentImage,
   label,
   accept = "image/*",
-  maxSize = 5 // MB
+  maxSize = 5, // MB
+  resourceType = null, // ✅ جديد: 'brands' | 'categories' | 'products'
+  resourceData = {} // ✅ جديد: بيانات إضافية لتحديد المجلد
 }) => {
   const { lang, t } = useLang();
   const [preview, setPreview] = useState(currentImage || null);
@@ -39,41 +41,44 @@ const ImageUploader = ({
     return true;
   }, [maxSize, lang]);
 
-  // ✅ معالجة اختيار الملف - ✅ ✅ ✅ النسخة المُصححة
-// ✅ داخل ImageUploader.jsx
-	const handleFileSelect = useCallback(async (file) => {
-	  if (!validateFile(file)) return;
-	  generatePreview(file);
-	  setUploading(true);
-
-	  try {
-	    const formData = new FormData();
-	    formData.append("image", file);
-	    
-	    // ✅ ✅ ✅ نضيف resourceType وبيانات المورد لتحديد المجلد الصحيح
-	    if (resourceType) {
-	      formData.append("resourceType", resourceType);
-	      // نضيف أي بيانات إضافية من resourceData
-	      Object.entries(resourceData || {}).forEach(([key, value]) => {
-		if (value) formData.append(key, value);
-	      });
-	    }
-
-	    const response = await adminApi.post("/upload", formData, {
-	      headers: { "Content-Type": "multipart/form-data" },
-	    });
-
-	    // ✅ نستخدم المسار الذي يرجعه الـ backend
-	    onImageSelect(response.data.path || response.data.secure_url);
-	    toast.success(lang === "ar" ? "✅ تم رفع الصورة" : "✅ Image uploaded");
-	  } catch (err) {
-	    console.error("Upload error:", err);
-	    const errorMsg = err.response?.data?.message || err.message || (lang === "ar" ? "❌ فشل الرفع" : "❌ Upload failed");
-	    toast.error(errorMsg);
-	  } finally {
-	    setUploading(false);
-	  }
-	}, [validateFile, generatePreview, onImageSelect, lang, resourceType, resourceData]);
+  // ✅ معالجة اختيار الملف - مع دعم resourceType و resourceData
+  const handleFileSelect = useCallback(async (file) => {
+    if (!validateFile(file)) return;
+    
+    generatePreview(file);
+    setUploading(true);
+    
+    try {
+      // 📤 رفع الصورة باستخدام adminApi
+      const formData = new FormData();
+      formData.append("image", file);
+      
+      // ✅ إضافة resourceType وبيانات المورد إذا وجدت
+      if (resourceType) {
+        formData.append("resourceType", resourceType);
+        Object.entries(resourceData || {}).forEach(([key, value]) => {
+          if (value) formData.append(key, value);
+        });
+      }
+      
+      const response = await adminApi.post("/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      
+      // ✅ إرجاع المسار الذي يرجعه الـ backend
+      onImageSelect(response.data.path || response.data.secure_url);
+      toast.success(lang === "ar" ? "✅ تم رفع الصورة" : "✅ Image uploaded");
+      
+    } catch (err) {
+      console.error("Upload error:", err);
+      const errorMsg = err.response?.data?.message || err.message || (lang === "ar" ? "❌ فشل الرفع" : "❌ Upload failed");
+      toast.error(errorMsg);
+    } finally {
+      setUploading(false);
+    }
+  }, [validateFile, generatePreview, onImageSelect, lang, resourceType, resourceData]);
 
   // ✅ Drag & Drop handlers
   const handleDrag = useCallback((e) => {
@@ -118,6 +123,22 @@ const ImageUploader = ({
     return getPublicImageUrl(path);
   };
 
+  // ✅ تنظيف الـ preview URL عند الفك
+  useEffect(() => {
+    return () => {
+      if (preview?.startsWith("blob:")) {
+        URL.revokeObjectURL(preview);
+      }
+    };
+  }, [preview]);
+
+  // ✅ تحديث المعاينة عند تغيير currentImage من الخارج
+  useEffect(() => {
+    if (currentImage && currentImage !== preview) {
+      setPreview(currentImage);
+    }
+  }, [currentImage]);
+
   return (
     <div className="space-y-3" dir={lang === "ar" ? "rtl" : "ltr"}>
       {label && (
@@ -159,6 +180,7 @@ const ImageUploader = ({
                 src={getImageUrl(preview)}
                 alt="Preview"
                 className="w-32 h-32 object-contain rounded-xl bg-gray-100"
+                loading="lazy"
                 onError={(e) => {
                   console.warn("Preview load error");
                   e.target.style.display = 'none';

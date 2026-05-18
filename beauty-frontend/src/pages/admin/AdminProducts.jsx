@@ -931,6 +931,13 @@ const AdminProducts = () => {
                             <ImageUploader 
                               currentImage={variant.image} 
                               onImageSelect={(p) => updateVariant(variant.id, "image", p)} 
+                                resourceType="products"
+			  	resourceData={{ 
+			  	  brand_id: formData.brand_id,
+			  	  sku: variant.sku || formData.sku,
+			   	 name_en: formData.name_en,
+			   	 name_ar: formData.name_ar
+				  }}
                               label={null} 
                             />
                           </div>
