@@ -3,7 +3,7 @@ import { useState, useCallback, useRef } from "react";
 import { useLang } from "../context/LanguageContext";
 import { toast } from "sonner";
 import { getImageUrl as getPublicImageUrl } from "../utils/imageUtils";
-import { adminApi } from "../utils/adminAuth"; // ✅ استيراد adminApi
+import { adminApi } from "../utils/adminAuth"; // ✅ استخدام adminApi
 
 const ImageUploader = ({
   onImageSelect,
@@ -12,7 +12,7 @@ const ImageUploader = ({
   accept = "image/*",
   maxSize = 5,
   resourceType = null, // ✅ جديد: 'brands' | 'categories' | 'products'
-  resourceData = {} // ✅ جديد: بيانات إضافية
+  resourceData = {} // ✅ جديد: بيانات إضافية لتحديد المجلد
 }) => {
   const { lang } = useLang();
   const [preview, setPreview] = useState(currentImage || null);
@@ -73,7 +73,7 @@ const ImageUploader = ({
     }
   }, [validateFile, generatePreview, onImageSelect, lang, resourceType, resourceData]);
 
-  // ✅ Drag & Drop handlers
+  // ✅ Drag & Drop handlers (نفس الكود السابق)
   const handleDrag = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
