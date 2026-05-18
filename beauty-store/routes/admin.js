@@ -49,10 +49,24 @@ router.get("/stats",
 );
 
 // ================= 📤 IMAGE UPLOAD =================
-router.post("/upload", 
+// ✅ routes/admin.js - روت upload المُصحح نهائياً
+router.post("/upload",
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.CREATE),
-  uploadCompressed("image"), 
+  
+  // ✅ Middleware وسيط: يحفظ البيانات من body قبل معالجة multer
+  (req, res, next) => {
+    req._resourceType = (req.body?.resourceType || req.query?.resourceType || "assets").toLowerCase().trim();
+    req._name = req.body?.name || req.body?.name_en || req.body?.name_ar || "";
+    req._name_ar = req.body?.name_ar || "";
+    req._name_en = req.body?.name_en || "";
+    req._brand_id = req.body?.brand_id || "";
+    req._sku = req.body?.sku || "";
+    next();
+  },
+  
+  uploadCompressed("image"),
+  
   (req, res) => {
     if (!req.uploadedPath) {
       return res.status(400).json({ message: "❌ لم يتم رفع أي صورة" });
@@ -60,11 +74,10 @@ router.post("/upload",
     res.status(201).json({
       message: "✅ تم رفع الصورة بنجاح",
       path: req.uploadedPath,
-      url: `/api/${req.uploadedPath}`
+      url: req.uploadedPath // نرجع الرابط الكامل من Cloudinary
     });
   }
 );
-
 // ================= 📦 PRODUCTS CRUD =================
 
 // ✅ جلب المنتجات
