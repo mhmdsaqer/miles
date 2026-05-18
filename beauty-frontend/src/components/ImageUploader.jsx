@@ -61,11 +61,7 @@ const ImageUploader = ({
         });
       }
       
-      const response = await adminApi.post("/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await adminApi.post("/upload", formData);
       
       // ✅ إرجاع المسار الذي يرجعه الـ backend
       onImageSelect(response.data.path || response.data.secure_url);
