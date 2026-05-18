@@ -65,20 +65,11 @@ const storage = new CloudinaryStorage({
     let subFolder = "";
     let filename = "";
 
-    // ✅ ✅ ✅ Logging للتشخيص - مهم جدًا لمعرفة ما يصل من الفرونت إند
-    console.log("🔍 Upload Debug - req.body:", {
-      resourceType: req.body?.resourceType,
-      bodyKeys: Object.keys(req.body || {}),
-      fileName: file?.originalname,
-      mimeType: file?.mimetype
-    });
-
-    // ✅ قراءة resourceType مع fallback آمن
     const resourceType = req.body?.resourceType?.toLowerCase()?.trim();
 
+    // 🔹 تحديد نوع المورد وبناء المجلدات
     if (resourceType === "brands") {
       resourceFolder = "brands";
-      // ✅ دعم الاسم من عدة حقول محتملة
       const brandName = req.body?.name || req.body?.name_en || req.body?.name_ar;
       if (brandName) {
         subFolder = slugify(brandName);
@@ -93,14 +84,10 @@ const storage = new CloudinaryStorage({
     }
     else if (resourceType === "products") {
       resourceFolder = "products";
-      
-      // ✅ الحصول على slug البراند
       if (req.body?.brand_id) {
         const brandSlug = await getBrandSlugById(req.body.brand_id);
         if (brandSlug) subFolder = brandSlug;
       }
-      
-      // ✅ توليد filename من SKU أو اسم المنتج
       if (req.body?.sku?.trim()) {
         filename = req.body.sku.toUpperCase().trim();
       } else if (req.body?.name_en || req.body?.name_ar) {
@@ -110,26 +97,30 @@ const storage = new CloudinaryStorage({
       }
     }
 
-    // ✅ ✅ ✅ fallback آمن للـ filename (منع القيم الفارغة أو "-")
+    // ✅ Fallback آمن للاسم
     if (!filename || filename === "-" || filename.trim() === "") {
       filename = `img-${Date.now()}`;
     }
 
-    // ✅ بناء المسار النهائي
+    // 🎯 ✅ التعديل الجوهري: دمج resourceFolder في الـ public_id لمطابقة الترحيل
+    // هذا سيخلق الهيكلية: miles-beauty/brands/brands/slug
     let finalFolder = `${baseUrl}/${resourceFolder}`;
-    if (subFolder) finalFolder += `/${subFolder}`;
+    
+    // ✅ بناء الـ public_id ليشمل تكرار المجلد (مطابقة لسكربت الترحيل)
+    let finalPublicId = `${resourceFolder}`; // نبدأ باسم المجلد (brands, categories, products)
+    if (subFolder) finalPublicId += `/${subFolder}`;
+    finalPublicId += `/${filename}`;
 
-    // ✅ Logging للمسار النهائي
     console.log("📁 Cloudinary Upload Path:", {
       folder: finalFolder,
-      filename: filename,
-      fullPublicId: `${finalFolder}/${filename}`
+      public_id: finalPublicId,
+      fullUrl: `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/${finalFolder}/${finalPublicId}`
     });
 
     return {
-      folder: finalFolder,
+      folder: finalFolder,        // miles-beauty/brands
       format: "webp",
-      public_id: filename,
+      public_id: finalPublicId,   // brands/famous (هذا يخلق التكرار المطلوب)
       resource_type: file.mimetype.startsWith("image/") ? "image" : "raw",
       transformation: [
         { width: 1200, height: 1200, crop: "limit" },
@@ -138,6 +129,7 @@ const storage = new CloudinaryStorage({
       ],
     };
   },
+
 });
 
 const fileFilter = (req, file, cb) => {
