@@ -1,11 +1,13 @@
-// src/utils/adminAuth.js
+// src/utils/adminAuth.js - النسخة المُصححة ✅
 import axios from "axios";
 
 const STORAGE_KEY = "miles_admin_token";
 const USER_DATA_KEY = "miles_user_data";
-const API_URL = "http://localhost:3000";
 
-// ✅ الـ baseURL يبقى خاص بصفحات الأدمن
+// ✅ ✅ ✅ استخدم المتغير من الـ env مع fallback محلي
+const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
+
+// ✅ الـ baseURL يستخدم الـ API_URL الديناميكي
 export const adminApi = axios.create({
   baseURL: `${API_URL}/api/admin`,
   timeout: 15000,
@@ -32,32 +34,19 @@ adminApi.interceptors.response.use(
   }
 );
 
-// ✅ ✅ دوال مساعدة للتحقق من الصلاحيات
+// ✅ دوال التحقق من الصلاحيات (نفسها - ما تغيرت)
 const checkUserPermission = (user, permission) => {
   if (!user) return false;
-  
-  // Super admin أو صلاحية * تعني وصول كامل
-  if (user.role === "super_admin" || user.permissions?.includes("*")) {
-    return true;
-  }
-  
-  // تحقق مباشر من الصلاحية
-  if (user.permissions?.includes(permission)) {
-    return true;
-  }
-  
-  // تحقق من النمط: products:* يغطي products:create, products:read, إلخ
+  if (user.role === "super_admin" || user.permissions?.includes("*")) return true;
+  if (user.permissions?.includes(permission)) return true;
   const [resource] = permission.split(":");
-  if (user.permissions?.includes(`${resource}:*`)) {
-    return true;
-  }
-  
+  if (user.permissions?.includes(`${resource}:*`)) return true;
   return false;
 };
 
 export const adminAuth = {
-  // ✅ تسجيل الدخول بالنظام الجديد
   login: async (email, password) => {
+    // ✅ ✅ ✅ استخدم API_URL الديناميكي هنا أيضاً
     const response = await axios.post(`${API_URL}/api/auth/login`, { email, password });
     const { token, user } = response.data;
     sessionStorage.setItem(STORAGE_KEY, token);
@@ -80,7 +69,6 @@ export const adminAuth = {
     }
   },
   
-  // ✅ ✅ إضافة دالة التحقق من صلاحية واحدة
   hasPermission: (permission) => {
     try {
       const user = adminAuth.getCurrentUser();
@@ -90,12 +78,10 @@ export const adminAuth = {
     }
   },
   
-  // ✅ ✅ إضافة دالة التحقق من عدة صلاحيات
   hasPermissions: (permissions, requireAll = false) => {
     if (!Array.isArray(permissions)) {
       return adminAuth.hasPermission(permissions);
     }
-    
     if (requireAll) {
       return permissions.every(p => adminAuth.hasPermission(p));
     }
