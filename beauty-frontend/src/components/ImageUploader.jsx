@@ -61,10 +61,10 @@ const ImageUploader = ({
       formData.append("resourceType", resourceType || "assets");
       
       // ✅ إضافة جميع بيانات المورد (مع التحقق من القيم الفارغة)
-      if (resourceData && typeof resourceData === "object") {
+      if (resourceData ) {
         Object.entries(resourceData).forEach(([key, value]) => {
           // ✅ إرسال فقط إذا كانت القيمة موجودة وليست فارغة
-          if (value !== null && value !== undefined && value !== "") {
+          if (value && String(value).trim()) {
             formData.append(key, String(value));
           }
         });
