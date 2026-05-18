@@ -1,12 +1,13 @@
-// src/components/ImageUploader.jsx
+// src/components/ImageUploader.jsx - النسخة المُصححة ✅
 import { useState, useCallback, useRef } from "react";
 import { useLang } from "../context/LanguageContext";
 import { toast } from "sonner";
 import { getImageUrl as getPublicImageUrl } from "../utils/imageUtils";
+import { adminApi } from "../utils/adminAuth"; // ✅ استيراد adminApi
 
-const ImageUploader = ({ 
-  onImageSelect, 
-  currentImage, 
+const ImageUploader = ({
+  onImageSelect,
+  currentImage,
   label,
   accept = "image/*",
   maxSize = 5 // MB
@@ -16,13 +17,10 @@ const ImageUploader = ({
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
-  
-  const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
 
   // ✅ توليد معاينة للصورة
   const generatePreview = useCallback((file) => {
     if (!file.type.startsWith("image/")) return;
-    
     const reader = new FileReader();
     reader.onload = (e) => setPreview(e.target.result);
     reader.readAsDataURL(file);
@@ -41,7 +39,7 @@ const ImageUploader = ({
     return true;
   }, [maxSize, lang]);
 
-  // ✅ معالجة اختيار الملف
+  // ✅ معالجة اختيار الملف - ✅ ✅ ✅ النسخة المُصححة
   const handleFileSelect = useCallback(async (file) => {
     if (!validateFile(file)) return;
     
@@ -49,30 +47,26 @@ const ImageUploader = ({
     setUploading(true);
     
     try {
-      // 📤 رفع الصورة للسيرفر
+      // 📤 رفع الصورة باستخدام adminApi (بدلاً من fetch)
       const formData = new FormData();
       formData.append("image", file);
       
-      const token = sessionStorage.getItem("miles_admin_token");
-      const response = await fetch(`${API_URL}/api/admin/upload`, {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${token}` },
-        body: formData
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) throw new Error(data.message);
+      // ✅ adminApi يضيف التوكن تلقائياً ويعالج الأخطاء
+      const response = await adminApi.post("/upload", formData);
       
       // ✅ إرجاع مسار الصورة للمكون الأب
-      onImageSelect(data.path || data.secure_url);
+      onImageSelect(response.data.path || response.data.secure_url);
       toast.success(lang === "ar" ? "✅ تم رفع الصورة" : "✅ Image uploaded");
       
     } catch (err) {
       console.error("Upload error:", err);
-      toast.error(err.message || (lang === "ar" ? "❌ فشل الرفع" : "❌ Upload failed"));
-      // fallback: استخدام المعاينة المحلية فقط
-      onImageSelect(URL.createObjectURL(file));
+      
+      // ✅ عرض رسالة الخطأ من الـ backend إذا وجدت
+      const errorMsg = err.response?.data?.message || err.message || (lang === "ar" ? "❌ فشل الرفع" : "❌ Upload failed");
+      toast.error(errorMsg);
+      
+      // fallback: استخدام المعاينة المحلية فقط (للتجربة)
+      // onImageSelect(URL.createObjectURL(file)); // ⚠️ احذف هذا السطر لتجنب حفظ صور محلية
     } finally {
       setUploading(false);
     }
@@ -93,39 +87,33 @@ const ImageUploader = ({
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
     if (e.dataTransfer.files?.[0]) {
       handleFileSelect(e.dataTransfer.files[0]);
     }
   }, [handleFileSelect]);
 
   const handleClick = () => fileInputRef.current?.click();
-
+  
   const handleChange = (e) => {
     if (e.target.files?.[0]) {
       handleFileSelect(e.target.files[0]);
     }
   };
 
-  // ✅ تنظيف الـ preview URL عند الفك
-// ✅ تحديث دالة getImageUrl للتعامل مع روابط Cloudinary
-	// ✅ تحديث دالة getImageUrl للتعامل مع Cloudinary + imageUtils
-	const getImageUrl = (path) => {
-	  if (!path) return null;
-	  
-	  // ✅ إذا كانت معاينة محلية (blob/data)، اعرضها مباشرة
-	  if (path.startsWith("blob:") || path.startsWith("data:")) {
-	    return path;
-	  }
-	  
-	  // ✅ إذا كانت من Cloudinary، نرجعها كما هي
-	  if (path.startsWith("https://res.cloudinary.com/")) {
-	    return path;
-	  }
-	  
-	  // ✅ إذا كانت من الداتابيس، استخدم الدالة المركزية
-	  return getPublicImageUrl(path);
-	};
+  // ✅ دالة معالجة مسار الصورة - تدعم Cloudinary والمسار المحلي
+  const getImageUrl = (path) => {
+    if (!path) return null;
+    // ✅ إذا كانت معاينة محلية (blob/data)، اعرضها مباشرة
+    if (path.startsWith("blob:") || path.startsWith("data:")) {
+      return path;
+    }
+    // ✅ إذا كانت من Cloudinary، نرجعها كما هي
+    if (path.startsWith("https://res.cloudinary.com/")) {
+      return path;
+    }
+    // ✅ إذا كانت من الداتابيس، استخدم الدالة المركزية
+    return getPublicImageUrl(path);
+  };
 
   return (
     <div className="space-y-3" dir={lang === "ar" ? "rtl" : "ltr"}>
@@ -144,8 +132,8 @@ const ImageUploader = ({
         onDrop={handleDrop}
         className={`
           relative border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all
-          ${dragActive 
-            ? "border-pink-500 bg-pink-50/50" 
+          ${dragActive
+            ? "border-pink-500 bg-pink-50/50"
             : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
           }
           ${uploading ? "opacity-50 pointer-events-none" : ""}
