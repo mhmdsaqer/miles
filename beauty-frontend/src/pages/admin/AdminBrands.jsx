@@ -423,7 +423,11 @@ const AdminBrands = () => {
                 label={lang === "ar" ? "صورة البراند *" : "Brand Image *"}
                 currentImage={formData.image}
                 resourceType="brands"                    // ✅ جديد
-  		resourceData={{ name: formData.name }}   // ✅ جديد
+  		resourceData={{
+  		 name: formData.name,
+  		 name_ar: formData.name,  // للأمان
+  		 name_en: formData.name
+  		 }}   // ✅ جديد
                 onImageSelect={(path) => setFormData(prev => ({ ...prev, image: path }))}
               />
               

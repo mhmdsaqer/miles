@@ -1,9 +1,9 @@
-// src/components/ImageUploader.jsx - النسخة المُصححة ✅
-import { useState, useCallback, useRef } from "react";
+// src/components/ImageUploader.jsx - النسخة المُصححة نهائيًا ✅
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useLang } from "../context/LanguageContext";
 import { toast } from "sonner";
 import { getImageUrl as getPublicImageUrl } from "../utils/imageUtils";
-import { adminApi } from "../utils/adminAuth"; // ✅ استخدام adminApi
+import { adminApi } from "../utils/adminAuth";
 
 const ImageUploader = ({
   onImageSelect,
@@ -11,14 +11,21 @@ const ImageUploader = ({
   label,
   accept = "image/*",
   maxSize = 5,
-  resourceType = null, // ✅ جديد: 'brands' | 'categories' | 'products'
-  resourceData = {} // ✅ جديد: بيانات إضافية لتحديد المجلد
+  resourceType = null, // ✅ 'brands' | 'categories' | 'products'
+  resourceData = {} // ✅ بيانات إضافية: { name, name_ar, name_en, brand_id, sku }
 }) => {
   const { lang } = useLang();
   const [preview, setPreview] = useState(currentImage || null);
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
+
+  // ✅ تحديث المعاينة عند تغيير currentImage من الخارج
+  useEffect(() => {
+    if (currentImage && currentImage !== preview) {
+      setPreview(currentImage);
+    }
+  }, [currentImage, preview]);
 
   const generatePreview = useCallback((file) => {
     if (!file.type.startsWith("image/")) return;
@@ -39,7 +46,7 @@ const ImageUploader = ({
     return true;
   }, [maxSize, lang]);
 
-  // ✅ ✅ ✅ الدالة الرئيسية - مع استخدام adminApi وتمرير resourceType
+  // ✅ ✅ ✅ الدالة الرئيسية - مع Logging وتمرير البيانات بشكل صحيح
   const handleFileSelect = useCallback(async (file) => {
     if (!validateFile(file)) return;
     
@@ -50,22 +57,46 @@ const ImageUploader = ({
       const formData = new FormData();
       formData.append("image", file);
       
-      // ✅ إضافة resourceType وبيانات المورد إذا وجدت
-      if (resourceType) {
-        formData.append("resourceType", resourceType);
-        Object.entries(resourceData || {}).forEach(([key, value]) => {
-          if (value) formData.append(key, value);
+      // ✅ ✅ ✅ إضافة resourceType دائماً (حتى لو null للfallback)
+      formData.append("resourceType", resourceType || "assets");
+      
+      // ✅ إضافة جميع بيانات المورد (مع التحقق من القيم الفارغة)
+      if (resourceData && typeof resourceData === "object") {
+        Object.entries(resourceData).forEach(([key, value]) => {
+          // ✅ إرسال فقط إذا كانت القيمة موجودة وليست فارغة
+          if (value !== null && value !== undefined && value !== "") {
+            formData.append(key, String(value));
+          }
         });
       }
       
-      // ✅ استخدام adminApi (يضيف التوكن تلقائياً ويستخدم VITE_API_URL)
-      // ✅ لا نحدد Content-Type يدوياً - دع Axios يفعله
-      const response = await adminApi.post("/upload", formData);
+      // ✅ ✅ ✅ Logging للتشخيص (فقط في التطوير)
+      if (import.meta.env?.DEV) {
+        console.log("📤 Uploading with data:", {
+          resourceType,
+          resourceData,
+          formDataKeys: Array.from(formData.keys())
+        });
+      }
+
+      // ✅ استخدام adminApi (يضيف التوكن تلقائياً)
+      // ✅ لا نحدد Content-Type - Axios يحدده تلقائياً مع FormData
+      const response = await adminApi.post("/upload", formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       
       onImageSelect(response.data.path || response.data.secure_url);
       toast.success(lang === "ar" ? "✅ تم رفع الصورة" : "✅ Image uploaded");
+      
     } catch (err) {
-      console.error("Upload error:", err);
+      console.error("❌ Upload error:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      });
+      
       const errorMsg = err.response?.data?.message || err.message || (lang === "ar" ? "❌ فشل الرفع" : "❌ Upload failed");
       toast.error(errorMsg);
     } finally {
@@ -73,7 +104,7 @@ const ImageUploader = ({
     }
   }, [validateFile, generatePreview, onImageSelect, lang, resourceType, resourceData]);
 
-  // ✅ Drag & Drop handlers (نفس الكود السابق)
+  // ✅ Drag & Drop handlers
   const handleDrag = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();

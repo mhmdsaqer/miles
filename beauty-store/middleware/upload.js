@@ -1,4 +1,4 @@
-// beauty-store/middleware/upload.js - النسخة المُصححة ✅
+// beauty-store/middleware/upload.js - النسخة المُصححة نهائيًا ✅
 const cloudinary = require("cloudinary").v2;
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const multer = require("multer");
@@ -35,7 +35,28 @@ const getBrandSlugById = async (brandId) => {
   }
 };
 
-// ✅ إعداد التخزين في Cloudinary - مع دعم resourceType من الـ Frontend
+// ✅ ✅ ✅ دالة مساعدة لاستخراج الـ public_id من رابط Cloudinary
+const extractPublicIdFromUrl = (url) => {
+  if (!url?.startsWith("https://res.cloudinary.com/")) return null;
+  
+  try {
+    // إزالة البادئة: https://res.cloudinary.com/{cloud_name}/image/upload/
+    const afterBase = url.replace(/^https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\//, '');
+    
+    // إزالة الإصدار: v1779105168/
+    const withoutVersion = afterBase.replace(/^v\d+\//, '');
+    
+    // إزالة امتداد الملف
+    const publicId = withoutVersion.replace(/\.[^/.]+$/, "");
+    
+    return publicId || null;
+  } catch (err) {
+    console.error("❌ Error extracting publicId:", err);
+    return null;
+  }
+};
+
+// ✅ إعداد التخزين في Cloudinary - مع دعم resourceType + Logging للتشخيص
 const storage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => {
@@ -44,39 +65,66 @@ const storage = new CloudinaryStorage({
     let subFolder = "";
     let filename = "";
 
-    // ✅ 1. قراءة resourceType من الـ body (من الفرونت إند)
-    const resourceType = req.body.resourceType;
+    // ✅ ✅ ✅ Logging للتشخيص - مهم جدًا لمعرفة ما يصل من الفرونت إند
+    console.log("🔍 Upload Debug - req.body:", {
+      resourceType: req.body?.resourceType,
+      bodyKeys: Object.keys(req.body || {}),
+      fileName: file?.originalname,
+      mimeType: file?.mimetype
+    });
+
+    // ✅ قراءة resourceType مع fallback آمن
+    const resourceType = req.body?.resourceType?.toLowerCase()?.trim();
 
     if (resourceType === "brands") {
       resourceFolder = "brands";
-      if (req.body?.name) subFolder = slugify(req.body.name);
-      filename = req.body?.name ? slugify(req.body.name) : "brand";
-    } 
+      // ✅ دعم الاسم من عدة حقول محتملة
+      const brandName = req.body?.name || req.body?.name_en || req.body?.name_ar;
+      if (brandName) {
+        subFolder = slugify(brandName);
+        filename = slugify(brandName);
+      }
+    }
     else if (resourceType === "categories") {
       resourceFolder = "categories";
-      const categoryName = req.body?.name_ar || req.body?.name_en || "category";
+      const categoryName = req.body?.name_ar || req.body?.name_en || req.body?.name || "category";
       subFolder = slugify(categoryName);
       filename = slugify(categoryName);
-    } 
+    }
     else if (resourceType === "products") {
       resourceFolder = "products";
+      
+      // ✅ الحصول على slug البراند
       if (req.body?.brand_id) {
         const brandSlug = await getBrandSlugById(req.body.brand_id);
         if (brandSlug) subFolder = brandSlug;
       }
-      if (req.body?.sku) {
+      
+      // ✅ توليد filename من SKU أو اسم المنتج
+      if (req.body?.sku?.trim()) {
         filename = req.body.sku.toUpperCase().trim();
+      } else if (req.body?.name_en || req.body?.name_ar) {
+        filename = slugify(req.body.name_en || req.body.name_ar);
       } else {
         filename = `product-${Date.now()}`;
       }
     }
 
+    // ✅ ✅ ✅ fallback آمن للـ filename (منع القيم الفارغة أو "-")
+    if (!filename || filename === "-" || filename.trim() === "") {
+      filename = `img-${Date.now()}`;
+    }
+
     // ✅ بناء المسار النهائي
     let finalFolder = `${baseUrl}/${resourceFolder}`;
     if (subFolder) finalFolder += `/${subFolder}`;
-    if (!req.body?.sku) {
-      filename = `${filename}-${Date.now()}`;
-    }
+
+    // ✅ Logging للمسار النهائي
+    console.log("📁 Cloudinary Upload Path:", {
+      folder: finalFolder,
+      filename: filename,
+      fullPublicId: `${finalFolder}/${filename}`
+    });
 
     return {
       folder: finalFolder,
@@ -123,13 +171,15 @@ const uploadCompressed = (fieldName) => {
       if (req.file) {
         console.log("✅ File uploaded:", {
           path: req.file.path,
-          filename: req.file.filename
+          filename: req.file.filename,
+          folder: req.file.folder,
+          public_id: req.file.public_id
         });
 
         req.uploadedPath = req.file.path;
         req.cloudinaryPublicId = req.file.filename;
         req.cloudinaryInfo = {
-          public_id: req.file.filename,
+          public_id: req.file.public_id,
           secure_url: req.file.path,
           width: req.file.width,
           height: req.file.height,
@@ -143,21 +193,43 @@ const uploadCompressed = (fieldName) => {
   };
 };
 
-// 🗑️ دالة لحذف صورة من Cloudinary
-const deleteFromCloudinary = async (publicId) => {
+// 🗑️ ✅ ✅ ✅ دالة لحذف صورة من Cloudinary - النسخة المُحسّنة
+const deleteFromCloudinary = async (imageUrlOrPublicId) => {
   try {
-    if (!publicId) return false;
-    let fullPublicId = publicId;
-    if (!publicId.includes("/")) {
-      const folder = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
-      fullPublicId = `${folder}/${publicId}`;
+    if (!imageUrlOrPublicId) return false;
+    
+    // ✅ استخراج public_id سواء كان رابطاً أو public_id مباشر
+    let publicId = imageUrlOrPublicId;
+    
+    if (imageUrlOrPublicId.startsWith("https://res.cloudinary.com/")) {
+      publicId = extractPublicIdFromUrl(imageUrlOrPublicId);
+      if (!publicId) {
+        console.warn("⚠️ Could not extract publicId from URL:", imageUrlOrPublicId);
+        return false;
+      }
     }
-    const result = await cloudinary.uploader.destroy(fullPublicId);
-    if (result.result === "ok") {
-      console.log(`🗑️ Deleted from Cloudinary: ${fullPublicId}`);
+    
+    // ✅ التأكد من أن public_id يحتوي على المجلد الأساسي
+    const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
+    if (!publicId.startsWith(baseUrl)) {
+      publicId = `${baseUrl}/${publicId}`;
+    }
+    
+    console.log(`🗑️ Attempting to delete from Cloudinary: ${publicId}`);
+    
+    const result = await cloudinary.uploader.destroy(publicId);
+    
+    if (result.result === "ok" || result.result === "deleted") {
+      console.log(`✅ Successfully deleted: ${publicId}`);
       return true;
+    } else if (result.result === "not found") {
+      console.warn(`⚠️ Image not found in Cloudinary: ${publicId}`);
+      return true; // نعتبرها محذوفة لتجنب الأخطاء
     }
+    
+    console.warn(`⚠️ Delete result: ${result.result}`);
     return false;
+    
   } catch (err) {
     console.error("❌ Error deleting from Cloudinary:", err.message);
     return false;
@@ -170,5 +242,6 @@ module.exports = {
   cloudinary,
   deleteFromCloudinary,
   slugify,
-  getBrandSlugById
+  getBrandSlugById,
+  extractPublicIdFromUrl // ✅ تصدير الدالة الجديدة للاستخدام في أماكن أخرى
 };

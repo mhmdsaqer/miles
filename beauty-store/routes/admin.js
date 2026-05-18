@@ -379,7 +379,8 @@ router.delete("/products/:id",
       // ✅ ✅ ✅ حذف صورة المنتج من Cloudinary إذا كانت رابطاً
       if (product.image?.startsWith("https://res.cloudinary.com/")) {
         // استخراج الـ public_id من الرابط
-        const publicId = product.image.split('/').pop().split('.')[0];
+        const { extractPublicIdFromUrl } = require("../middleware/upload");
+	const publicId = extractPublicIdFromUrl(product.image);
         await deleteFromCloudinary(publicId);
         console.log(`🗑️ Deleted product image from Cloudinary: ${publicId}`);
       }

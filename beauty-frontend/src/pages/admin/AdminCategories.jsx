@@ -444,7 +444,9 @@ const AdminCategories = () => {
                 resourceType="categories"  // ✅ لتحديد مجلد Cloudinary الصحيح
                 resourceData={{ 
                   name_ar: formData.name_ar,
-                  name_en: formData.name_en
+                  name_en: formData.name_en.
+                  name: formData.name_ar || formData.name_en
+
                 }}
                 onImageSelect={(path) => setFormData(prev => ({ ...prev, image: path }))}
               />
