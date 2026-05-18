@@ -1,4 +1,4 @@
-// routes/admin.js - النسخة النهائية مع نظام Audit Log وحل مشكلة "N/A"
+// routes/admin.js - النسخة النهائية مع حذف الصور من Cloudinary ✅
 const express = require("express");
 const router = express.Router();
 const { validate, schemas } = require("../middleware/validate");
@@ -16,8 +16,8 @@ const AuditLog = require("../models/AuditLog");
 const authMiddleware = require("../middleware/auth");
 const { checkPermission, PERMISSIONS } = require("../middleware/authorize");
 
-// ✅ استيراد دالة رفع الصور المضغوطة
-const { uploadCompressed } = require("../middleware/upload");
+// ✅ استيراد دالة رفع الصور + دالة الحذف من Cloudinary
+const { uploadCompressed, deleteFromCloudinary } = require("../middleware/upload");
 
 // ✅ استيراد Audit Logger
 const audit = require("../utils/auditLogger");
@@ -362,7 +362,7 @@ router.put("/products/:id",
   }
 );
 
-// ✅ حذف منتج - مع Audit Log
+// ✅ حذف منتج - مع Audit Log + ✅ حذف الصورة من Cloudinary
 router.delete("/products/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.DELETE),
@@ -374,6 +374,14 @@ router.delete("/products/:id",
       
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
+      }
+      
+      // ✅ ✅ ✅ حذف صورة المنتج من Cloudinary إذا كانت رابطاً
+      if (product.image?.startsWith("https://res.cloudinary.com/")) {
+        // استخراج الـ public_id من الرابط
+        const publicId = product.image.split('/').pop().split('.')[0];
+        await deleteFromCloudinary(publicId);
+        console.log(`🗑️ Deleted product image from Cloudinary: ${publicId}`);
       }
       
       // ✅ تسجيل الحذف في Audit Log
@@ -856,6 +864,7 @@ router.put("/brands/:id",
   }
 );
 
+// ✅ حذف براند - مع Audit Log + ✅ حذف الصورة من Cloudinary
 router.delete("/brands/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.BRANDS.DELETE),
@@ -875,6 +884,14 @@ router.delete("/brands/:id",
       const brand = await Brand.findOneAndDelete({ id: brandId });
       if (!brand) {
         return res.status(404).json({ message: "Brand not found" });
+      }
+
+      // ✅ ✅ ✅ حذف صورة البراند من Cloudinary إذا كانت رابطاً
+      if (brand.image?.startsWith("https://res.cloudinary.com/")) {
+        // استخراج الـ public_id من الرابط
+        const publicId = brand.image.split('/').pop().split('.')[0];
+        await deleteFromCloudinary(publicId);
+        console.log(`🗑️ Deleted brand image from Cloudinary: ${publicId}`);
       }
 
       // ✅ تسجيل حذف براند
@@ -1000,6 +1017,7 @@ async function getCategoryAndDescendantsIds(catId, categories = null) {
   return ids;
 }
 
+// ✅ حذف تصنيف - مع Audit Log + ✅ حذف الصورة من Cloudinary
 router.delete("/categories/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.CATEGORIES.DELETE),
@@ -1029,6 +1047,14 @@ router.delete("/categories/:id",
       }
 
       await Category.deleteMany({ id: { $in: idsToDelete } });
+
+      // ✅ ✅ ✅ حذف صورة التصنيف من Cloudinary إذا كانت رابطاً
+      if (category.image?.startsWith("https://res.cloudinary.com/")) {
+        // استخراج الـ public_id من الرابط
+        const publicId = category.image.split('/').pop().split('.')[0];
+        await deleteFromCloudinary(publicId);
+        console.log(`🗑️ Deleted category image from Cloudinary: ${publicId}`);
+      }
 
       // ✅ تسجيل حذف التصنيف
       await audit.delete(req.user, "category", category.toObject(), req);

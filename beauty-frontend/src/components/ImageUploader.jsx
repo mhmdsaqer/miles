@@ -1,19 +1,18 @@
 // src/components/ImageUploader.jsx - النسخة المُصححة ✅
-// ✅ ✅ ✅ جميع الـ import في الأعلى فقط
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useLang } from "../context/LanguageContext";
 import { toast } from "sonner";
 import { getImageUrl as getPublicImageUrl } from "../utils/imageUtils";
-import { adminApi } from "../utils/adminAuth"; // ✅ ✅ ✅ هنا في الأعلى فقط
+import { adminApi } from "../utils/adminAuth"; // ✅ استيراد adminApi
 
 const ImageUploader = ({
   onImageSelect,
   currentImage,
   label,
   accept = "image/*",
-  maxSize = 5, // MB
+  maxSize = 5,
   resourceType = null, // ✅ جديد: 'brands' | 'categories' | 'products'
-  resourceData = {} // ✅ جديد: بيانات إضافية لتحديد المجلد
+  resourceData = {} // ✅ جديد: بيانات إضافية
 }) => {
   const { lang } = useLang();
   const [preview, setPreview] = useState(currentImage || null);
@@ -21,7 +20,6 @@ const ImageUploader = ({
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
 
-  // ✅ توليد معاينة للصورة
   const generatePreview = useCallback((file) => {
     if (!file.type.startsWith("image/")) return;
     const reader = new FileReader();
@@ -29,7 +27,6 @@ const ImageUploader = ({
     reader.readAsDataURL(file);
   }, []);
 
-  // ✅ التحقق من حجم الملف
   const validateFile = useCallback((file) => {
     if (!file.type.startsWith("image/")) {
       toast.error(lang === "ar" ? "⚠️ الملف يجب أن يكون صورة" : "⚠️ File must be an image");
@@ -61,7 +58,7 @@ const ImageUploader = ({
         });
       }
       
-      // ✅ استخدام adminApi بدلاً من fetch (يضيف التوكن تلقائياً)
+      // ✅ استخدام adminApi (يضيف التوكن تلقائياً ويستخدم VITE_API_URL)
       // ✅ لا نحدد Content-Type يدوياً - دع Axios يفعله
       const response = await adminApi.post("/upload", formData);
       
@@ -104,29 +101,13 @@ const ImageUploader = ({
     }
   };
 
-  // ✅ دالة معالجة مسار الصورة - تدعم Cloudinary والمسار المحلي
+  // ✅ دالة معالجة مسار الصورة
   const getImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith("blob:") || path.startsWith("data:")) return path;
     if (path.startsWith("https://res.cloudinary.com/")) return path;
     return getPublicImageUrl(path);
   };
-
-  // ✅ تنظيف الـ preview URL عند الفك
-  useEffect(() => {
-    return () => {
-      if (preview?.startsWith("blob:")) {
-        URL.revokeObjectURL(preview);
-      }
-    };
-  }, [preview]);
-
-  // ✅ تحديث المعاينة عند تغيير currentImage من الخارج
-  useEffect(() => {
-    if (currentImage && currentImage !== preview) {
-      setPreview(currentImage);
-    }
-  }, [currentImage]);
 
   return (
     <div className="space-y-3" dir={lang === "ar" ? "rtl" : "ltr"}>
