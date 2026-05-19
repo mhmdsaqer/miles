@@ -92,6 +92,7 @@ const uploadToCloudinary = async (fileBuffer, originalName, uploadParams) => {
     
     // تحديد اسم الملف
     if (sku?.trim()) {
+      filename = slugify(sku).toUpperCase();
       filename = sku.toUpperCase().trim();
     } else if (productName) {
       filename = slugify(productName);
