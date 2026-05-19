@@ -50,9 +50,15 @@ const storage = new CloudinaryStorage({
 params: async (req, file) => {
   const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
   
-  // ✅ ✅ ✅ الإصلاح هنا: قراءة _resourceType أولاً
-  const rawType = req._resourceType || req.body?.resourceType || req.query?.resourceType;
+  // ✅ ✅ ✅ الإصلاح: اقرأ من req.body مباشرة (لأن multer حلّله الآن)
+  // لا تعتمد على _resourceType لأنه حُدد قبل تحليل FormData
+  const rawType = req.body?.resourceType || req.query?.resourceType;
   const resourceType = rawType?.toLowerCase()?.trim() || "assets";
+  
+  // ✅ نفس الشيء للبيانات الأخرى - اقرأ من req.body مباشرة
+  const brandName = req.body?.name || req.body?.name_en || req.body?.name_ar || "";
+  const brandId = req.body?.brand_id || "";
+  const sku = req.body?.sku || "";
   
   let resourceFolder = "assets";
   let subFolder = "";
@@ -60,26 +66,25 @@ params: async (req, file) => {
 
   if (resourceType === "brands") {
     resourceFolder = "brands";
-    const brandName = req._name || req.body?.name || req.body?.name_en || req.body?.name_ar;
     if (brandName) filename = slugify(brandName);
   }
   else if (resourceType === "categories") {
     resourceFolder = "categories";
-    const catName = req._name_ar || req.body?.name_ar || req.body?.name_en || req._name || "category";
+    const catName = req.body?.name_ar || req.body?.name_en || "category";
     filename = slugify(catName);
   }
   else if (resourceType === "products") {
     resourceFolder = "products";
     
-    if (req._brand_id || req.body?.brand_id) {
-      const brandSlug = await getBrandSlugById(req._brand_id || req.body?.brand_id);
+    if (brandId) {
+      const brandSlug = await getBrandSlugById(brandId);
       if (brandSlug) subFolder = brandSlug;
     }
     
-    if (req._sku?.trim() || req.body?.sku?.trim()) {
-      filename = (req._sku || req.body?.sku).toUpperCase().trim();
-    } else if (req._name_en || req.body?.name_en || req._name_ar || req.body?.name_ar) {
-      filename = slugify(req._name_en || req.body?.name_en || req._name_ar || req.body?.name_ar);
+    if (sku?.trim()) {
+      filename = sku.toUpperCase().trim();
+    } else if (req.body?.name_en || req.body?.name_ar) {
+      filename = slugify(req.body.name_en || req.body.name_ar);
     } else {
       filename = `product-${Date.now()}`;
     }
@@ -89,8 +94,10 @@ params: async (req, file) => {
     filename = `img-${Date.now()}`;
   }
 
-  // ✅ بناء المسار بدون تكرار
+  // ✅ ✅ ✅ بناء المسار بدون تكرار (هذا هو الإصلاح الثاني!)
   const finalFolder = `${baseUrl}/${resourceFolder}`;
+  
+  // ✅ public_id يبدأ من ما بعد resourceFolder فقط (بدون تكرار)
   let finalPublicId = "";
   if (subFolder) finalPublicId += `${subFolder}/`;
   finalPublicId += filename;
@@ -98,17 +105,16 @@ params: async (req, file) => {
   console.log("📁 Cloudinary Upload Debug:", {
     resourceType,
     rawType,
-    req__resourceType: req._resourceType,
-    req_body_resourceType: req.body?.resourceType,
+    req_body_resourceType: req.body?.resourceType,  // ✅ الآن يجب أن تظهر القيمة الصحيحة!
     folder: finalFolder,
     public_id: finalPublicId,
     expectedUrl: `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/${finalFolder}/${finalPublicId}`
   });
 
   return {
-    folder: finalFolder,
+    folder: finalFolder,        // miles-beauty/brands
     format: "webp",
-    public_id: finalPublicId,
+    public_id: finalPublicId,   // nevertti (بدون تكرار!)
     resource_type: file.mimetype.startsWith("image/") ? "image" : "raw",
     transformation: [
       { width: 1200, height: 1200, crop: "limit" },
