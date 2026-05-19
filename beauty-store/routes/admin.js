@@ -144,10 +144,10 @@ router.post("/products",
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.CREATE),
   
-  // ✅ validate مع التأكد أن image رابط Cloudinary
+  // ✅ ✅ ✅ الإصلاح: استخدام .uri() بدلاً من .pattern()
   validate(
     schemas.product.fork(["image"], field => 
-      field.required().pattern(/^https:\/\/res\.cloudinary\.com\/.+/i)
+      field.required().uri({ scheme: ['https'] })  // ✅ يقبل أي رابط HTTPS
     ),
     "body"
   ),
@@ -161,7 +161,7 @@ router.post("/products",
       } = req.body;
 
       // ✅ تحقق أن الصورة رابط Cloudinary
-      if (!image || !image.startsWith("https://res.cloudinary.com/")) {
+      if (!image || !image.startsWith("https://")) {
         return res.status(400).json({ message: "❌ صورة المنتج مطلوبة ويجب أن تكون رابط Cloudinary" });
       }
 
@@ -805,7 +805,7 @@ router.post("/brands",
   // ✅ validate مع التأكد أن image رابط Cloudinary
   validate(
     schemas.brand.fork(["image"], field => 
-      field.required().pattern(/^https:\/\/res\.cloudinary\.com\/.+/i)
+      field.required().uri({ scheme: ['https'] })  // ✅ الإصلاح هنا
     ),
     "body"
   ),
@@ -815,7 +815,7 @@ router.post("/brands",
       const { id, name, code, image } = req.body;
       
       // ✅ تحقق أن الصورة رابط Cloudinary
-      if (!image || !image.startsWith("https://res.cloudinary.com/")) {
+      if (!image || !image.startsWith("https://")) {
         return res.status(400).json({ message: "❌ صورة البراند مطلوبة ويجب أن تكون رابط Cloudinary" });
       }
       
@@ -958,7 +958,7 @@ router.post("/categories",
   // ✅ validate مع التأكد أن image رابط Cloudinary (أو فارغ)
   validate(
     schemas.category.fork(["image"], field => 
-      field.allow("").pattern(/^(https:\/\/res\.cloudinary\.com\/.+)?$/i)
+      field.allow("").uri({ scheme: ['https'] })  // ✅ مع السماح بالفارغ
     ),
     "body"
   ),
@@ -968,7 +968,7 @@ router.post("/categories",
       const { id, name_ar, name_en, parent_id, image, sort_order } = req.body;
       
       // ✅ تحقق أن الصورة رابط صحيح إذا وُجدت
-      if (image && !image.startsWith("https://res.cloudinary.com/")) {
+      if (image && !image.startsWith("https://")) {
         return res.status(400).json({ message: "❌ صورة التصنيف يجب أن تكون رابط Cloudinary" });
       }
       
