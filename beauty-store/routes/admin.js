@@ -234,7 +234,7 @@ router.put("/products/:id",
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.UPDATE),
   
-  uploadCompressed("image"),
+  uploadCompressed("image", { required: false }),
   
   (req, res, next) => {
     const updateSchema = schemas.product.fork(

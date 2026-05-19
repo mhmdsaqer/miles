@@ -211,7 +211,7 @@ const parseFormData = (req, res, next) => {
 };
 
 // ✅ Middleware النهائي للرفع
-const uploadCompressed = (fieldName = "image") => {
+const uploadCompressed = (fieldName = "image",{ required = true } = {}) => {
   return async (req, res, next) => {
     try {
       // أولاً: نحلل الـ FormData
@@ -224,14 +224,18 @@ const uploadCompressed = (fieldName = "image") => {
 
       // ✅ ✅ ✅ التحقق من وجود الملف مع رسالة أوضح
       if (!req._uploadData?.file) {
-        console.warn("⚠️ No file in request:", {
-          hasUploadData: !!req._uploadData,
-          hasFile: !!req._uploadData?.file,
-          body: req.body
-        });
-        return res.status(400).json({ 
-          message: "❌ No file uploaded - please select an image file" 
-        });
+        if (required) {
+          console.warn("⚠️ No file in request:", {
+            hasUploadData: !!req._uploadData,
+            hasFile: !!req._uploadData?.file,
+            body: req.body
+          });
+          return res.status(400).json({ 
+            message: "❌ No file uploaded - please select an image file" 
+          });
+        }
+        // ✅ إذا كان اختياريًا، نمرر بدون ملف
+        return next();
       }
 
       const { file, resourceType, brandName, categoryName, brandId, sku, productName } = req._uploadData;

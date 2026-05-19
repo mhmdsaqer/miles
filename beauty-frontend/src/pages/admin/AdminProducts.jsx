@@ -946,7 +946,9 @@ const AdminProducts = () => {
                               resourceType="products"
                               resourceData={{ 
                                 brand_id: formData.brand_id,
-                                sku: variant.sku || formData.sku,
+                                sku: variant.sku?.trim() 
+			      ? variant.sku 
+			      : (formData.sku?.trim() ? `${formData.sku.trim()}-VAR-${variant.id}` : `VAR-${variant.id}`),
                                 name_en: formData.name_en,
                                 name_ar: formData.name_ar,
                                 isVariant: true  // ✅ ✅ ✅ إضافة حقل للإشارة أن هذا متغير
