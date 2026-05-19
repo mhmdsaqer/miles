@@ -1,15 +1,17 @@
-// ✅ beauty-store/middleware/upload.js - النسخة النهائية 100% ✅
+// ✅ beauty-store/middleware/upload.js - النسخة الجذرية الجديدة 100%
 const cloudinary = require("cloudinary").v2;
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs").promises;
 
+// تهيئة Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// دالة slugify
 const slugify = (str) => {
   if (!str) return "";
   return str
@@ -20,6 +22,7 @@ const slugify = (str) => {
     .replace(/^-+|-+$/g, '');
 };
 
+// دالة جلب Slug البراند
 const getBrandSlugById = async (brandId) => {
   try {
     if (!brandId) return null;
@@ -32,6 +35,7 @@ const getBrandSlugById = async (brandId) => {
   }
 };
 
+// دالة استخراج public_id من الرابط
 const extractPublicIdFromUrl = (url) => {
   if (!url?.startsWith("https://res.cloudinary.com/")) return null;
   try {
@@ -44,22 +48,19 @@ const extractPublicIdFromUrl = (url) => {
   }
 };
 
-// ✅ ✅ ✅ إعداد التخزين - النسخة المُصححة نهائياً
-const storage = new CloudinaryStorage({
-  cloudinary,
-params: async (req, file) => {
-  const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
-  
-  // ✅ ✅ ✅ الإصلاح: اقرأ من req.body مباشرة (لأن multer حلّله الآن)
-  // لا تعتمد على _resourceType لأنه حُدد قبل تحليل FormData
-  const rawType = req.body?.resourceType || req.query?.resourceType;
-  const resourceType = rawType?.toLowerCase()?.trim() || "assets";
-  
-  // ✅ نفس الشيء للبيانات الأخرى - اقرأ من req.body مباشرة
-  const brandName = req.body?.name || req.body?.name_en || req.body?.name_ar || "";
-  const brandId = req.body?.brand_id || "";
-  const sku = req.body?.sku || "";
-  
+// ✅ ✅ ✅ الدالة الرئيسية للرفع اليدوي لـ Cloudinary
+const uploadToCloudinary = async (fileBuffer, originalName, uploadParams) => {
+  const {
+    resourceType = "assets",
+    baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty",
+    brandName,
+    categoryName,
+    brandId,
+    sku,
+    productName
+  } = uploadParams;
+
+  // تحديد المجلد الرئيسي
   let resourceFolder = "assets";
   let subFolder = "";
   let filename = "";
@@ -70,116 +71,187 @@ params: async (req, file) => {
   }
   else if (resourceType === "categories") {
     resourceFolder = "categories";
-    const catName = req.body?.name_ar || req.body?.name_en || "category";
-    filename = slugify(catName);
+    if (categoryName) filename = slugify(categoryName);
   }
   else if (resourceType === "products") {
     resourceFolder = "products";
     
+    // جلب Slug البراند للمجلد الفرعي
     if (brandId) {
       const brandSlug = await getBrandSlugById(brandId);
       if (brandSlug) subFolder = brandSlug;
     }
     
+    // تحديد اسم الملف
     if (sku?.trim()) {
       filename = sku.toUpperCase().trim();
-    } else if (req.body?.name_en || req.body?.name_ar) {
-      filename = slugify(req.body.name_en || req.body.name_ar);
-    } else {
-      filename = `product-${Date.now()}`;
+    } else if (productName) {
+      filename = slugify(productName);
     }
   }
 
+  // Fallback لاسم الملف
   if (!filename || filename === "-" || filename.trim() === "") {
     filename = `img-${Date.now()}`;
   }
 
-  // ✅ ✅ ✅ بناء المسار بدون تكرار (هذا هو الإصلاح الثاني!)
-  const finalFolder = `${baseUrl}/${resourceFolder}`;
+  // ✅ ✅ ✅ بناء المسار النهائي (بدون تكرار!)
+  // الهيكلية: miles-beauty/{resourceFolder}/{subFolder?}/{filename}
+  const cloudinaryFolder = `${baseUrl}/${resourceFolder}`;
   
-  // ✅ public_id يبدأ من ما بعد resourceFolder فقط (بدون تكرار)
-  let finalPublicId = "";
-  if (subFolder) finalPublicId += `${subFolder}/`;
-  finalPublicId += filename;
+  // public_id يبدأ من ما بعد resourceFolder فقط
+  let publicId = "";
+  if (subFolder) publicId += `${subFolder}/`;
+  publicId += filename;
 
-  console.log("📁 Cloudinary Upload Debug:", {
+  console.log("📁 Cloudinary Upload Params:", {
     resourceType,
-    rawType,
-    req_body_resourceType: req.body?.resourceType,  // ✅ الآن يجب أن تظهر القيمة الصحيحة!
-    folder: finalFolder,
-    public_id: finalPublicId,
-    expectedUrl: `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/${finalFolder}/${finalPublicId}`
+    folder: cloudinaryFolder,
+    public_id: publicId,
+    expectedUrl: `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/${cloudinaryFolder}/${publicId}`
   });
 
-  return {
-    folder: finalFolder,        // miles-beauty/brands
-    format: "webp",
-    public_id: finalPublicId,   // nevertti (بدون تكرار!)
-    resource_type: file.mimetype.startsWith("image/") ? "image" : "raw",
-    transformation: [
-      { width: 1200, height: 1200, crop: "limit" },
-      { quality: "auto:good" },
-      { fetch_format: "auto" }
-    ],
-  };
-},
-});
-
-const fileFilter = (req, file, cb) => {
-  const allowed = /jpeg|jpg|png|webp|gif/;
-  const ext = allowed.test(path.extname(file.originalname).toLowerCase());
-  const mime = allowed.test(file.mimetype);
-  if (ext && mime) cb(null, true);
-  else cb(new Error("⚠️ فقط صور JPG, PNG, WebP, GIF مسموحة"), false);
-};
-
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }
-});
-
-const uploadCompressed = (fieldName) => {
-  return (req, res, next) => {
-    upload.single(fieldName)(req, res, async (err) => {
-      if (err) {
-        console.error("❌ Multer error:", err);
-        if (err instanceof multer.MulterError) {
-          return res.status(400).json({ message: `❌ Upload error: ${err.message}` });
+  // ✅ الرفع الفعلي لـ Cloudinary
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: cloudinaryFolder,
+        public_id: publicId,
+        format: "webp",
+        resource_type: "image",
+        transformation: [
+          { width: 1200, height: 1200, crop: "limit" },
+          { quality: "auto:good" },
+          { fetch_format: "auto" }
+        ]
+      },
+      (error, result) => {
+        if (error) {
+          console.error("❌ Cloudinary upload error:", error);
+          reject(error);
+        } else {
+          console.log("✅ Cloudinary upload success:", result.secure_url);
+          resolve({
+            secure_url: result.secure_url,
+            public_id: result.public_id,
+            folder: result.folder,
+            format: result.format
+          });
         }
-        return res.status(400).json({ message: `❌ ${err.message}` });
       }
-      if (req.file) {
-      
-        console.log("✅ File uploaded:", {
-          path: req.file.path,
-          public_id: req.file.public_id
-        });
-         req.uploadedPath = req.file.path;
-         const { extractPublicIdFromUrl } = require("../middleware/upload");
- 	 req.cloudinaryPublicId = extractPublicIdFromUrl(req.file.path);
+    );
+    uploadStream.end(fileBuffer);
+  });
+};
 
-          console.log("🔑 Extracted public_id:", req.cloudinaryPublicId);
+// ✅ Middleware للتعامل مع FormData واستخراج البيانات قبل الرفع
+const parseFormData = (req, res, next) => {
+  // إذا كان Content-Type ليس multipart/form-data، نمرر مباشرة
+  const contentType = req.headers['content-type'] || '';
+  if (!contentType.includes('multipart/form-data')) {
+    return next();
+  }
 
-      }
-      next();
+  // نستخدم multer مع memoryStorage لقراءة الـ body والـ file معاً
+  const upload = multer({ storage: multer.memoryStorage() });
+  
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      console.error("❌ FormData parse error:", err);
+      return next(err);
+    }
+    
+    // ✅ الآن لدينا الوصول الكامل لـ req.body و req.file
+    // نحفظ البيانات في req._uploadData للاستخدام لاحقاً
+    req._uploadData = {
+      resourceType: (req.body?.resourceType || "assets").toLowerCase().trim(),
+      brandName: req.body?.name || req.body?.name_en || req.body?.name_ar,
+      categoryName: req.body?.name_ar || req.body?.name_en,
+      brandId: req.body?.brand_id,
+      sku: req.body?.sku,
+      productName: req.body?.name_en || req.body?.name_ar,
+      file: req.file  // الملف في الذاكرة
+    };
+    
+    console.log("📦 FormData parsed:", {
+      resourceType: req._uploadData.resourceType,
+      hasFile: !!req.file,
+      fileSize: req.file?.size
     });
+    
+    next();
+  });
+};
+
+// ✅ Middleware النهائي للرفع
+const uploadCompressed = (fieldName = "image") => {
+  return async (req, res, next) => {
+    try {
+      // أولاً: نحلل الـ FormData
+      await new Promise((resolve, reject) => {
+        parseFormData(req, res, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
+      // نتحقق من وجود الملف
+      if (!req._uploadData?.file) {
+        return res.status(400).json({ message: "❌ No file uploaded" });
+      }
+
+      const { file, resourceType, brandName, categoryName, brandId, sku, productName } = req._uploadData;
+
+      // ✅ نرفع لـ Cloudinary يدوياً مع التحكم الكامل
+      const uploadResult = await uploadToCloudinary(
+        file.buffer,
+        file.originalname,
+        {
+          resourceType,
+          brandName,
+          categoryName,
+          brandId,
+          sku,
+          productName
+        }
+      );
+
+      // نحفظ النتيجة في الـ request للاستخدام في الـ route
+      req.uploadedPath = uploadResult.secure_url;
+      req.cloudinaryPublicId = uploadResult.public_id;
+
+      console.log("✅ Upload complete:", {
+        url: uploadResult.secure_url,
+        public_id: uploadResult.public_id
+      });
+
+      next();
+    } catch (err) {
+      console.error("❌ Upload middleware error:", err);
+      return res.status(500).json({ 
+        message: "❌ Upload failed", 
+        error: err.message 
+      });
+    }
   };
 };
 
+// ✅ دالة الحذف من Cloudinary
 const deleteFromCloudinary = async (imageUrlOrPublicId) => {
   try {
     if (!imageUrlOrPublicId) return false;
+    
     let publicId = imageUrlOrPublicId;
+    
+    // إذا كان رابطاً، نستخرج الـ public_id
     if (imageUrlOrPublicId.startsWith("https://res.cloudinary.com/")) {
       publicId = extractPublicIdFromUrl(imageUrlOrPublicId);
       if (!publicId) return false;
     }
-    const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
-    if (!publicId.startsWith(baseUrl)) publicId = `${baseUrl}/${publicId}`;
-    
+
     console.log(`🗑️ Deleting from Cloudinary: ${publicId}`);
     const result = await cloudinary.uploader.destroy(publicId);
+    
     return result.result === "ok" || result.result === "deleted" || result.result === "not found";
   } catch (err) {
     console.error("❌ Error deleting from Cloudinary:", err.message);
@@ -187,6 +259,7 @@ const deleteFromCloudinary = async (imageUrlOrPublicId) => {
   }
 };
 
+// ✅ التصدير
 module.exports = {
   uploadCompressed,
   uploadCloudinary: uploadCompressed,
@@ -194,5 +267,6 @@ module.exports = {
   deleteFromCloudinary,
   slugify,
   getBrandSlugById,
-  extractPublicIdFromUrl
+  extractPublicIdFromUrl,
+  uploadToCloudinary  // ✅ نصدّر الدالة الرئيسية للاستخدام المباشر إذا لزم
 };

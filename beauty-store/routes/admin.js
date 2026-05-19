@@ -54,34 +54,19 @@ router.post("/upload",
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.CREATE),
   
-  // ✅ Middleware وسيط: يحفظ البيانات من body قبل معالجة multer
-  (req, res, next) => {
-    if (process.env.NODE_ENV === "development") {
-    console.log("🔎 [Admin Upload Middleware] Received:", {
-      body_resourceType: req.body?.resourceType,
-      query_resourceType: req.query?.resourceType,
-      rawBody: req.body  // ⚠️ قد يكون فارغاً بعد multer
-    });
-  }
-    req._resourceType = (req.body?.resourceType || req.query?.resourceType || "assets").toLowerCase().trim();
-    req._name = req.body?.name || req.body?.name_en || req.body?.name_ar || "";
-    req._name_ar = req.body?.name_ar || "";
-    req._name_en = req.body?.name_en || "";
-    req._brand_id = req.body?.brand_id || "";
-    req._sku = req.body?.sku || "";
-    next();
-  },
-  
+  // ✅ نستخدم الـ middleware الجديد مباشرة (لا حاجة لـ Middleware وسيط)
   uploadCompressed("image"),
   
   (req, res) => {
     if (!req.uploadedPath) {
       return res.status(400).json({ message: "❌ لم يتم رفع أي صورة" });
     }
+    
     res.status(201).json({
       message: "✅ تم رفع الصورة بنجاح",
       path: req.uploadedPath,
-      url: req.uploadedPath // نرجع الرابط الكامل من Cloudinary
+      url: req.uploadedPath,
+      public_id: req.cloudinaryPublicId  // ✅ نرجع الـ public_id أيضاً
     });
   }
 );
