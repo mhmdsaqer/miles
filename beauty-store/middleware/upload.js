@@ -156,12 +156,17 @@ const uploadCompressed = (fieldName) => {
         return res.status(400).json({ message: `❌ ${err.message}` });
       }
       if (req.file) {
+      
         console.log("✅ File uploaded:", {
           path: req.file.path,
           public_id: req.file.public_id
         });
-        req.uploadedPath = req.file.path;
-        req.cloudinaryPublicId = req.file.public_id;
+         req.uploadedPath = req.file.path;
+         const { extractPublicIdFromUrl } = require("../middleware/upload");
+ 	 req.cloudinaryPublicId = extractPublicIdFromUrl(req.file.path);
+
+          console.log("🔑 Extracted public_id:", req.cloudinaryPublicId);
+
       }
       next();
     });

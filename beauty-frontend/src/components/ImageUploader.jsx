@@ -81,6 +81,14 @@ const ImageUploader = ({
 
       // ✅ استخدام adminApi (يضيف التوكن تلقائياً)
       // ✅ لا نحدد Content-Type - Axios يحدده تلقائياً مع FormData
+      if (import.meta.env?.DEV) {
+	  console.log("🔍 [ImageUploader] Debug:", {
+	    resourceTypeProp: resourceType,
+	    resourceTypeSent: resourceType || "assets",
+	    resourceData,
+	    formDataKeys: Array.from(formData.keys())
+	  });
+	}
 	const response = await adminApi.post("/upload", formData);
 
       

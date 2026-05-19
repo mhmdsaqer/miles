@@ -56,6 +56,13 @@ router.post("/upload",
   
   // ✅ Middleware وسيط: يحفظ البيانات من body قبل معالجة multer
   (req, res, next) => {
+    if (process.env.NODE_ENV === "development") {
+    console.log("🔎 [Admin Upload Middleware] Received:", {
+      body_resourceType: req.body?.resourceType,
+      query_resourceType: req.query?.resourceType,
+      rawBody: req.body  // ⚠️ قد يكون فارغاً بعد multer
+    });
+  }
     req._resourceType = (req.body?.resourceType || req.query?.resourceType || "assets").toLowerCase().trim();
     req._name = req.body?.name || req.body?.name_en || req.body?.name_ar || "";
     req._name_ar = req.body?.name_ar || "";
