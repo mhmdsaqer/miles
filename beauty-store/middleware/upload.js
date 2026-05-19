@@ -50,65 +50,70 @@ const storage = new CloudinaryStorage({
   params: async (req, file) => {
     const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
     
-    // ✅ قراءة resourceType من الـ body مع fallback آمن
-    const rawType = req.body?.resourceType || req.query?.resourceType;
+    // ✅ قراءة resourceType من المصدر الصحيح (قبل معالجة multer)
+    const rawType = req._resourceType || req.body?.resourceType || req.query?.resourceType;
     const resourceType = rawType?.toLowerCase()?.trim() || "assets";
     
     let resourceFolder = "assets";
     let subFolder = "";
     let filename = "";
 
-    // 🔹 تحديد نوع المورد
+    // 🔹 تحديد نوع المورد والمجلد
     if (resourceType === "brands") {
       resourceFolder = "brands";
-      const brandName = req.body?.name || req.body?.name_en || req.body?.name_ar;
+      const brandName = req.body?.name || req.body?.name_en || req.body?.name_ar || req._name;
       if (brandName) filename = slugify(brandName);
     }
     else if (resourceType === "categories") {
       resourceFolder = "categories";
-      const catName = req.body?.name_ar || req.body?.name_en || req.body?.name || "category";
+      const catName = req.body?.name_ar || req.body?.name_en || req.body?.name || req._name_ar || "category";
       filename = slugify(catName);
     }
     else if (resourceType === "products") {
       resourceFolder = "products";
-      if (req.body?.brand_id) {
-        const brandSlug = await getBrandSlugById(req.body.brand_id);
+      
+      // الحصول على Slug للبراند لإنشاء مجلد فرعي
+      if (req.body?.brand_id || req._brand_id) {
+        const brandId = req.body?.brand_id || req._brand_id;
+        const brandSlug = await getBrandSlugById(brandId);
         if (brandSlug) subFolder = brandSlug;
       }
-      if (req.body?.sku?.trim()) {
-        filename = req.body.sku.toUpperCase().trim();
-      } else if (req.body?.name_en || req.body?.name_ar) {
-        filename = slugify(req.body.name_en || req.body.name_ar);
+      
+      // تحديد اسم الملف
+      if (req.body?.sku?.trim() || req._sku?.trim()) {
+        filename = (req.body?.sku || req._sku).toUpperCase().trim();
+      } else if (req.body?.name_en || req.body?.name_ar || req._name_en || req._name_ar) {
+        filename = slugify(req.body?.name_en || req._name_en || req.body?.name_ar || req._name_ar);
       } else {
         filename = `product-${Date.now()}`;
       }
     }
 
-    // ✅ Fallback آمن
+    // ✅ Fallback آمن لاسم الملف
     if (!filename || filename === "-" || filename.trim() === "") {
       filename = `img-${Date.now()}`;
     }
 
-    // ✅ ✅ ✅ بناء المسار النهائي (مطابق لسكربت الترحيل)
-    // الهيكلية: miles-beauty/{folder}/{folder}/{subFolder}/{filename}
+    // ✅ ✅ ✅ بناء المسار الصحيح - بدون تكرار
+    // الهيكلية المطلوبة: miles-beauty/{resourceFolder}/{subFolder?}/{filename}
     const finalFolder = `${baseUrl}/${resourceFolder}`;
     
-    // ✅ public_id يبدأ بـ اسم المجلد لمطابقة الترحيل
-    let finalPublicId = `${resourceFolder}`; 
-    if (subFolder) finalPublicId += `/${subFolder}`;
-    finalPublicId += `/${filename}`;
+    // ✅ public_id يجب أن يبدأ من ما بعد resourceFolder لتجنب التكرار
+    let finalPublicId = "";
+    if (subFolder) finalPublicId += `${subFolder}/`;
+    finalPublicId += filename;
 
-    console.log("📁 Cloudinary Upload:", {
+    console.log("📁 Cloudinary Upload Debug:", {
       resourceType,
       folder: finalFolder,
-      public_id: finalPublicId, // ✅ هذا هو المهم
+      public_id: finalPublicId,
       expectedUrl: `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/${finalFolder}/${finalPublicId}`
     });
 
     return {
-      folder: finalFolder,        // مثال: miles-beauty/brands
+      folder: finalFolder,           // مثال: miles-beauty/brands
       format: "webp",
-      public_id: finalPublicId,   // ✅ ✅ ✅ الإصلاح هنا: نرجع finalPublicId وليس filename
+      public_id: finalPublicId,      // ✅ مثال: brand-name (بدون تكرار)
       resource_type: file.mimetype.startsWith("image/") ? "image" : "raw",
       transformation: [
         { width: 1200, height: 1200, crop: "limit" },
