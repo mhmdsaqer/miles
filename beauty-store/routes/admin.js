@@ -1,4 +1,4 @@
-// routes/admin.js - النسخة النهائية مع حذف الصور من Cloudinary ✅
+// routes/admin.js - النسخة النهائية المُصححة جذرياً ✅
 const express = require("express");
 const router = express.Router();
 const { validate, schemas } = require("../middleware/validate");
@@ -17,7 +17,7 @@ const authMiddleware = require("../middleware/auth");
 const { checkPermission, PERMISSIONS } = require("../middleware/authorize");
 
 // ✅ استيراد دالة رفع الصور + دالة الحذف من Cloudinary
-const { uploadCompressed, deleteFromCloudinary } = require("../middleware/upload");
+const { uploadCompressed, deleteFromCloudinary, extractPublicIdFromUrl } = require("../middleware/upload");
 
 // ✅ استيراد Audit Logger
 const audit = require("../utils/auditLogger");
@@ -49,27 +49,42 @@ router.get("/stats",
 );
 
 // ================= 📤 IMAGE UPLOAD =================
-// ✅ routes/admin.js - روت upload المُصحح نهائياً
+// ✅ ✅ ✅ روت upload المُصحح جذرياً - يعمل مع multer.memoryStorage
 router.post("/upload",
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.CREATE),
   
-  // ✅ نستخدم الـ middleware الجديد مباشرة (لا حاجة لـ Middleware وسيط)
+  // ✅ نستخدم uploadCompressed الذي يحلل FormData ويرفع لـ Cloudinary
   uploadCompressed("image"),
   
   (req, res) => {
+    // ✅ ✅ ✅ التحقق من النتيجة بعد الرفع
     if (!req.uploadedPath) {
-      return res.status(400).json({ message: "❌ لم يتم رفع أي صورة" });
+      console.error("❌ Upload failed - no uploadedPath in request");
+      return res.status(400).json({ 
+        message: "❌ لم يتم رفع الصورة",
+        debug: {
+          hasFile: !!req.file,
+          hasUploadedPath: !!req.uploadedPath,
+          body: req.body
+        }
+      });
     }
+    
+    console.log("✅ Upload successful:", {
+      path: req.uploadedPath,
+      public_id: req.cloudinaryPublicId
+    });
     
     res.status(201).json({
       message: "✅ تم رفع الصورة بنجاح",
       path: req.uploadedPath,
       url: req.uploadedPath,
-      public_id: req.cloudinaryPublicId  // ✅ نرجع الـ public_id أيضاً
+      public_id: req.cloudinaryPublicId
     });
   }
 );
+
 // ================= 📦 PRODUCTS CRUD =================
 
 // ✅ جلب المنتجات
@@ -139,15 +154,30 @@ const generateSKU = async (formData, brands) => {
   return `${brandCode}-${String(formData.id).padStart(5, '0')}`.toUpperCase();
 };
 
-// ✅ إضافة منتج - مع Audit Log
+// ✅ إضافة منتج - مع Audit Log ✅ ✅ ✅ الترتيب الصحيح: validate بدون image → upload → handler
 router.post("/products", 
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.CREATE),
+  
+  // ✅ أولاً: validate البيانات الأساسية (جعل image اختياري)
   validate(
     schemas.product.fork(["image"], field => field.optional()),
     "body"
   ),
-  uploadCompressed("image"), 
+  
+  // ✅ ثانياً: رفع الصورة
+  uploadCompressed("image"),
+  
+  // ✅ ثالثاً: التحقق اليدوي من وجود الصورة (قبل الـ handler الرئيسي)
+  (req, res, next) => {
+    const finalImage = req.uploadedPath || req.body.image;
+    if (!finalImage) {
+      return res.status(400).json({ message: "❌ صورة المنتج مطلوبة" });
+    }
+    next();
+  },
+  
+  // ✅ رابعاً: الـ handler الرئيسي
   async (req, res) => {
     try {
       const {
@@ -156,7 +186,9 @@ router.post("/products",
         has_variants, variants
       } = req.body;
 
+      // ✅ ✅ ✅ الأهم: استخدام req.uploadedPath أولاً، ثم fallback
       const productImage = req.uploadedPath || image;
+      
       const brands = await Brand.find().select('id code');
       const finalSku = await generateSKU({ ...req.body, sku }, brands);
 
@@ -175,7 +207,7 @@ router.post("/products",
       const newProduct = new Product({
         id, brand_id, category_id, name_ar, name_en,
         description_ar, description_en,
-        image: productImage,
+        image: productImage,  // ✅ استخدام الصورة الصحيحة
         price,
         sku: finalSku,
         has_variants: has_variants || (variants?.length > 0) || false
@@ -194,6 +226,7 @@ router.post("/products",
             product_id: id,
             sku: variantSku,
             price: Number(v.price) || Number(price),
+            // ✅ استخدام uploadedPath إذا وجد
             image: v.uploadedPath || v.image || productImage,
             attributes: v.attributes || {}
           };
@@ -228,11 +261,15 @@ router.post("/products",
   }
 );
 
-// ✅ تعديل منتج - مع Audit Log ✅ ✅ ✅ الترتيب الصحيح: (القديم، الجديد)
+// ✅ تعديل منتج - مع Audit Log ✅ ✅ ✅ الترتيب الصحيح
 router.put("/products/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.UPDATE),
-  uploadCompressed("image"), 
+  
+  // ✅ أولاً: رفع الصورة (قبل الـ validate لأن image قد تتغير)
+  uploadCompressed("image"),
+  
+  // ✅ ثانياً: validate مع جعل الحقول المهمة optional للتحديث
   (req, res, next) => {
     const updateSchema = schemas.product.fork(
       ["id", "sku", "name_ar", "name_en", "image", "price"],
@@ -240,6 +277,7 @@ router.put("/products/:id",
     );
     validate(updateSchema, "body")(req, res, next);
   },
+  
   async (req, res) => {
     try {
       const productId = Number(req.params.id);
@@ -259,9 +297,13 @@ router.put("/products/:id",
         productData.sku = normalizedSku;
       }
 
-      if (req.uploadedPath) productData.image = req.uploadedPath;
+      // ✅ ✅ ✅ تحديث الصورة إذا رُفعت جديدة
+      if (req.uploadedPath) {
+        productData.image = req.uploadedPath;
+        console.log("🖼️ Updated product image:", req.uploadedPath);
+      }
 
-      // ✅ حفظ القيم القديمة قبل التحديث (لـ Audit Log) - مع .lean()
+      // ✅ حفظ القيم القديمة قبل التحديث (لـ Audit Log)
       const oldProduct = await Product.findOne({ id: productId }).lean();
 
       const product = await Product.findOneAndUpdate(
@@ -272,13 +314,13 @@ router.put("/products/:id",
 
       if (!product) return res.status(404).json({ message: "Product not found" });
 
-      // ✅ ✅ ✅ تسجيل التحديث في Audit Log - الترتيب الصحيح: (القديم، الجديد)
+      // ✅ تسجيل التحديث في Audit Log - الترتيب الصحيح: (القديم، الجديد)
       await audit.update(
         req.user, 
         "product", 
-        oldProduct || {},      // ✅ البيانات القديمة أولاً
-        product,               // ✅ البيانات الجديدة ثانياً
-        req                    // ✅ الـ Request
+        oldProduct || {},
+        product,
+        req
       );
     
       if (variants && Array.isArray(variants)) {
@@ -328,6 +370,7 @@ router.put("/products/:id",
           const updatePayload = {
             sku: rawSku ? rawSku.toUpperCase() : `SKU-${productId}-${Date.now()}`,
             price: Number(v.price) || product.price,
+            // ✅ استخدام uploadedPath إذا وجد
             image: v.uploadedPath || v.image || product.image,
             attributes: v.attributes || {}
           };
@@ -386,11 +429,11 @@ router.delete("/products/:id",
       
       // ✅ ✅ ✅ حذف صورة المنتج من Cloudinary إذا كانت رابطاً
       if (product.image?.startsWith("https://res.cloudinary.com/")) {
-        // استخراج الـ public_id من الرابط
-        const { extractPublicIdFromUrl } = require("../middleware/upload");
-	const publicId = extractPublicIdFromUrl(product.image);
-        await deleteFromCloudinary(publicId);
-        console.log(`🗑️ Deleted product image from Cloudinary: ${publicId}`);
+        const publicId = extractPublicIdFromUrl(product.image);
+        if (publicId) {
+          await deleteFromCloudinary(publicId);
+          console.log(`🗑️ Deleted product image from Cloudinary: ${publicId}`);
+        }
       }
       
       // ✅ تسجيل الحذف في Audit Log
@@ -517,9 +560,9 @@ router.put("/variants/:id",
       await audit.update(
         req.user, 
         "variant", 
-        oldVariant?.toObject() || {},      // ✅ القديم أولاً
-        updatedVariant.toObject(),         // ✅ الجديد ثانياً
-        req                                 // ✅ الـ Request
+        oldVariant?.toObject() || {},
+        updatedVariant.toObject(),
+        req
       );
 
       res.json({ 
@@ -800,24 +843,42 @@ router.get("/brands",
   }
 );
 
+// ✅ ✅ ✅ روت إضافة براند - الترتيب الصحيح: validate بدون image → upload → handler
 router.post("/brands", 
   authMiddleware,
   checkPermission(PERMISSIONS.BRANDS.CREATE),
+  
+  // ✅ أولاً: validate البيانات الأساسية (جعل image اختياري)
   validate(
-    schemas.brand.fork(["image"], field => field.optional()), 
+    schemas.brand.fork(["image"], field => field.optional()),
     "body"
   ),
-  uploadCompressed("image"), 
+  
+  // ✅ ثانياً: رفع الصورة
+  uploadCompressed("image"),
+  
+  // ✅ ثالثاً: التحقق اليدوي من وجود الصورة
+  (req, res, next) => {
+    const finalImage = req.uploadedPath || req.body.image;
+    if (!finalImage) {
+      return res.status(400).json({ message: "❌ صورة البراند مطلوبة" });
+    }
+    next();
+  },
+  
+  // ✅ رابعاً: الـ handler الرئيسي
   async (req, res) => {
     try {
       const { id, name, code, image } = req.body;
+      
+      // ✅ ✅ ✅ استخدام req.uploadedPath أولاً
       const brandImage = req.uploadedPath || image;
       
       const exists = await Brand.findOne({ id });
       if (exists) return res.status(400).json({ message: "⚠️ براند بهذا المعرف موجود" });
 
       const newBrand = await Brand.create({
-        id, name, code, image: brandImage
+        id, name, code, image: brandImage  // ✅ استخدام الصورة الصحيحة
       });
       
       // ✅ تسجيل إنشاء براند
@@ -834,15 +895,22 @@ router.post("/brands",
   }
 );
 
-// ✅ ✅ ✅ تصحيح ترتيب الوسائط في audit.update للـ Brands
+// ✅ ✅ ✅ روت تعديل براند - الترتيب الصحيح
 router.put("/brands/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.BRANDS.UPDATE),
-  uploadCompressed("image"), 
+  
+  // ✅ أولاً: رفع الصورة
+  uploadCompressed("image"),
+  
+  // ✅ ثانياً: validate مع جعل الحقول optional
   validate(schemas.brand.fork(["id"], field => field.optional()), "body"),
+  
   async (req, res) => {
     try {
       const { image, ...updateData } = req.body;
+      
+      // ✅ تحديث الصورة إذا رُفعت جديدة
       if (req.uploadedPath) {
         updateData.image = req.uploadedPath;
       }
@@ -856,13 +924,13 @@ router.put("/brands/:id",
       
       if (!brand) return res.status(404).json({ message: "Brand not found" });
       
-      // ✅ ✅ ✅ الترتيب الصحيح: (القديم، الجديد)
+      // ✅ ✅ ✅ الترتيب الصحيح في Audit Log: (القديم، الجديد)
       await audit.update(
         req.user, 
         "brand", 
-        oldBrand?.toObject() || {},        // ✅ القديم أولاً
-        brand.toObject(),                  // ✅ الجديد ثانياً
-        req                                 // ✅ الـ Request
+        oldBrand?.toObject() || {},
+        brand.toObject(),
+        req
       );
       
       res.json({ 
@@ -898,13 +966,13 @@ router.delete("/brands/:id",
         return res.status(404).json({ message: "Brand not found" });
       }
 
-      // ✅ ✅ ✅ حذف صورة البراند من Cloudinary إذا كانت رابطاً
+      // ✅ ✅ ✅ حذف صورة البراند من Cloudinary
       if (brand.image?.startsWith("https://res.cloudinary.com/")) {
-        // استخراج الـ public_id من الرابط
-        const { extractPublicIdFromUrl } = require("../middleware/upload");
-	const publicId = extractPublicIdFromUrl(brand.image);
-        await deleteFromCloudinary(publicId);
-        console.log(`🗑️ Deleted brand image from Cloudinary: ${publicId}`);
+        const publicId = extractPublicIdFromUrl(brand.image);
+        if (publicId) {
+          await deleteFromCloudinary(publicId);
+          console.log(`🗑️ Deleted brand image from Cloudinary: ${publicId}`);
+        }
       }
 
       // ✅ تسجيل حذف براند
@@ -943,18 +1011,34 @@ router.get("/categories",
   }
 );
 
+// ✅ ✅ ✅ روت إضافة تصنيف - الترتيب الصحيح
 router.post("/categories", 
   authMiddleware,
   checkPermission(PERMISSIONS.CATEGORIES.CREATE),
+  
+  // ✅ أولاً: validate بدون image (اجعله اختياري)
   validate(
     schemas.category.fork(["image"], field => field.optional()),
     "body"
   ),
-  uploadCompressed("image"), 
+  
+  // ✅ ثانياً: رفع الصورة
+  uploadCompressed("image"),
+  
+  // ✅ ثالثاً: التحقق اليدوي
+  (req, res, next) => {
+    const finalImage = req.uploadedPath || req.body.image || "";
+    if (!finalImage) {
+      return res.status(400).json({ message: "❌ صورة التصنيف مطلوبة" });
+    }
+    next();
+  },
   
   async (req, res) => {
     try {
       const { id, name_ar, name_en, parent_id, image, sort_order } = req.body;
+      
+      // ✅ استخدام uploadedPath أولاً
       const catImage = req.uploadedPath || image || "";
       
       const exists = await Category.findOne({ id });
@@ -979,14 +1063,19 @@ router.post("/categories",
   }
 );
 
-// ✅ ✅ ✅ تصحيح ترتيب الوسائط في audit.update للـ Categories
+// ✅ ✅ ✅ روت تعديل تصنيف - الترتيب الصحيح
 router.put("/categories/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.CATEGORIES.UPDATE),
-  uploadCompressed("image"), 
+  
+  // ✅ أولاً: رفع الصورة
+  uploadCompressed("image"),
+  
   async (req, res) => {
     try {
       const { image, ...updateData } = req.body;
+      
+      // ✅ تحديث الصورة إذا رُفعت جديدة
       if (req.uploadedPath) {
         updateData.image = req.uploadedPath;
       }
@@ -1000,13 +1089,13 @@ router.put("/categories/:id",
       
       if (!cat) return res.status(404).json({ message: "Category not found" });
       
-      // ✅ ✅ ✅ الترتيب الصحيح: (القديم، الجديد)
+      // ✅ ✅ ✅ الترتيب الصحيح في Audit Log
       await audit.update(
         req.user, 
         "category", 
-        oldCat?.toObject() || {},          // ✅ القديم أولاً
-        cat.toObject(),                    // ✅ الجديد ثانياً
-        req                                 // ✅ الـ Request
+        oldCat?.toObject() || {},
+        cat.toObject(),
+        req
       );
       
       res.json({ 
@@ -1065,12 +1154,13 @@ router.delete("/categories/:id",
 
       await Category.deleteMany({ id: { $in: idsToDelete } });
 
-      // ✅ ✅ ✅ حذف صورة التصنيف من Cloudinary إذا كانت رابطاً
+      // ✅ ✅ ✅ حذف صورة التصنيف من Cloudinary
       if (category.image?.startsWith("https://res.cloudinary.com/")) {
-        // استخراج الـ public_id من الرابط
-        const publicId = category.image.split('/').pop().split('.')[0];
-        await deleteFromCloudinary(publicId);
-        console.log(`🗑️ Deleted category image from Cloudinary: ${publicId}`);
+        const publicId = extractPublicIdFromUrl(category.image);
+        if (publicId) {
+          await deleteFromCloudinary(publicId);
+          console.log(`🗑️ Deleted category image from Cloudinary: ${publicId}`);
+        }
       }
 
       // ✅ تسجيل حذف التصنيف
@@ -1157,7 +1247,7 @@ router.post("/users",
   }
 );
 
-// ✅ ✅ ✅ تصحيح ترتيب الوسائط في audit.update للـ Users
+// ✅ ✅ ✅ روت تعديل مستخدم - مع الترتيب الصحيح في audit.update
 router.put("/users/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.USERS.UPDATE),
@@ -1196,9 +1286,9 @@ router.put("/users/:id",
         await audit.update(
           req.user, 
           "user", 
-          oldUser?.toObject() || {},       // ✅ القديم أولاً
-          updatedUser.toObject(),          // ✅ الجديد ثانياً
-          req                               // ✅ الـ Request
+          oldUser?.toObject() || {},
+          updatedUser.toObject(),
+          req
         );
       }
       
@@ -1277,16 +1367,11 @@ router.put("/settings",
 );
 
 // ================= 📋 AUDIT LOGS (Super Admin Only) =================
-
-/**
- * 📊 عرض سجل النشاطات - لـ Super Admin فقط
- */
 router.get("/audit-logs",
   authMiddleware,
   checkPermission("settings:read"),
   async (req, res) => {
     try {
-      // ✅ استخراج اللغة من الـ query
       const { 
         page = 1, 
         limit = 50, 
@@ -1296,7 +1381,7 @@ router.get("/audit-logs",
         startDate, 
         endDate,
         search,
-        lang  // ✅ تمت إضافة lang هنا
+        lang
       } = req.query;
       
       let query = {};
@@ -1319,7 +1404,6 @@ router.get("/audit-logs",
         ];
       }
       
-      // ✅ فلترة حسب اللغة
       if (lang && ["ar", "en"].includes(lang)) {
         query["metadata.lang"] = lang;
       }
@@ -1347,9 +1431,6 @@ router.get("/audit-logs",
   }
 );
 
-/**
- * 🔍 عرض تفاصيل سجل معين (مع الـ changes الكاملة) - لـ Super Admin فقط
- */
 router.get("/audit-logs/:id",
   authMiddleware,
   checkPermission("settings:read"),
@@ -1357,7 +1438,6 @@ router.get("/audit-logs/:id",
     try {
       const log = await AuditLog.findById(req.params.id);
       if (!log) return res.status(404).json({ message: "Log not found" });
-      
       res.json({ log });
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch log details" });
@@ -1365,15 +1445,10 @@ router.get("/audit-logs/:id",
   }
 );
 
-// ================= 🗑️ DELETE AUDIT LOG (Super Admin Only) =================
-/**
- * حذف سجل نشاط - لـ Super Admin فقط
- */
 router.delete("/audit-logs/:id",
   authMiddleware,
   async (req, res) => {
     try {
-      // ✅ تحقق إضافي: فقط Super Admin يمكنه الحذف
       const lang = req.query.lang || 'ar';
       
       if (req.user.role !== "super_admin") {
@@ -1388,9 +1463,6 @@ router.delete("/audit-logs/:id",
       if (!log) {
         return res.status(404).json({ message: "Log not found" });
       }
-      
-      // ✅ ✅ ✅ تم حذف تسجيل الحذف المتداخل لمنع الحلقة اللانهائية
-      // لا نسجل حذف سجل الـ Audit Log نفسه في الـ Audit Log
       
       res.json({
         message: lang === "ar" 
