@@ -12,7 +12,7 @@ cloudinary.config({
 });
 
 // دالة slugify
-// ✅ beauty-store/middleware/upload.js - دالة slugify المُحسّنة
+// ✅ beauty-store/middleware/upload.js - دالة slugify المُحسّنة جذرياً
 const slugify = (str) => {
   if (!str) return "";
   
@@ -20,14 +20,18 @@ const slugify = (str) => {
     .toString()
     .toLowerCase()
     .trim()
-    // ✅ إزالة جميع التشكيل والأحرف العربية غير الإنجليزية
-    .normalize('NFD')                    // فصل الأحرف عن التشكيل
-    .replace(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/g, '') // إزالة الأحرف العربية
-    .replace(/[\u0300-\u036f]/g, '')     // إزالة علامات التشكيل (diacritics)
-    // ✅ الآن تنظيف المسار
-    .replace(/[^a-z0-9\s\-_]/g, '')      // إبقاء فقط: أرقام، حروف إنجليزية، شرطات، underscore
-    .replace(/[\s_-]+/g, '-')            // تحويل المسافات والشرطات المتعددة لشرطة واحدة
-    .replace(/^-+|-+$/g, '');            // إزالة الشرطات من البداية والنهاية
+    // ✅ 1. فصل الأحرف عن التشكيل (NFD Normalization)
+    .normalize('NFD')
+    // ✅ 2. إزالة جميع الأحرف العربية + التشكيل
+    .replace(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g, '') // إزالة العربية
+    .replace(/[\u0300-\u036f\u1AB0-\u1AFF\u1DC0-\u1DFF\u20D0-\u20FF\uFE20-\uFE2F]/g, '') // إزالة التشكيل
+    // ✅ 3. إزالة أي أحرف غير إنجليزية/أرقام
+    .replace(/[^a-z0-9\s\-_]/g, '')
+    // ✅ 4. تنظيف المسافات والشرطات
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    // ✅ 5. التأكد من النتيجة النهائية
+    .replace(/[^a-z0-9\-]/g, '') || `img-${Date.now()}`; // Fallback آمن
 };
 
 // دالة جلب Slug البراند
@@ -92,10 +96,13 @@ const uploadToCloudinary = async (fileBuffer, originalName, uploadParams) => {
     
     // تحديد اسم الملف
     if (sku?.trim()) {
-      filename = slugify(sku).toUpperCase();
+      const cleanSku = slugify(sku);
+      filename = cleanSku ? cleanSku.toUpperCase() : `product-${Date.now()}`;
       filename = sku.toUpperCase().trim();
     } else if (productName) {
       filename = slugify(productName);
+    }else{
+        filename = `product-${Date.now()}`;
     }
   }
 
