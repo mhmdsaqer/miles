@@ -53,7 +53,10 @@ const storage = new CloudinaryStorage({
     // ✅ قراءة resourceType من المصدر الصحيح (قبل معالجة multer)
     const rawType = req._resourceType || req.body?.resourceType || req.query?.resourceType;
     const resourceType = rawType?.toLowerCase()?.trim() || "assets";
-    
+      // ✅ نفس الشيء للبيانات الأخرى
+    const brandName = req._name || req.body?.name || req.body?.name_en || req.body?.name_ar || "";
+    const brandId = req._brand_id || req.body?.brand_id;
+    const sku = req._sku || req.body?.sku;
     let resourceFolder = "assets";
     let subFolder = "";
     let filename = "";
@@ -96,19 +99,23 @@ const storage = new CloudinaryStorage({
 
     // ✅ ✅ ✅ بناء المسار الصحيح - بدون تكرار
     // الهيكلية المطلوبة: miles-beauty/{resourceFolder}/{subFolder?}/{filename}
-    const finalFolder = `${baseUrl}/${resourceFolder}/${resourceFolder}`;
+    const finalFolder = `${baseUrl}/${resourceFolder}`;
     
     // ✅ public_id يجب أن يبدأ من ما بعد resourceFolder لتجنب التكرار
     let finalPublicId = "";
     if (subFolder) finalPublicId += `${subFolder}/`;
     finalPublicId += filename;
 
-    console.log("📁 Cloudinary Upload Debug:", {
-      resourceType,
-      folder: finalFolder,
-      public_id: finalPublicId,
-      expectedUrl: `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/${finalFolder}/${finalPublicId}`
-    });
+  // ✅ Debug Log مفصل
+  console.log("🔍 Cloudinary Upload Debug:", {
+    resourceType,
+    rawType,
+    req_body_resourceType: req.body?.resourceType,
+    req__resourceType: req._resourceType,
+    folder: finalFolder,
+    public_id: finalPublicId,
+    expectedUrl: `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/${finalFolder}/${finalPublicId}`
+  });
 
     return {
       folder: finalFolder,           // مثال: miles-beauty/brands
