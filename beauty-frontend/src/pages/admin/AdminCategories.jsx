@@ -1,4 +1,4 @@
-// src/pages/admin/AdminCategories.jsx - النسخة المنطقية المُحسّنة ✅
+// src/pages/admin/AdminCategories.jsx - النسخة الشجرية التفاعلية ✅
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { adminApi } from "../../utils/adminAuth";
 import { useLang } from "../../context/LanguageContext";
@@ -20,15 +20,17 @@ const AdminCategories = () => {
   const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   
-  // ✅ بيانات النموذج - مع تحسينات المنطق
+  // ✅ حالة التصنيفات المفتوحة للعرض الشجري
+  const [expandedCategories, setExpandedCategories] = useState(new Set());
+  
+  // ✅ بيانات النموذج
   const [formData, setFormData] = useState({
     id: "",
     name_ar: "",
     name_en: "",
-    parent_id: null,      // ✅ null = تصنيف رئيسي
-    is_parent: true,      // ✅ Checkbox: هل هذا تصنيف رئيسي؟
+    parent_id: null,
+    is_parent: true,      // ✅ Checkbox: تصنيف رئيسي
     image: "",            // ✅ اختياري
-    // sort_order محذوف من الواجهة، يُستخدم 0 افتراضياً
   });
 
   // ✅ دوال التحقق من الصلاحيات
@@ -47,6 +49,9 @@ const AdminCategories = () => {
     try {
       const res = await adminApi.get("/categories");
       setCategories(res.data);
+      // ✅ افتح كل التصنيفات الرئيسية عند التحميل
+      const mainCats = res.data.filter(c => c.parent_id === null).map(c => c.id);
+      setExpandedCategories(new Set(mainCats));
     } catch (err) {
       toast.error(
         <div className="flex items-center gap-3">
@@ -76,19 +81,24 @@ const AdminCategories = () => {
     return map;
   }, [categories]);
 
-  // ✅ التصنيفات الفرعية فقط (للاختيار كأب) - استثناء التصنيف الذي يتم تعديله
+  // ✅ التصنيفات الرئيسية فقط
+  const mainCategories = useMemo(() => 
+    categories.filter(c => c.parent_id === null),
+  [categories]);
+
+  // ✅ التصنيفات الفرعية (للاختيار كأب)
   const childOptions = useMemo(() => 
     categories
-      .filter(c => c.parent_id !== null)  // ✅ فقط التصنيفات الفرعية يمكن أن تكون أباً لتصنيف جديد
-      .filter(c => c.id !== editingId)     // ✅ استثناء التصنيف الذي يتم تعديله
+      .filter(c => c.parent_id !== null)
+      .filter(c => c.id !== editingId)
       .map(c => ({ 
         id: c.id, 
         name: c[`name_${lang}`],
-        hasChildren: categories.some(cc => cc.parent_id === c.id)  // ✅ للتحذير
+        hasChildren: categories.some(cc => cc.parent_id === c.id)
       }))
   , [categories, lang, editingId]);
 
-  // ✅ فلترة محلية للبحث
+  // ✅ فلترة البحث
   const filtered = useMemo(() => {
     if (!search) return categories;
     const q = search.toLowerCase();
@@ -99,21 +109,25 @@ const AdminCategories = () => {
     );
   }, [categories, search]);
 
-  // ✅ بناء شجرة العرض - مع دعم التوسيع/الطي
-  const buildTree = useCallback((items, parentId = null, level = 0) => {
-    return items
-      .filter(c => c.parent_id === parentId)
-      .sort((a, b) => a.id - b.id)  // ✅ ترتيب حسب ID للعرض المنطقي
-      .map(c => ({
-        ...c,
-        level,
-        children: buildTree(items, c.id, level + 1)
-      }));
+  // ✅ دالة فتح/إغلاق تصنيف في العرض الشجري
+  const toggleExpand = useCallback((catId) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(catId)) {
+        next.delete(catId);
+      } else {
+        next.add(catId);
+      }
+      return next;
+    });
   }, []);
 
-  const tree = useMemo(() => buildTree(filtered), [filtered, buildTree]);
+  // ✅ دالة جلب أبناء تصنيف معين (مباشرة فقط)
+  const getChildren = useCallback((parentId) => {
+    return categories.filter(c => c.parent_id === parentId);
+  }, [categories]);
 
-  // ✅ فتح/إغلاق النموذج - مع منطق Checkbox التصنيف الرئيسي
+  // ✅ فتح/إغلاق النموذج
   const openModal = useCallback((cat = null) => {
     if (cat && !canUpdate) {
       toast.error(lang === "ar" ? "❌ غير مصرح بتعديل التصنيفات" : "❌ Forbidden");
@@ -129,7 +143,7 @@ const AdminCategories = () => {
       setFormData({ 
         ...cat, 
         parent_id: cat.parent_id,
-        is_parent: cat.parent_id === null,  // ✅ إذا لم يكن له أب = رئيسي
+        is_parent: cat.parent_id === null,
         image: cat.image || ""
       });
     } else {
@@ -139,7 +153,7 @@ const AdminCategories = () => {
         name_ar: "", 
         name_en: "", 
         parent_id: null, 
-        is_parent: true,  // ✅ الافتراضي: تصنيف رئيسي
+        is_parent: true,
         image: ""
       });
     }
@@ -157,11 +171,11 @@ const AdminCategories = () => {
     setFormData(prev => ({
       ...prev,
       is_parent: isParent,
-      parent_id: isParent ? null : prev.parent_id  // ✅ إذا أصبح رئيسي، نلغي الأب
+      parent_id: isParent ? null : prev.parent_id
     }));
   }, []);
 
-  // ✅ حفظ التصنيف - مع منطق Checkbox
+  // ✅ حفظ التصنيف
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -174,7 +188,6 @@ const AdminCategories = () => {
       return;
     }
 
-    // ✅ التحقق من الحقول الأساسية
     if (!formData.id || !formData.name_ar || !formData.name_en) {
       toast.warning(
         <div className="flex items-center gap-3">
@@ -188,14 +201,12 @@ const AdminCategories = () => {
       return;
     }
 
-    // ✅ التحقق من أن الـ ID رقمي وفريد
     const idNum = Number(formData.id);
     if (isNaN(idNum) || idNum <= 0) {
       toast.error(lang === "ar" ? "❌ الـ ID يجب أن يكون رقماً موجباً" : "❌ ID must be a positive number");
       return;
     }
 
-    // ✅ التحقق من عدم تكرار الـ ID
     const exists = categories.find(c => c.id === idNum && c.id !== editingId);
     if (exists) {
       toast.error(lang === "ar" ? "❌ تصنيف بهذا الـ ID موجود مسبقاً" : "❌ Category with this ID already exists");
@@ -204,14 +215,13 @@ const AdminCategories = () => {
 
     setSubmitting(true);
     try {
-      // ✅ بناء الـ Payload النهائي
       const payload = { 
         id: idNum, 
         name_ar: formData.name_ar.trim(), 
         name_en: formData.name_en.trim(), 
         parent_id: formData.is_parent ? null : (formData.parent_id ? Number(formData.parent_id) : null),
-        image: formData.image || "",  // ✅ الصورة اختيارية
-        sort_order: 0  // ✅ قيمة افتراضية
+        image: formData.image || "",
+        sort_order: 0
       };
       
       if (editingId) {
@@ -264,7 +274,7 @@ const AdminCategories = () => {
     }
   };
 
-  // ✅ حذف تصنيف - مع تحذير إذا كان يحتوي على منتجات
+  // ✅ حذف تصنيف - مع تحذير ذكي
   const handleDelete = async (id) => {
     if (!canDelete) {
       toast.error(lang === "ar" ? "❌ غير مصرح بحذف التصنيفات" : "❌ Forbidden");
@@ -274,16 +284,19 @@ const AdminCategories = () => {
     const category = categories.find(c => c.id === id);
     if (!category) return;
 
-    // ✅ التحقق إذا كان التصنيف يحتوي على أبناء
     const hasChildren = categories.some(c => c.parent_id === id);
     
-    // ✅ التحقق إذا كان التصنيف يحتوي على منتجات (من خلال البحث في المنتجات لاحقاً إذا لزم)
-    // نكتفي بتحذير المستخدم
-
-    const confirmMessage = lang === "ar" 
-      ? `هل أنت متأكد من حذف "${category[`name_${lang}`]}"؟${hasChildren ? '\n\n⚠️ هذا التصنيف يحتوي على تصنيفات فرعية، سيتم حذفها أيضاً.' : ''}`
-      : `Are you sure you want to delete "${category[`name_${lang}`]}"?${hasChildren ? '\n\n⚠️ This category has sub-categories, they will be deleted too.' : ''}`;
-
+    // ✅ تحذير مخصص حسب الحالة
+    let confirmMessage = lang === "ar" 
+      ? `هل أنت متأكد من حذف "${category[`name_${lang}`]}"؟`
+      : `Are you sure you want to delete "${category[`name_${lang}`]}"?`;
+    
+    if (hasChildren) {
+      confirmMessage += lang === "ar"
+        ? `\n\n⚠️ هذا التصنيف يحتوي على ${categories.filter(c => c.parent_id === id).length} تصنيفات فرعية.`
+        : `\n\n⚠️ This category has ${categories.filter(c => c.parent_id === id).length} sub-categories.`;
+    }
+    
     if (!window.confirm(confirmMessage)) return;
     
     try {
@@ -312,106 +325,129 @@ const AdminCategories = () => {
     }
   };
 
-  // ✅ معالجة تغيير الحقول العادية
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // ✅ مكون عرض الشجرة - مع تصميم منطقي وواضح
-  const renderTree = (nodes) => (
-    <tbody className={`divide-y ${isDark ? 'divide-gray-700' : 'divide-gray-50'}`}>
-      {nodes.map(node => {
-        const parentName = node.parent_id 
-          ? categoryMap.get(node.parent_id)?.[`name_${lang}`] 
-          : null;
-        const hasProducts = false; // ✅ يمكن إضافة تحقق من المنتجات لاحقاً
-        
-        return (
-          <tr key={node.id} className={`transition-colors ${isDark ? 'hover:bg-gray-750' : 'hover:bg-gray-50/50'}`}>
-            {/* ID */}
-            <td className={`px-6 py-4 font-mono text-xs ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
-              {node.id}
-            </td>
-            
-            {/* الاسم مع الإزاحة حسب المستوى */}
-            <td className={`px-6 py-4 ${isDark ? 'text-white' : 'text-gray-900'}`} style={{ paddingLeft: `${node.level * 24 + 24}px` }}>
-              <div className="flex items-center gap-2">
-                {/* أيقونة تشير للمستوى */}
-                {node.level > 0 && (
-                  <span className={`text-gray-300 select-none`} style={{ marginLeft: `${(node.level - 1) * 12}px` }}>
-                    └─
-                  </span>
+  // ✅ ✅ ✅ مكون عرض شجرة التصنيفات التفاعلي
+  const renderCategoryTree = (parentId = null, level = 0) => {
+    const children = categories.filter(c => c.parent_id === parentId);
+    
+    if (children.length === 0) return null;
+    
+    return (
+      <ul className={`space-y-1 ${level > 0 ? 'mt-1' : ''}`}>
+        {children.map(cat => {
+          const hasChildren = categories.some(c => c.parent_id === cat.id);
+          const isExpanded = expandedCategories.has(cat.id);
+          const parentName = cat.parent_id ? categoryMap.get(cat.parent_id)?.[`name_${lang}`] : null;
+          
+          return (
+            <li key={cat.id}>
+              <div 
+                className={`
+                  flex items-center gap-2 p-2 rounded-lg transition-all cursor-pointer group
+                  ${isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'}
+                  ${level > 0 ? 'ml-4' : ''}
+                `}
+                style={{ borderLeft: level > 0 ? `2px solid ${isDark ? '#374151' : '#e5e7eb'}` : 'none', paddingLeft: level > 0 ? '12px' : '0' }}
+              >
+                {/* ✅ زر التوسيع/الطي */}
+                {hasChildren ? (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleExpand(cat.id); }}
+                    className={`
+                      w-6 h-6 rounded flex items-center justify-center transition-transform
+                      ${isExpanded ? 'rotate-90' : ''}
+                      ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'}
+                    `}
+                    title={isExpanded ? (lang === "ar" ? "طي" : "Collapse") : (lang === "ar" ? "توسيع" : "Expand")}
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                ) : (
+                  <span className="w-6" /> // مساحة فارغة للمحاذاة
                 )}
-                {/* اسم التصنيف */}
-                <span className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  {lang === "ar" ? node.name_ar : node.name_en}
+                
+                {/* ✅ أيقونة التصنيف */}
+                <span className={`text-lg flex-shrink-0 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {cat.image ? (
+                    <img 
+                      src={getImageUrl(cat.image)} 
+                      alt="" 
+                      className="w-5 h-5 object-contain rounded"
+                      onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.textContent = '📁'; }}
+                    />
+                  ) : '📁'}
                 </span>
-                {/* Badge: رئيسي / فرعي */}
-                {node.parent_id === null && (
-                  <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
-                    isDark ? 'bg-pink-900/30 text-pink-400' : 'bg-pink-100 text-pink-700'
+                
+                {/* ✅ اسم التصنيف */}
+                <div className="flex-1 min-w-0">
+                  <span className={`font-bold truncate block ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {lang === "ar" ? cat.name_ar : cat.name_en}
+                  </span>
+                  {parentName && level === 0 && (
+                    <span className={`text-[9px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {lang === "ar" ? "رئيسي" : "Main"}
+                    </span>
+                  )}
+                </div>
+                
+                {/* ✅ عدد الأبناء */}
+                {hasChildren && (
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                    isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-500'
                   }`}>
-                    {lang === "ar" ? "رئيسي" : "Main"}
+                    {getChildren(cat.id).length}
                   </span>
                 )}
+                
+                {/* ✅ أزرار الإجراءات - تظهر عند التحويم */}
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {canUpdate && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openModal(cat); }}
+                      className={`p-1.5 rounded-lg transition ${
+                        isDark ? 'hover:bg-blue-900/30 text-blue-400' : 'hover:bg-blue-50 text-blue-600'
+                      }`}
+                      title={lang === "ar" ? "تعديل" : "Edit"}
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(cat.id); }}
+                      className={`p-1.5 rounded-lg transition ${
+                        isDark ? 'hover:bg-red-900/30 text-red-400' : 'hover:bg-red-50 text-red-600'
+                      }`}
+                      title={lang === "ar" ? "حذف" : "Delete"}
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
               </div>
-            </td>
-            
-            {/* اسم الأب (للفروع فقط) */}
-            <td className={`px-6 py-4 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              {parentName ? (
-                <span className="truncate max-w-[150px] block" title={parentName}>
-                  {parentName}
-                </span>
-              ) : (
-                <span className={isDark ? 'text-gray-600' : 'text-gray-300'}>—</span>
+              
+              {/* ✅ عرض الأبناء إذا كان التصنيف مفتوحاً */}
+              {hasChildren && isExpanded && (
+                <div className="ml-8 mt-1">
+                  {renderCategoryTree(cat.id, level + 1)}
+                </div>
               )}
-            </td>
-            
-            {/* الصورة */}
-            <td className="px-6 py-4">
-              {node.image ? (
-                <img 
-                  src={getImageUrl(node.image)}
-                  alt={lang === "ar" ? node.name_ar : node.name_en} 
-                  className="w-10 h-10 object-contain rounded-lg bg-gray-50 dark:bg-gray-700" 
-                  loading="lazy"
-                  onError={(e) => { e.target.style.display = 'none'; }}
-                />
-              ) : <span className={isDark ? 'text-gray-500' : 'text-gray-300'}>—</span>}
-            </td>
-            
-            {/* الإجراءات */}
-            <td className="px-6 py-4">
-              <div className="flex gap-2">
-                {canUpdate && (
-                  <button 
-                    onClick={() => openModal(node)} 
-                    className={`px-3 py-1.5 rounded-lg font-bold transition text-xs ${
-                      isDark ? 'bg-blue-900/30 text-blue-400 hover:bg-blue-900/50' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                    }`}
-                  >
-                    {lang === "ar" ? "تعديل" : "Edit"}
-                  </button>
-                )}
-                {canDelete && (
-                  <button 
-                    onClick={() => handleDelete(node.id)} 
-                    className={`px-3 py-1.5 rounded-lg font-bold transition text-xs ${
-                      isDark ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50' : 'bg-red-50 text-red-600 hover:bg-red-100'
-                    }`}
-                  >
-                    {lang === "ar" ? "حذف" : "Delete"}
-                  </button>
-                )}
-              </div>
-            </td>
-          </tr>
-        );
-      })}
-    </tbody>
-  );
+            </li>
+          );
+        })}
+      </ul>
+    );
+  };
 
   // ✅ حالة عدم وجود صلاحية القراءة
   if (!canRead) {
@@ -442,7 +478,7 @@ const AdminCategories = () => {
             {lang === "ar" ? "إدارة التصنيفات" : "Categories Management"}
           </h1>
           <p className={`text-sm mt-1 font-bold ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
-            {categories.filter(c => c.parent_id === null).length} {lang === "ar" ? "تصنيف رئيسي" : "main"} •{" "}
+            {mainCategories.length} {lang === "ar" ? "تصنيف رئيسي" : "main"} •{" "}
             {categories.filter(c => c.parent_id !== null).length} {lang === "ar" ? "تصنيف فرعي" : "sub"}
           </p>
         </div>
@@ -469,7 +505,7 @@ const AdminCategories = () => {
         </div>
       </div>
 
-      {/* ===== Table ===== */}
+      {/* ===== شجرة التصنيفات التفاعلية ===== */}
       <div className={`rounded-[2rem] border shadow-sm overflow-hidden transition-colors duration-300 ${
         isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
       }`}>
@@ -482,27 +518,175 @@ const AdminCategories = () => {
             {search ? (lang === "ar" ? "لا توجد نتائج مطابقة" : "No matching results") : (lang === "ar" ? "لا توجد تصنيفات" : "No categories yet")}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className={`border-b ${isDark ? 'bg-gray-750 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
-                <tr>
-                  <th className={`px-6 py-4 font-black uppercase tracking-widest text-[10px] text-right ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>ID</th>
-                  <th className={`px-6 py-4 font-black uppercase tracking-widest text-[10px] text-right ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {lang === "ar" ? "اسم التصنيف" : "Category Name"}
-                  </th>
-                  <th className={`px-6 py-4 font-black uppercase tracking-widest text-[10px] text-right ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {lang === "ar" ? "الأب" : "Parent"}
-                  </th>
-                  <th className={`px-6 py-4 font-black uppercase tracking-widest text-[10px] text-right ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {lang === "ar" ? "الصورة" : "Image"}
-                  </th>
-                  <th className={`px-6 py-4 font-black uppercase tracking-widest text-[10px] text-right ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {lang === "ar" ? "إجراءات" : "Actions"}
-                  </th>
-                </tr>
-              </thead>
-              {renderTree(tree)}
-            </table>
+          <div className="p-4">
+            {/* ✅ عرض التصنيفات الرئيسية */}
+            {mainCategories.length > 0 ? (
+              <div className="space-y-2">
+                {mainCategories
+                  .filter(c => !search || c.name_ar?.toLowerCase().includes(search.toLowerCase()) || c.name_en?.toLowerCase().includes(search.toLowerCase()))
+                  .map(cat => {
+                    const children = getChildren(cat.id).filter(c => 
+                      !search || c.name_ar?.toLowerCase().includes(search.toLowerCase()) || c.name_en?.toLowerCase().includes(search.toLowerCase())
+                    );
+                    const isExpanded = expandedCategories.has(cat.id);
+                    
+                    return (
+                      <div key={cat.id} className={`rounded-xl border overflow-hidden transition-colors ${
+                        isDark ? 'border-gray-700' : 'border-gray-100'
+                      }`}>
+                        {/* ✅ رأس التصنيف الرئيسي */}
+                        <div 
+                          className={`
+                            flex items-center gap-3 p-4 cursor-pointer transition-colors
+                            ${isDark ? 'bg-gray-750 hover:bg-gray-700' : 'bg-gray-50 hover:bg-gray-100'}
+                          `}
+                          onClick={() => toggleExpand(cat.id)}
+                        >
+                          {/* زر التوسيع */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleExpand(cat.id); }}
+                            className={`
+                              w-7 h-7 rounded-lg flex items-center justify-center transition-transform
+                              ${isExpanded ? 'rotate-90' : ''}
+                              ${isDark ? 'bg-gray-600 text-gray-300' : 'bg-gray-200 text-gray-600'}
+                            `}
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                          
+                          {/* صورة + اسم */}
+                          <div className="flex items-center gap-3 flex-1">
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                              isDark ? 'bg-gray-600' : 'bg-white'
+                            }`}>
+                              {cat.image ? (
+                                <img 
+                                  src={getImageUrl(cat.image)} 
+                                  alt="" 
+                                  className="w-8 h-8 object-contain"
+                                  onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.textContent = '📁'; }}
+                                />
+                              ) : '📁'}
+                            </div>
+                            <div>
+                              <span className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                                {lang === "ar" ? cat.name_ar : cat.name_en}
+                              </span>
+                              <span className={`block text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                {children.length} {lang === "ar" ? "تصنيف فرعي" : "sub-categories"}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {/* أزرار الإجراءات */}
+                          <div className="flex items-center gap-2">
+                            {canUpdate && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); openModal(cat); }}
+                                className={`p-2 rounded-lg transition ${
+                                  isDark ? 'hover:bg-blue-900/30 text-blue-400' : 'hover:bg-blue-50 text-blue-600'
+                                }`}
+                                title={lang === "ar" ? "تعديل" : "Edit"}
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                            )}
+                            {canDelete && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDelete(cat.id); }}
+                                className={`p-2 rounded-lg transition ${
+                                  isDark ? 'hover:bg-red-900/30 text-red-400' : 'hover:bg-red-50 text-red-600'
+                                }`}
+                                title={lang === "ar" ? "حذف" : "Delete"}
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* ✅ قائمة الأبناء - تظهر عند التوسيع */}
+                        {isExpanded && children.length > 0 && (
+                          <div className={`p-4 border-t ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-100 bg-white'}`}>
+                            <div className="space-y-2">
+                              {children.map(child => (
+                                <div 
+                                  key={child.id}
+                                  className={`
+                                    flex items-center gap-3 p-3 rounded-lg transition-colors
+                                    ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}
+                                  `}
+                                >
+                                  <span className="w-6" /> {/* مساحة للمحاذاة */}
+                                  
+                                  {/* صورة + اسم الابن */}
+                                  <div className="flex items-center gap-3 flex-1">
+                                    <div className={`w-8 h-8 rounded flex items-center justify-center text-sm ${
+                                      isDark ? 'bg-gray-700' : 'bg-gray-100'
+                                    }`}>
+                                      {child.image ? (
+                                        <img 
+                                          src={getImageUrl(child.image)} 
+                                          alt="" 
+                                          className="w-6 h-6 object-contain"
+                                          onError={(e) => { e.target.style.display = 'none'; }}
+                                        />
+                                      ) : '📄'}
+                                    </div>
+                                    <span className={`font-medium ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+                                      {lang === "ar" ? child.name_ar : child.name_en}
+                                    </span>
+                                  </div>
+                                  
+                                  {/* أزرار إجراءات الابن */}
+                                  <div className="flex items-center gap-1">
+                                    {canUpdate && (
+                                      <button
+                                        onClick={() => openModal(child)}
+                                        className={`p-1.5 rounded transition ${
+                                          isDark ? 'hover:bg-blue-900/30 text-blue-400' : 'hover:bg-blue-50 text-blue-600'
+                                        }`}
+                                        title={lang === "ar" ? "تعديل" : "Edit"}
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                      </button>
+                                    )}
+                                    {canDelete && (
+                                      <button
+                                        onClick={() => handleDelete(child.id)}
+                                        className={`p-1.5 rounded transition ${
+                                          isDark ? 'hover:bg-red-900/30 text-red-400' : 'hover:bg-red-50 text-red-600'
+                                        }`}
+                                        title={lang === "ar" ? "حذف" : "Delete"}
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            ) : (
+              <div className={`text-center py-12 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {lang === "ar" ? "لا توجد تصنيفات رئيسية" : "No main categories"}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -536,7 +720,7 @@ const AdminCategories = () => {
             {/* Modal Form */}
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               
-              {/* ✅ الصف الأول: ID + Checkbox التصنيف الرئيسي */}
+              {/* ID + Checkbox التصنيف الرئيسي */}
               <div className="grid grid-cols-2 gap-4 items-end">
                 <div>
                   <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -550,7 +734,7 @@ const AdminCategories = () => {
                     onChange={handleChange} 
                     placeholder="مثال: 101" 
                     required 
-                    disabled={!!editingId}  // ✅ لا يمكن تعديل الـ ID بعد الإنشاء
+                    disabled={!!editingId}
                     className={`w-full border rounded-xl px-4 py-2.5 text-sm transition-colors disabled:opacity-50 ${
                       isDark 
                         ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
@@ -559,7 +743,7 @@ const AdminCategories = () => {
                   />
                 </div>
                 
-                {/* ✅ Checkbox: هل هذا تصنيف رئيسي؟ */}
+                {/* Checkbox: تصنيف رئيسي */}
                 <div className="flex items-center gap-2 p-3 rounded-xl border transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700" onClick={(e) => e.preventDefault()}>
                   <input 
                     type="checkbox" 
@@ -574,7 +758,7 @@ const AdminCategories = () => {
                 </div>
               </div>
 
-              {/* ✅ Select اختيار الأب - يظهر فقط إذا لم يكن تصنيفاً رئيسياً */}
+              {/* Select اختيار الأب */}
               {!formData.is_parent && (
                 <div className="animate-fadeIn">
                   <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -596,7 +780,7 @@ const AdminCategories = () => {
                       <option 
                         key={p.id} 
                         value={p.id}
-                        disabled={p.hasChildren}  // ✅ يمكن منع اختيار تصنيف له أبناء إذا لزم
+                        disabled={p.hasChildren}
                         title={p.hasChildren ? (lang === "ar" ? "هذا التصنيف يحتوي على فروع" : "This category has sub-categories") : ""}
                       >
                         {p.name} {p.hasChildren && "📁"}
@@ -611,7 +795,7 @@ const AdminCategories = () => {
                 </div>
               )}
 
-              {/* ✅ الأسماء بالعربي والإنجليزي */}
+              {/* الأسماء بالعربي والإنجليزي */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -649,7 +833,7 @@ const AdminCategories = () => {
                 </div>
               </div>
 
-              {/* ✅ ✅ ✅ مكون رفع الصور - اختياري */}
+              {/* مكون رفع الصور - اختياري */}
               <ImageUploader
                 label={lang === "ar" ? "صورة التصنيف (اختياري)" : "Category Image (Optional)"}
                 currentImage={formData.image}
@@ -662,7 +846,7 @@ const AdminCategories = () => {
                 onImageSelect={(path) => setFormData(prev => ({ ...prev, image: path }))}
               />
 
-              {/* ✅ أزرار الحفظ والإلغاء */}
+              {/* أزرار الحفظ والإلغاء */}
               <div className="flex gap-3 pt-2">
                 <button 
                   type="submit" 
@@ -692,7 +876,7 @@ const AdminCategories = () => {
                 </button>
               </div>
 
-              {/* ✅ ملاحظة توضيحية */}
+              {/* ملاحظة توضيحية */}
               <div className={`text-[10px] text-center p-3 rounded-xl ${isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-50 text-gray-500'}`}>
                 💡 {lang === "ar" 
                   ? "التصنيفات الرئيسية لا تحتاج لأب. الصورة اختيارية. الـ ID يجب أن يكون فريداً." 
