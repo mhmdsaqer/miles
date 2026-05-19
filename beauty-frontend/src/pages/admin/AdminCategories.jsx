@@ -1,4 +1,4 @@
-// src/pages/admin/AdminCategories.jsx - النسخة الشجرية المتقدمة المُصححة ✅
+// src/pages/admin/AdminCategories.jsx - النسخة المُصححة نهائياً ✅
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { adminApi } from "../../utils/adminAuth";
 import { useLang } from "../../context/LanguageContext";
@@ -20,7 +20,7 @@ const AdminCategories = () => {
   const [editingId, setEditingId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   
-  // ✅ حالة التصنيفات المفتوحة للعرض الشجري - تبدأ فارغة (كل شيء مطوي افتراضياً)
+  // ✅ حالة التصنيفات المفتوحة للعرض الشجري
   const [expandedCategories, setExpandedCategories] = useState(new Set());
   
   // ✅ بيانات النموذج
@@ -85,44 +85,15 @@ const AdminCategories = () => {
     categories.filter(c => c.parent_id === null),
   [categories]);
 
-  // ✅ دالة ذكية: جلب جميع الأبناء (مباشرة + غير مباشرة) شجرياً
-  const getAllDescendants = useCallback((parentId) => {
-    const descendants = [];
-    const collect = (id) => {
-      const children = categories.filter(c => c.parent_id === id);
-      children.forEach(child => {
-        descendants.push(child);
-        collect(child.id);
-      });
-    };
-    collect(parentId);
-    return descendants;
-  }, [categories]);
-
-  // ✅ فلترة البحث - مع دعم الشجرة
+  // ✅ فلترة البحث
   const filtered = useMemo(() => {
     if (!search) return categories;
     const q = search.toLowerCase();
-    const matched = categories.filter(c => 
+    return categories.filter(c => 
       c.name_ar?.toLowerCase().includes(q) || 
       c.name_en?.toLowerCase().includes(q) ||
       String(c.id).includes(q)
     );
-    const matchedIds = new Set(matched.map(c => c.id));
-    const withParents = new Set(matchedIds);
-    
-    matched.forEach(cat => {
-      let current = cat;
-      while (current.parent_id !== null) {
-        const parent = categories.find(c => c.id === current.parent_id);
-        if (parent) {
-          withParents.add(parent.id);
-          current = parent;
-        } else break;
-      }
-    });
-    
-    return categories.filter(c => withParents.has(c.id));
   }, [categories, search]);
 
   // ✅ دالة فتح/إغلاق تصنيف في العرض الشجري
@@ -138,8 +109,9 @@ const AdminCategories = () => {
     });
   }, []);
 
-  // ✅ ✅ ✅ دالة عرض الشجرة المتكررة - تدعم أي عدد من المستويات
-  const renderTree = useCallback((parentId = null, level = 0) => {
+  // ✅ ✅ ✅ الإصلاح الرئيسي: دالة عادية (ليست هوك) لتجنب مشكلة الـ TDZ مع الـ recursion
+  // ✅ هذه الدالة تعرض الشجرة بأي عدد من المستويات
+  const renderTree = (parentId = null, level = 0) => {
     const children = categories.filter(c => c.parent_id === parentId);
     
     if (children.length === 0) return null;
@@ -147,6 +119,7 @@ const AdminCategories = () => {
     return (
       <ul className={`space-y-1 ${level > 0 ? 'mt-1' : ''}`}>
         {children.map(cat => {
+          // ✅ هل هذا التصنيف لديه أبناء مباشرون؟ (لإظهار زر التوسيع)
           const hasDirectChildren = categories.some(c => c.parent_id === cat.id);
           const isExpanded = expandedCategories.has(cat.id);
           
@@ -246,7 +219,8 @@ const AdminCategories = () => {
                 </div>
               </div>
               
-              {/* عرض الأبناء (المستوى التالي) فقط إذا كان التصنيف مفتوحاً وله أبناء مباشرون */}
+              {/* ✅ ✅ ✅ عرض الأبناء (المستوى التالي) فقط إذا كان التصنيف مفتوحاً وله أبناء مباشرون */}
+              {/* ✅ هذا هو السطر الذي يدعم المستويات غير المحدودة عبر الـ recursion */}
               {hasDirectChildren && isExpanded && (
                 <div className="ml-8 mt-1">
                   {renderTree(cat.id, level + 1)}
@@ -257,7 +231,7 @@ const AdminCategories = () => {
         })}
       </ul>
     );
-  }, [categories, expandedCategories, isDark, lang, canUpdate, canDelete, openModal, handleDelete, toggleExpand]);
+  };
 
   // ✅ فتح/إغلاق النموذج
   const openModal = useCallback((cat = null) => {
@@ -416,9 +390,20 @@ const AdminCategories = () => {
     const category = categories.find(c => c.id === id);
     if (!category) return;
 
-    const allDescendants = getAllDescendants(id);
-    const descendantCount = allDescendants.length;
+    // ✅ حساب عدد جميع الأبناء (مباشر + غير مباشر)
+    const getAllDescendants = (parentId) => {
+      let count = 0;
+      const children = categories.filter(c => c.parent_id === parentId);
+      count += children.length;
+      children.forEach(child => {
+        count += getAllDescendants(child.id);
+      });
+      return count;
+    };
     
+    const descendantCount = getAllDescendants(id);
+    
+    // ✅ تحذير مخصص حسب الحالة
     let confirmMessage = lang === "ar" 
       ? `هل أنت متأكد من حذف "${category[`name_${lang}`]}"؟`
       : `Are you sure you want to delete "${category[`name_${lang}`]}"?`;
@@ -462,7 +447,7 @@ const AdminCategories = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // ✅ ✅ ✅ الإصلاح الرئيسي: دالة عادية (ليست هوك) لتجنب مشكلة الـ TDZ مع الـ recursion
+  // ✅ ✅ ✅ خيارات اختيار الأب - دالة عادية لتجنب مشكلة الـ TDZ
   const buildParentOptions = (cats, parentId = null, level = 0, excludeId = null) => {
     let opts = [];
     const children = cats.filter(c => c.parent_id === parentId && c.id !== excludeId);
@@ -480,7 +465,7 @@ const AdminCategories = () => {
           ? (lang === "ar" ? "هذا التصنيف له فروع - اختياره كأب سينقل فروعك تحته" : "This category has sub-categories - choosing it as parent will nest your category under it")
           : ""
       });
-      // ✅ الاستدعاء الذاتي - الآن يعمل لأن الدالة عادية وليست memoized
+      // ✅ الاستدعاء الذاتي - يعمل لأن الدالة عادية
       opts.push(...buildParentOptions(cats, cat.id, level + 1, excludeId));
     });
     
