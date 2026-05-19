@@ -12,14 +12,22 @@ cloudinary.config({
 });
 
 // دالة slugify
+// ✅ beauty-store/middleware/upload.js - دالة slugify المُحسّنة
 const slugify = (str) => {
   if (!str) return "";
+  
   return str
+    .toString()
     .toLowerCase()
     .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/[\s_-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    // ✅ إزالة جميع التشكيل والأحرف العربية غير الإنجليزية
+    .normalize('NFD')                    // فصل الأحرف عن التشكيل
+    .replace(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/g, '') // إزالة الأحرف العربية
+    .replace(/[\u0300-\u036f]/g, '')     // إزالة علامات التشكيل (diacritics)
+    // ✅ الآن تنظيف المسار
+    .replace(/[^a-z0-9\s\-_]/g, '')      // إبقاء فقط: أرقام، حروف إنجليزية، شرطات، underscore
+    .replace(/[\s_-]+/g, '-')            // تحويل المسافات والشرطات المتعددة لشرطة واحدة
+    .replace(/^-+|-+$/g, '');            // إزالة الشرطات من البداية والنهاية
 };
 
 // دالة جلب Slug البراند

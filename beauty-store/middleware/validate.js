@@ -51,12 +51,16 @@ const productSchema = Joi.object({
   description_en: Joi.string().min(10).max(2000).allow(""),
   
   // ✅ ✅ ✅ تحديث: قبول مسار محلي أو رابط Cloudinary
-  image: Joi.string()
-    .uri({ scheme: ['https'] })  // ✅ يقبل أي رابط HTTPS صحيح
-    .required()
-    .messages({
-      "string.uri": "مسار الصورة يجب أن يكون رابط HTTPS صحيح",
-    }),
+	image: Joi.string()
+	  .uri({ scheme: ['https'] })  // ✅ يقبل أي رابط HTTPS صحيح (يشمل % للأحرف المشفرة)
+	  .or(
+	    Joi.string().pattern(/^(assets\/.+\.(jpg|jpeg|png|webp|gif))$/i)
+	  )
+	  .required()
+	  .messages({
+	    "string.uri": "مسار الصورة يجب أن يكون رابط HTTPS صحيح",
+	    "string.pattern.base": "أو مسار محلي صحيح (assets/...)",
+	  }),
   
   price: Joi.number().min(0).max(10000).precision(2).required(),
   has_variants: Joi.boolean().default(false),
@@ -71,9 +75,12 @@ const productSchema = Joi.object({
         price: Joi.number().min(0).max(10000).precision(2),
         
         // ✅ نفس التحديث لحقل image في المتغيرات
-        image: Joi.string()
-          .uri({ scheme: ['https'] })  // ✅ يقبل روابط Cloudinary مع تشفير
-          .allow(""),
+	image: Joi.string()
+	  .uri({ scheme: ['https'] })
+	  .or(
+	    Joi.string().pattern(/^(assets\/.+\.(jpg|jpeg|png|webp|gif))$/i)
+	  )
+	  .allow(""),
         
         attributes: Joi.object().pattern(Joi.string(), Joi.any()),
       })
@@ -97,12 +104,15 @@ const brandSchema = Joi.object({
     }),
   
   // ✅ ✅ ✅ تحديث: قبول مسار محلي أو رابط Cloudinary
-  image: Joi.string()
-    .uri({ scheme: ['https'] })
-    .required()
-    .messages({
-      "string.uri": "مسار الصورة يجب أن يكون رابط HTTPS صحيح",
-    }),
+	image: Joi.string()
+	  .uri({ scheme: ['https'] })
+	  .or(
+	    Joi.string().pattern(/^(assets\/.+\.(jpg|jpeg|png|webp|gif))$/i)
+	  )
+	  .required()
+	  .messages({
+	    "string.uri": "مسار الصورة يجب أن يكون رابط HTTPS صحيح",
+	  }),
 });
 
 // ============================================
@@ -115,10 +125,13 @@ const categorySchema = Joi.object({
   parent_id: Joi.number().integer().positive().allow(null).default(null),
   
   // ✅ ✅ ✅ تحديث: قبول مسار محلي أو رابط Cloudinary (أو فارغ)
-  image: Joi.string()
-    .uri({ scheme: ['https'] })
-    .allow("")
-    .default(""),
+	image: Joi.string()
+	  .uri({ scheme: ['https'] })
+	  .or(
+	    Joi.string().pattern(/^(assets\/.+\.(jpg|jpeg|png|webp|gif))$/i)
+	  )
+	  .allow("")
+	  .default(""),
   
   sort_order: Joi.number().integer().min(0).default(0),
 });

@@ -86,6 +86,17 @@ const AdminProducts = () => {
   const canUpdate = useMemo(() => hasPermission("products:update"), [hasPermission]);
   const canDelete = useMemo(() => hasPermission("products:delete"), [hasPermission]);
   const canRead = useMemo(() => hasPermission("products:read"), [hasPermission]);
+  
+  const cleanSKU = (sku) => {
+  if (!sku) return "";
+  return sku
+    .toString()
+    .toUpperCase()
+    .trim()
+    .normalize('NFD')                    // فصل التشكيل
+    .replace(/[\u0300-\u036f]/g, '')     // إزالة التشكيل
+    .replace(/[^\w\-]/g, '');            // إبقاء فقط: أرقام، حروف، وشرطات
+};
 
   // ✅ دوال التحويل بين الهيكلين
   const attributesToArray = useCallback((attributes) => {
@@ -319,11 +330,12 @@ const AdminProducts = () => {
     }
 
     try {
+      const cleanMainSku = cleanSKU(formData.sku);
       const skuSet = new Set();
       
-      if (formData.sku?.trim()) {
-        skuSet.add(formData.sku.toUpperCase().trim());
-      }
+       if (cleanMainSku) {
+      skuSet.add(cleanMainSku);
+    }
 
       const variantsPayload = variants.length > 0 
         ? variants.map((v, index) => {
@@ -332,7 +344,7 @@ const AdminProducts = () => {
               ? `${formData.sku.toUpperCase().trim()}-${String(index + 1).padStart(3, '0')}`
               : `SKU-${formData.id}-${String(index + 1).padStart(3, '0')}`;
             
-            const finalSku = (v.sku?.trim() || generatedSku).toUpperCase();
+            const finalSku = cleanSKU(generatedSku);
             
             if (skuSet.has(finalSku)) {
               throw new Error(`⚠️ SKU "${finalSku}" مكرر في نفس المنتج`);
@@ -359,7 +371,7 @@ const AdminProducts = () => {
         description_en: formData.description_en || "",
         image: formData.image,
         price: Number(formData.price),
-        sku: formData.sku?.toUpperCase().trim(),
+        sku: cleanMainSku,
         has_variants: variants.length > 0,
         variants: variantsPayload
       };
