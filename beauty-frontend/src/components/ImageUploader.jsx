@@ -46,7 +46,18 @@ const ImageUploader = ({
     return true;
   }, [maxSize, lang]);
 
-  // ✅ ✅ ✅ الدالة الرئيسية - مع Logging وتمرير البيانات بشكل صحيح
+  // ✅ ✅ ✅ دالة تنظيف الـ SKU - بسيطة وفعّالة 100%
+  const cleanSKU = useCallback((sku) => {
+    if (!sku) return "";
+    return sku
+      .toUpperCase()                    // تحويل لأحرف كبيرة
+      .trim()                           // إزالة المسافات
+      .normalize('NFD')                 // فصل التشكيل عن الأحرف
+      .replace(/[\u0300-\u036f]/g, '')  // إزالة علامات التشكيل
+      .replace(/[^A-Z0-9\-]/g, '');     // ✅ إبقاء فقط: أرقام، حروف إنجليزية، وشرطات
+  }, []);
+
+  // ✅ ✅ ✅ الدالة الرئيسية - مع تنظيف الـ SKU قبل الإرسال
   const handleFileSelect = useCallback(async (file) => {
     if (!validateFile(file)) return;
     
@@ -61,11 +72,16 @@ const ImageUploader = ({
       formData.append("resourceType", resourceType || "assets");
       
       // ✅ إضافة جميع بيانات المورد (مع التحقق من القيم الفارغة)
-      if (resourceData ) {
+      if (resourceData) {
         Object.entries(resourceData).forEach(([key, value]) => {
           // ✅ إرسال فقط إذا كانت القيمة موجودة وليست فارغة
           if (value && String(value).trim()) {
-            formData.append(key, String(value));
+            // ✅ ✅ ✅ تنظيف الـ SKU إذا كان هو الحقل المرسل
+            if (key === 'sku') {
+              formData.append(key, cleanSKU(String(value)));
+            } else {
+              formData.append(key, String(value));
+            }
           }
         });
       }
@@ -81,16 +97,7 @@ const ImageUploader = ({
 
       // ✅ استخدام adminApi (يضيف التوكن تلقائياً)
       // ✅ لا نحدد Content-Type - Axios يحدده تلقائياً مع FormData
-      if (import.meta.env?.DEV) {
-	  console.log("🔍 [ImageUploader] Debug:", {
-	    resourceTypeProp: resourceType,
-	    resourceTypeSent: resourceType || "assets",
-	    resourceData,
-	    formDataKeys: Array.from(formData.keys())
-	  });
-	}
-	const response = await adminApi.post("/upload", formData);
-
+      const response = await adminApi.post("/upload", formData);
       
       onImageSelect(response.data.path || response.data.secure_url);
       toast.success(lang === "ar" ? "✅ تم رفع الصورة" : "✅ Image uploaded");
@@ -107,7 +114,7 @@ const ImageUploader = ({
     } finally {
       setUploading(false);
     }
-  }, [validateFile, generatePreview, onImageSelect, lang, resourceType, resourceData]);
+  }, [validateFile, generatePreview, onImageSelect, lang, resourceType, resourceData, cleanSKU]);
 
   // ✅ Drag & Drop handlers
   const handleDrag = useCallback((e) => {

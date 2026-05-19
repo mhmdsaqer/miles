@@ -1,4 +1,4 @@
-// ✅ beauty-store/middleware/upload.js - النسخة الجذرية الجديدة 100%
+// ✅ beauty-store/middleware/upload.js - النسخة النهائية 100% ✅
 const cloudinary = require("cloudinary").v2;
 const multer = require("multer");
 const path = require("path");
@@ -11,8 +11,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// دالة slugify
-// ✅ beauty-store/middleware/upload.js - دالة slugify المُحسّنة جذرياً
+// ✅ ✅ ✅ دالة slugify المُحسّنة جذرياً - لإزالة الأحرف العربية والتشكيل
 const slugify = (str) => {
   if (!str) return "";
   
@@ -25,13 +24,25 @@ const slugify = (str) => {
     // ✅ 2. إزالة جميع الأحرف العربية + التشكيل
     .replace(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g, '') // إزالة العربية
     .replace(/[\u0300-\u036f\u1AB0-\u1AFF\u1DC0-\u1DFF\u20D0-\u20FF\uFE20-\uFE2F]/g, '') // إزالة التشكيل
-    // ✅ 3. إزالة أي أحرف غير إنجليزية/أرقام
+    // ✅ 3. إزالة أي أحرف غير إنجليزية/أرقام/شرطات
     .replace(/[^a-z0-9\s\-_]/g, '')
-    // ✅ 4. تنظيف المسافات والشرطات
+    // ✅ 4. تنظيف المسافات والشرطات المتعددة
     .replace(/[\s_-]+/g, '-')
+    // ✅ 5. إزالة الشرطات من البداية والنهاية
     .replace(/^-+|-+$/g, '')
-    // ✅ 5. التأكد من النتيجة النهائية
-    .replace(/[^a-z0-9\-]/g, '') || `img-${Date.now()}`; // Fallback آمن
+    // ✅ 6. Fallback آمن إذا كانت النتيجة فارغة
+    .replace(/[^a-z0-9\-]/g, '') || `img-${Date.now()}`;
+};
+
+// ✅ دالة مساعدة لتنظيف الـ SKU بشكل صارم (للـ Products فقط)
+const cleanSKU = (sku) => {
+  if (!sku) return "";
+  return sku
+    .toUpperCase()           // تحويل لأحرف كبيرة
+    .trim()                  // إزالة المسافات
+    .normalize('NFD')        // فصل التشكيل
+    .replace(/[\u0300-\u036f]/g, '')  // إزالة علامات التشكيل
+    .replace(/[^A-Z0-9\-]/g, '');     // ✅ إبقاء فقط: أرقام، حروف إنجليزية، وشرطات
 };
 
 // دالة جلب Slug البراند
@@ -94,15 +105,15 @@ const uploadToCloudinary = async (fileBuffer, originalName, uploadParams) => {
       if (brandSlug) subFolder = brandSlug;
     }
     
-    // تحديد اسم الملف
+    // ✅ ✅ ✅ تحديد اسم الملف - مع تطبيق cleanSKU على الـ SKU
     if (sku?.trim()) {
-      const cleanSku = slugify(sku);
-      filename = cleanSku ? cleanSku.toUpperCase() : `product-${Date.now()}`;
-      filename = sku.toUpperCase().trim();
+      // ✅ الإصلاح الجذري: تنظيف الـ SKU قبل الاستخدام
+      const cleanedSku = cleanSKU(sku);
+      filename = cleanedSku || `product-${Date.now()}`;
     } else if (productName) {
       filename = slugify(productName);
-    }else{
-        filename = `product-${Date.now()}`;
+    } else {
+      filename = `product-${Date.now()}`;
     }
   }
 
@@ -282,7 +293,8 @@ module.exports = {
   cloudinary,
   deleteFromCloudinary,
   slugify,
+  cleanSKU,  // ✅ تصدير دالة cleanSKU للاستخدام الخارجي إذا لزم
   getBrandSlugById,
   extractPublicIdFromUrl,
-  uploadToCloudinary  // ✅ نصدّر الدالة الرئيسية للاستخدام المباشر إذا لزم
+  uploadToCloudinary
 };
