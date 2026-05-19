@@ -96,7 +96,7 @@ const storage = new CloudinaryStorage({
 
     // ✅ ✅ ✅ بناء المسار الصحيح - بدون تكرار
     // الهيكلية المطلوبة: miles-beauty/{resourceFolder}/{subFolder?}/{filename}
-    const finalFolder = `${baseUrl}/${resourceFolder}`;
+    const finalFolder = `${baseUrl}/${resourceFolder}/${resourceFolder}`;
     
     // ✅ public_id يجب أن يبدأ من ما بعد resourceFolder لتجنب التكرار
     let finalPublicId = "";
