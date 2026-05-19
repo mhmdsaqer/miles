@@ -222,9 +222,16 @@ const uploadCompressed = (fieldName = "image") => {
         });
       });
 
-      // نتحقق من وجود الملف
+      // ✅ ✅ ✅ التحقق من وجود الملف مع رسالة أوضح
       if (!req._uploadData?.file) {
-        return res.status(400).json({ message: "❌ No file uploaded" });
+        console.warn("⚠️ No file in request:", {
+          hasUploadData: !!req._uploadData,
+          hasFile: !!req._uploadData?.file,
+          body: req.body
+        });
+        return res.status(400).json({ 
+          message: "❌ No file uploaded - please select an image file" 
+        });
       }
 
       const { file, resourceType, brandName, categoryName, brandId, sku, productName } = req._uploadData;

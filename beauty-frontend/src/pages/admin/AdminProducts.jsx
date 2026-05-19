@@ -87,16 +87,16 @@ const AdminProducts = () => {
   const canDelete = useMemo(() => hasPermission("products:delete"), [hasPermission]);
   const canRead = useMemo(() => hasPermission("products:read"), [hasPermission]);
   
-  const cleanSKU = (sku) => {
-  if (!sku) return "";
-  return sku
-    .toString()
-    .toUpperCase()
-    .trim()
-    .normalize('NFD')                    // فصل التشكيل
-    .replace(/[\u0300-\u036f]/g, '')     // إزالة التشكيل
-    .replace(/[^\w\-]/g, '');            // إبقاء فقط: أرقام، حروف، وشرطات
-};
+  // ✅ ✅ ✅ دالة تنظيف الـ SKU - نفس الدالة في الـ Backend
+  const cleanSKU = useCallback((sku) => {
+    if (!sku) return "";
+    return sku
+      .toUpperCase()
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^A-Z0-9\-]/g, '');
+  }, []);
 
   // ✅ دوال التحويل بين الهيكلين
   const attributesToArray = useCallback((attributes) => {
@@ -333,15 +333,15 @@ const AdminProducts = () => {
       const cleanMainSku = cleanSKU(formData.sku);
       const skuSet = new Set();
       
-       if (cleanMainSku) {
-      skuSet.add(cleanMainSku);
-    }
+      if (cleanMainSku) {
+        skuSet.add(cleanMainSku);
+      }
 
       const variantsPayload = variants.length > 0 
         ? variants.map((v, index) => {
             const isTemp = v.id?.startsWith?.('temp_');
-            const generatedSku = formData.sku?.trim()
-              ? `${formData.sku.toUpperCase().trim()}-${String(index + 1).padStart(3, '0')}`
+            const generatedSku = cleanMainSku
+              ? `${cleanMainSku}-${String(index + 1).padStart(3, '0')}`
               : `SKU-${formData.id}-${String(index + 1).padStart(3, '0')}`;
             
             const finalSku = cleanSKU(generatedSku);
@@ -860,12 +860,12 @@ const AdminProducts = () => {
                   label={t("productImage")}
                   currentImage={formData.image}
                   resourceType="products"
-		  resourceData={{ 
-		    brand_id: formData.brand_id,
-		    sku: formData.sku,
-		    name_en: formData.name_en,
-		    name_ar: formData.name_ar
-		  }}
+                  resourceData={{ 
+                    brand_id: formData.brand_id,
+                    sku: formData.sku,
+                    name_en: formData.name_en,
+                    name_ar: formData.name_ar
+                  }}
                   onImageSelect={(path) => setFormData(prev => ({ ...prev, image: path }))}
                 />
               </div>
@@ -943,13 +943,14 @@ const AdminProducts = () => {
                             <ImageUploader 
                               currentImage={variant.image} 
                               onImageSelect={(p) => updateVariant(variant.id, "image", p)} 
-                                resourceType="products"
-			  	resourceData={{ 
-			  	  brand_id: formData.brand_id,
-			  	  sku: variant.sku || formData.sku,
-			   	 name_en: formData.name_en,
-			   	 name_ar: formData.name_ar
-				  }}
+                              resourceType="products"
+                              resourceData={{ 
+                                brand_id: formData.brand_id,
+                                sku: variant.sku || formData.sku,
+                                name_en: formData.name_en,
+                                name_ar: formData.name_ar,
+                                isVariant: true  // ✅ ✅ ✅ إضافة حقل للإشارة أن هذا متغير
+                              }}
                               label={null} 
                             />
                           </div>

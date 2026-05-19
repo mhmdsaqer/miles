@@ -86,6 +86,11 @@ const ImageUploader = ({
         });
       }
       
+      // ✅ ✅ ✅ إضافة حقل خاص للإشارة إذا كان هذا رفع لمتغير
+      if (resourceData?.isVariant === true) {
+        formData.append("isVariant", "true");
+      }
+      
       // ✅ ✅ ✅ Logging للتشخيص (فقط في التطوير)
       if (import.meta.env?.DEV) {
         console.log("📤 Uploading with data:", {
