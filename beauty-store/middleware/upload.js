@@ -47,88 +47,76 @@ const extractPublicIdFromUrl = (url) => {
 // ✅ ✅ ✅ إعداد التخزين - النسخة المُصححة نهائياً
 const storage = new CloudinaryStorage({
   cloudinary,
-  params: async (req, file) => {
-    const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
+params: async (req, file) => {
+  const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
+  
+  // ✅ ✅ ✅ الإصلاح هنا: قراءة _resourceType أولاً
+  const rawType = req._resourceType || req.body?.resourceType || req.query?.resourceType;
+  const resourceType = rawType?.toLowerCase()?.trim() || "assets";
+  
+  let resourceFolder = "assets";
+  let subFolder = "";
+  let filename = "";
+
+  if (resourceType === "brands") {
+    resourceFolder = "brands";
+    const brandName = req._name || req.body?.name || req.body?.name_en || req.body?.name_ar;
+    if (brandName) filename = slugify(brandName);
+  }
+  else if (resourceType === "categories") {
+    resourceFolder = "categories";
+    const catName = req._name_ar || req.body?.name_ar || req.body?.name_en || req._name || "category";
+    filename = slugify(catName);
+  }
+  else if (resourceType === "products") {
+    resourceFolder = "products";
     
-    // ✅ قراءة resourceType من المصدر الصحيح (قبل معالجة multer)
-    const rawType = req._resourceType || req.body?.resourceType || req.query?.resourceType;
-    const resourceType = rawType?.toLowerCase()?.trim() || "assets";
-      // ✅ نفس الشيء للبيانات الأخرى
-    const brandName = req._name || req.body?.name || req.body?.name_en || req.body?.name_ar || "";
-    const brandId = req._brand_id || req.body?.brand_id;
-    const sku = req._sku || req.body?.sku;
-    let resourceFolder = "assets";
-    let subFolder = "";
-    let filename = "";
-
-    // 🔹 تحديد نوع المورد والمجلد
-    if (resourceType === "brands") {
-      resourceFolder = "brands";
-      const brandName = req.body?.name || req.body?.name_en || req.body?.name_ar || req._name;
-      if (brandName) filename = slugify(brandName);
+    if (req._brand_id || req.body?.brand_id) {
+      const brandSlug = await getBrandSlugById(req._brand_id || req.body?.brand_id);
+      if (brandSlug) subFolder = brandSlug;
     }
-    else if (resourceType === "categories") {
-      resourceFolder = "categories";
-      const catName = req.body?.name_ar || req.body?.name_en || req.body?.name || req._name_ar || "category";
-      filename = slugify(catName);
-    }
-    else if (resourceType === "products") {
-      resourceFolder = "products";
-      
-      // الحصول على Slug للبراند لإنشاء مجلد فرعي
-      if (req.body?.brand_id || req._brand_id) {
-        const brandId = req.body?.brand_id || req._brand_id;
-        const brandSlug = await getBrandSlugById(brandId);
-        if (brandSlug) subFolder = brandSlug;
-      }
-      
-      // تحديد اسم الملف
-      if (req.body?.sku?.trim() || req._sku?.trim()) {
-        filename = (req.body?.sku || req._sku).toUpperCase().trim();
-      } else if (req.body?.name_en || req.body?.name_ar || req._name_en || req._name_ar) {
-        filename = slugify(req.body?.name_en || req._name_en || req.body?.name_ar || req._name_ar);
-      } else {
-        filename = `product-${Date.now()}`;
-      }
-    }
-
-    // ✅ Fallback آمن لاسم الملف
-    if (!filename || filename === "-" || filename.trim() === "") {
-      filename = `img-${Date.now()}`;
-    }
-
-    // ✅ ✅ ✅ بناء المسار الصحيح - بدون تكرار
-    // الهيكلية المطلوبة: miles-beauty/{resourceFolder}/{subFolder?}/{filename}
-    const finalFolder = `${baseUrl}/${resourceFolder}`;
     
-    // ✅ public_id يجب أن يبدأ من ما بعد resourceFolder لتجنب التكرار
-    let finalPublicId = "";
-    if (subFolder) finalPublicId += `${subFolder}/`;
-    finalPublicId += filename;
+    if (req._sku?.trim() || req.body?.sku?.trim()) {
+      filename = (req._sku || req.body?.sku).toUpperCase().trim();
+    } else if (req._name_en || req.body?.name_en || req._name_ar || req.body?.name_ar) {
+      filename = slugify(req._name_en || req.body?.name_en || req._name_ar || req.body?.name_ar);
+    } else {
+      filename = `product-${Date.now()}`;
+    }
+  }
 
-  // ✅ Debug Log مفصل
-  console.log("🔍 Cloudinary Upload Debug:", {
+  if (!filename || filename === "-" || filename.trim() === "") {
+    filename = `img-${Date.now()}`;
+  }
+
+  // ✅ بناء المسار بدون تكرار
+  const finalFolder = `${baseUrl}/${resourceFolder}`;
+  let finalPublicId = "";
+  if (subFolder) finalPublicId += `${subFolder}/`;
+  finalPublicId += filename;
+
+  console.log("📁 Cloudinary Upload Debug:", {
     resourceType,
     rawType,
-    req_body_resourceType: req.body?.resourceType,
     req__resourceType: req._resourceType,
+    req_body_resourceType: req.body?.resourceType,
     folder: finalFolder,
     public_id: finalPublicId,
     expectedUrl: `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/${finalFolder}/${finalPublicId}`
   });
 
-    return {
-      folder: finalFolder,           // مثال: miles-beauty/brands
-      format: "webp",
-      public_id: finalPublicId,      // ✅ مثال: brand-name (بدون تكرار)
-      resource_type: file.mimetype.startsWith("image/") ? "image" : "raw",
-      transformation: [
-        { width: 1200, height: 1200, crop: "limit" },
-        { quality: "auto:good" },
-        { fetch_format: "auto" }
-      ],
-    };
-  },
+  return {
+    folder: finalFolder,
+    format: "webp",
+    public_id: finalPublicId,
+    resource_type: file.mimetype.startsWith("image/") ? "image" : "raw",
+    transformation: [
+      { width: 1200, height: 1200, crop: "limit" },
+      { quality: "auto:good" },
+      { fetch_format: "auto" }
+    ],
+  };
+},
 });
 
 const fileFilter = (req, file, cb) => {
