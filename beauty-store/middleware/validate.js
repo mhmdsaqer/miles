@@ -1,4 +1,4 @@
-// beauty-store/middleware/validate.js - النسخة المُحدثة لدعم Cloudinary ✅
+// beauty-store/middleware/validate.js - النسخة المُصححة ✅
 const Joi = require("joi");
 
 /**
@@ -50,17 +50,15 @@ const productSchema = Joi.object({
   description_ar: Joi.string().min(10).max(2000).allow(""),
   description_en: Joi.string().min(10).max(2000).allow(""),
   
-  // ✅ ✅ ✅ تحديث: قبول مسار محلي أو رابط Cloudinary
-	image: Joi.string()
-	  .uri({ scheme: ['https'] })  // ✅ يقبل أي رابط HTTPS صحيح (يشمل % للأحرف المشفرة)
-	  .or(
-	    Joi.string().pattern(/^(assets\/.+\.(jpg|jpeg|png|webp|gif))$/i)
-	  )
-	  .required()
-	  .messages({
-	    "string.uri": "مسار الصورة يجب أن يكون رابط HTTPS صحيح",
-	    "string.pattern.base": "أو مسار محلي صحيح (assets/...)",
-	  }),
+  // ✅ ✅ ✅ الإصلاح: استخدام Joi.alternatives().try() بدلاً من .or()
+  image: Joi.alternatives().try(
+    Joi.string().uri({ scheme: ['https'] }),  // ✅ يقبل أي رابط HTTPS صحيح
+    Joi.string().pattern(/^(assets\/.+\.(jpg|jpeg|png|webp|gif))$/i)  // ✅ أو مسار محلي
+  )
+  .required()
+  .messages({
+    "any.only": "مسار الصورة يجب أن يكون إما رابط HTTPS صحيح أو مسار محلي (assets/...)",
+  }),
   
   price: Joi.number().min(0).max(10000).precision(2).required(),
   has_variants: Joi.boolean().default(false),
@@ -74,13 +72,12 @@ const productSchema = Joi.object({
         sku: Joi.string().uppercase().trim().pattern(/^[A-Z0-9\-]{3,50}$/),
         price: Joi.number().min(0).max(10000).precision(2),
         
-        // ✅ نفس التحديث لحقل image في المتغيرات
-	image: Joi.string()
-	  .uri({ scheme: ['https'] })
-	  .or(
-	    Joi.string().pattern(/^(assets\/.+\.(jpg|jpeg|png|webp|gif))$/i)
-	  )
-	  .allow(""),
+        // ✅ نفس الإصلاح لحقل image في المتغيرات
+        image: Joi.alternatives().try(
+          Joi.string().uri({ scheme: ['https'] }),
+          Joi.string().pattern(/^(assets\/.+\.(jpg|jpeg|png|webp|gif))$/i)
+        )
+        .allow(""),
         
         attributes: Joi.object().pattern(Joi.string(), Joi.any()),
       })
@@ -103,16 +100,15 @@ const brandSchema = Joi.object({
       "string.pattern.base": "Code يجب أن يكون 2-10 أحرف كبيرة",
     }),
   
-  // ✅ ✅ ✅ تحديث: قبول مسار محلي أو رابط Cloudinary
-	image: Joi.string()
-	  .uri({ scheme: ['https'] })
-	  .or(
-	    Joi.string().pattern(/^(assets\/.+\.(jpg|jpeg|png|webp|gif))$/i)
-	  )
-	  .required()
-	  .messages({
-	    "string.uri": "مسار الصورة يجب أن يكون رابط HTTPS صحيح",
-	  }),
+  // ✅ ✅ ✅ نفس الإصلاح
+  image: Joi.alternatives().try(
+    Joi.string().uri({ scheme: ['https'] }),
+    Joi.string().pattern(/^(assets\/.+\.(jpg|jpeg|png|webp|gif))$/i)
+  )
+  .required()
+  .messages({
+    "any.only": "مسار الصورة يجب أن يكون إما رابط HTTPS صحيح أو مسار محلي (assets/...)",
+  }),
 });
 
 // ============================================
@@ -124,14 +120,13 @@ const categorySchema = Joi.object({
   name_en: Joi.string().min(2).max(100).required(),
   parent_id: Joi.number().integer().positive().allow(null).default(null),
   
-  // ✅ ✅ ✅ تحديث: قبول مسار محلي أو رابط Cloudinary (أو فارغ)
-	image: Joi.string()
-	  .uri({ scheme: ['https'] })
-	  .or(
-	    Joi.string().pattern(/^(assets\/.+\.(jpg|jpeg|png|webp|gif))$/i)
-	  )
-	  .allow("")
-	  .default(""),
+  // ✅ ✅ ✅ نفس الإصلاح (مع السماح بالفارغ)
+  image: Joi.alternatives().try(
+    Joi.string().uri({ scheme: ['https'] }),
+    Joi.string().pattern(/^(assets\/.+\.(jpg|jpeg|png|webp|gif))$/i)
+  )
+  .allow("")
+  .default(""),
   
   sort_order: Joi.number().integer().min(0).default(0),
 });
