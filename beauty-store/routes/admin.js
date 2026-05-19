@@ -143,7 +143,10 @@ const generateSKU = async (formData, brands) => {
 router.post("/products", 
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.CREATE),
-  validate(schemas.product, "body"),
+  validate(
+    schemas.product.fork(["image"], field => field.optional()),
+    "body"
+  ),
   uploadCompressed("image"), 
   async (req, res) => {
     try {
@@ -800,8 +803,11 @@ router.get("/brands",
 router.post("/brands", 
   authMiddleware,
   checkPermission(PERMISSIONS.BRANDS.CREATE),
+  validate(
+    schemas.brand.fork(["image"], field => field.optional()), 
+    "body"
+  ),
   uploadCompressed("image"), 
-  validate(schemas.brand, "body"),
   async (req, res) => {
     try {
       const { id, name, code, image } = req.body;
@@ -940,8 +946,12 @@ router.get("/categories",
 router.post("/categories", 
   authMiddleware,
   checkPermission(PERMISSIONS.CATEGORIES.CREATE),
+  validate(
+    schemas.category.fork(["image"], field => field.optional()),
+    "body"
+  ),
   uploadCompressed("image"), 
-  validate(schemas.category, "body"),
+  
   async (req, res) => {
     try {
       const { id, name_ar, name_en, parent_id, image, sort_order } = req.body;
