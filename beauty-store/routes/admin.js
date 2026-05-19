@@ -868,6 +868,11 @@ router.post("/brands",
   
   // ✅ رابعاً: الـ handler الرئيسي
   async (req, res) => {
+    console.log("🔎 [DEBUG] Brand handler received:", {
+    uploadedPath: req.uploadedPath,
+    bodyImage: req.body.image,
+    bodyKeys: Object.keys(req.body)
+  });
     try {
       const { id, name, code, image } = req.body;
       
