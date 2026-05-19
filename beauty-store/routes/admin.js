@@ -1,4 +1,4 @@
-// routes/admin.js - النسخة النهائية المُصححة ✅
+// routes/admin.js - النسخة المُصححة نهائياً ✅
 // ✅ المبدأ: روتات الـ POST تستقبل رابط الصورة كـ JSON (لأن الصورة رُفعت مسبقاً عبر /upload)
 // ✅ روتات الـ PUT يمكنها استقبال ملف جديد للرفع عبر uploadCompressed
 
@@ -52,7 +52,6 @@ router.get("/stats",
 );
 
 // ================= 📤 IMAGE UPLOAD =================
-// ✅ روت رفع الصورة فقط - يعيد الرابط بعد الرفع لـ Cloudinary
 router.post("/upload",
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.CREATE),
@@ -72,7 +71,6 @@ router.post("/upload",
 
 // ================= 📦 PRODUCTS CRUD =================
 
-// ✅ جلب المنتجات
 router.get("/products", 
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.READ),
@@ -112,7 +110,6 @@ router.get("/products",
   }
 );
 
-// ✅ جلب منتج واحد
 router.get("/products/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.READ),
@@ -139,18 +136,13 @@ const generateSKU = async (formData, brands) => {
   return `${brandCode}-${String(formData.id).padStart(5, '0')}`.toUpperCase();
 };
 
-// ✅ ✅ ✅ إضافة منتج - بدون uploadCompressed (الصورة رُفعت مسبقاً كـ رابط)
+// ✅ ✅ ✅ إضافة منتج - مع التحقق اليدوي من الصورة (بدون .fork().uri())
 router.post("/products", 
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.CREATE),
   
-  // ✅ ✅ ✅ الإصلاح: استخدام .uri() بدلاً من .pattern()
-  validate(
-    schemas.product.fork(["image"], field => 
-      field.required().uri({ scheme: ['https'] })  // ✅ يقبل أي رابط HTTPS
-    ),
-    "body"
-  ),
+  // ✅ ✅ ✅ الإصلاح: استخدام validate عادي + تحقق يدوي من الصورة
+  validate(schemas.product, "body"),
   
   async (req, res) => {
     try {
@@ -160,9 +152,11 @@ router.post("/products",
         has_variants, variants
       } = req.body;
 
-      // ✅ تحقق أن الصورة رابط Cloudinary
-      if (!image || !image.startsWith("https://")) {
-        return res.status(400).json({ message: "❌ صورة المنتج مطلوبة ويجب أن تكون رابط Cloudinary" });
+      // ✅ ✅ ✅ التحقق اليدوي من أن الصورة رابط HTTPS (بدون استخدام .uri() في الفورك)
+      if (!image || !/^https:\/\//i.test(image)) {
+        return res.status(400).json({ 
+          message: "❌ صورة المنتج مطلوبة ويجب أن تكون رابط HTTPS صحيح" 
+        });
       }
 
       const brands = await Brand.find().select('id code');
@@ -183,7 +177,7 @@ router.post("/products",
       const newProduct = new Product({
         id, brand_id, category_id, name_ar, name_en,
         description_ar, description_en,
-        image,  // ✅ نستخدم الرابط مباشرة (رُفع مسبقاً)
+        image,
         price,
         sku: finalSku,
         has_variants: has_variants || (variants?.length > 0) || false
@@ -201,7 +195,7 @@ router.post("/products",
             product_id: id,
             sku: variantSku,
             price: Number(v.price) || Number(price),
-            image: v.image || image,  // ✅ نستخدم رابط الصورة المرفوعة
+            image: v.image || image,
             attributes: v.attributes || {}
           };
         });
@@ -235,15 +229,13 @@ router.post("/products",
   }
 );
 
-// ✅ ✅ ✅ تعديل منتج - مع uploadCompressed (لرفع صورة جديدة عند التعديل)
+// ✅ تعديل منتج
 router.put("/products/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.UPDATE),
   
-  // ✅ أولاً: رفع الصورة الجديدة إذا وُجدت
   uploadCompressed("image"),
   
-  // ✅ ثانياً: validate مع جعل الحقول optional
   (req, res, next) => {
     const updateSchema = schemas.product.fork(
       ["id", "sku", "name_ar", "name_en", "image", "price"],
@@ -271,7 +263,6 @@ router.put("/products/:id",
         productData.sku = normalizedSku;
       }
 
-      // ✅ إذا رُفعت صورة جديدة، نستخدمها
       if (req.uploadedPath) {
         productData.image = req.uploadedPath;
       }
@@ -377,7 +368,6 @@ router.put("/products/:id",
   }
 );
 
-// ✅ حذف منتج - مع حذف الصورة من Cloudinary
 router.delete("/products/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.DELETE),
@@ -797,33 +787,30 @@ router.get("/brands",
   }
 );
 
-// ✅ ✅ ✅ إضافة براند - بدون uploadCompressed (الصورة رُفعت مسبقاً)
+// ✅ ✅ ✅ إضافة براند - مع التحقق اليدوي من الصورة
 router.post("/brands", 
   authMiddleware,
   checkPermission(PERMISSIONS.BRANDS.CREATE),
   
-  // ✅ validate مع التأكد أن image رابط Cloudinary
-  validate(
-    schemas.brand.fork(["image"], field => 
-      field.required().uri({ scheme: ['https'] })  // ✅ الإصلاح هنا
-    ),
-    "body"
-  ),
+  // ✅ استخدام المخطط الأصلي + تحقق يدوي
+  validate(schemas.brand, "body"),
   
   async (req, res) => {
     try {
       const { id, name, code, image } = req.body;
       
-      // ✅ تحقق أن الصورة رابط Cloudinary
-      if (!image || !image.startsWith("https://")) {
-        return res.status(400).json({ message: "❌ صورة البراند مطلوبة ويجب أن تكون رابط Cloudinary" });
+      // ✅ التحقق اليدوي من أن الصورة رابط HTTPS
+      if (!image || !/^https:\/\//i.test(image)) {
+        return res.status(400).json({ 
+          message: "❌ صورة البراند مطلوبة ويجب أن تكون رابط HTTPS صحيح" 
+        });
       }
       
       const exists = await Brand.findOne({ id });
       if (exists) return res.status(400).json({ message: "⚠️ براند بهذا المعرف موجود" });
 
       const newBrand = await Brand.create({
-        id, name, code, image  // ✅ نستخدم الرابط مباشرة
+        id, name, code, image
       });
       
       await audit.create(req.user, "brand", newBrand.toObject(), req);
@@ -839,7 +826,6 @@ router.post("/brands",
   }
 );
 
-// ✅ ✅ ✅ تعديل براند - مع uploadCompressed لرفع صورة جديدة
 router.put("/brands/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.BRANDS.UPDATE),
@@ -852,7 +838,6 @@ router.put("/brands/:id",
     try {
       const { image, ...updateData } = req.body;
       
-      // ✅ إذا رُفعت صورة جديدة، نستخدمها
       if (req.uploadedPath) {
         updateData.image = req.uploadedPath;
       }
@@ -885,7 +870,6 @@ router.put("/brands/:id",
   }
 );
 
-// ✅ حذف براند - مع حذف الصورة من Cloudinary
 router.delete("/brands/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.BRANDS.DELETE),
@@ -950,26 +934,23 @@ router.get("/categories",
   }
 );
 
-// ✅ ✅ ✅ إضافة تصنيف - بدون uploadCompressed
+// ✅ ✅ ✅ إضافة تصنيف - مع التحقق اليدوي من الصورة
 router.post("/categories", 
   authMiddleware,
   checkPermission(PERMISSIONS.CATEGORIES.CREATE),
   
-  // ✅ validate مع التأكد أن image رابط Cloudinary (أو فارغ)
-  validate(
-    schemas.category.fork(["image"], field => 
-      field.allow("").uri({ scheme: ['https'] })  // ✅ مع السماح بالفارغ
-    ),
-    "body"
-  ),
+  // ✅ استخدام المخطط الأصلي + تحقق يدوي
+  validate(schemas.category, "body"),
   
   async (req, res) => {
     try {
       const { id, name_ar, name_en, parent_id, image, sort_order } = req.body;
       
-      // ✅ تحقق أن الصورة رابط صحيح إذا وُجدت
-      if (image && !image.startsWith("https://")) {
-        return res.status(400).json({ message: "❌ صورة التصنيف يجب أن تكون رابط Cloudinary" });
+      // ✅ التحقق اليدوي: إذا وُجدت صورة، يجب أن تكون رابط HTTPS
+      if (image && !/^https:\/\//i.test(image)) {
+        return res.status(400).json({ 
+          message: "❌ صورة التصنيف يجب أن تكون رابط HTTPS صحيح" 
+        });
       }
       
       const exists = await Category.findOne({ id });
@@ -993,7 +974,6 @@ router.post("/categories",
   }
 );
 
-// ✅ ✅ ✅ تعديل تصنيف - مع uploadCompressed
 router.put("/categories/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.CATEGORIES.UPDATE),
@@ -1050,7 +1030,6 @@ async function getCategoryAndDescendantsIds(catId, categories = null) {
   return ids;
 }
 
-// ✅ حذف تصنيف - مع حذف الصورة من Cloudinary
 router.delete("/categories/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.CATEGORIES.DELETE),
@@ -1110,7 +1089,7 @@ router.delete("/categories/:id",
   }
 );
 
-// ================= 👥 USERS MANAGEMENT (Super Admin Only) =================
+// ================= 👥 USERS MANAGEMENT =================
 router.get("/users", 
   authMiddleware,
   checkPermission(PERMISSIONS.USERS.READ),
@@ -1263,7 +1242,7 @@ router.delete("/users/:id",
   }
 );
 
-// ================= ⚙️ SETTINGS (Super Admin Only) =================
+// ================= ⚙️ SETTINGS =================
 router.get("/settings", 
   authMiddleware,
   checkPermission(PERMISSIONS.SETTINGS.READ),
@@ -1286,7 +1265,7 @@ router.put("/settings",
   }
 );
 
-// ================= 📋 AUDIT LOGS (Super Admin Only) =================
+// ================= 📋 AUDIT LOGS =================
 router.get("/audit-logs",
   authMiddleware,
   checkPermission("settings:read"),
