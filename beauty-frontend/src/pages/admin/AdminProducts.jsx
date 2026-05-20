@@ -88,21 +88,17 @@ const AdminProducts = () => {
   const canRead = useMemo(() => hasPermission("products:read"), [hasPermission]);
   
   // ✅ ✅ ✅ دالة تنظيف الـ SKU - نفس الدالة في الـ Backend
-// ✅ في دالة cleanSKU داخل AdminProducts.jsx
-	const cleanSKU = useCallback((sku) => {
-	  if (!sku) return "";
-	  
-	  return sku
-	    .toString()
-	    .toUpperCase()                    // تحويل لأحرف كبيرة
-	    .trim()                           // إزالة المسافات من البداية والنهاية
-	    .normalize('NFD')                 // فصل التشكيل عن الأحرف
-	    .replace(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/g, '') // إزالة الأحرف العربية
-	    .replace(/[\u0300-\u036f]/g, '')  // إزالة علامات التشكيل
-	    .replace(/\s+/g, '-')             // تحويل المسافات الداخلية لشرطات
-	    .replace(/[^A-Z0-9\-_.]/g, '')    // ✅ إبقاء: أحرف، أرقام، شرطات، نقاط فقط
-	    .substring(0, 100);               // ✅ تحديد الطول الأقصى
-	}, []);
+const cleanSKU = (sku) => {
+  if (!sku) return "";
+  return sku
+    .toUpperCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^A-Z0-9\-_.]/g, '')
+    .substring(0, 100);
+};
 
   // ✅ دوال التحويل بين الهيكلين
   const attributesToArray = useCallback((attributes) => {
