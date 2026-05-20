@@ -110,6 +110,14 @@ const uploadToCloudinary = async (fileBuffer, originalName, uploadParams) => {
       // ✅ الإصلاح الجذري: تنظيف الـ SKU قبل الاستخدام
       const cleanedSku = cleanSKU(sku);
       filename = cleanedSku || `product-${Date.now()}`;
+      
+          // ✅ Logging للتأكد من تطابق الـ SKU
+    console.log("🔍 Variant SKU Debug:", {
+      originalSku: sku,
+      cleanedSku: cleanedSku,
+      filename: filename,
+      isVariant: uploadParams.isVariant
+    });
     } else if (productName) {
       filename = slugify(productName);
     } else {

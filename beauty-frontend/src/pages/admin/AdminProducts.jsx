@@ -337,29 +337,36 @@ const AdminProducts = () => {
         skuSet.add(cleanMainSku);
       }
 
-      const variantsPayload = variants.length > 0 
-        ? variants.map((v, index) => {
-            const isTemp = v.id?.startsWith?.('temp_');
-            const generatedSku = cleanMainSku
-              ? `${cleanMainSku}-${String(index + 1).padStart(3, '0')}`
-              : `SKU-${formData.id}-${String(index + 1).padStart(3, '0')}`;
-            
-            const finalSku = cleanSKU(generatedSku);
-            
-            if (skuSet.has(finalSku)) {
-              throw new Error(`⚠️ SKU "${finalSku}" مكرر في نفس المنتج`);
-            }
-            skuSet.add(finalSku);
-            
-            return {
-              id: isTemp ? undefined : (v.id ? Number(v.id) : undefined),
-              sku: finalSku,
-              price: Number(v.price) || Number(formData.price),
-              image: v.image || formData.image,
-              attributes: attributesToObject(v.attributes)
-            };
-          })
-        : undefined;
+// ✅ في دالة handleSubmit - داخل variants.map
+		const variantsPayload = variants.length > 0 
+		  ? variants.map((v, index) => {
+		      const isTemp = v.id?.startsWith?.('temp_');
+		      
+		      // ✅ ✅ ✅ نفس المنطق بالضبط لتوليد الـ SKU
+		      let finalSku;
+		      if (v.sku?.trim()) {
+			finalSku = cleanSKU(v.sku);
+		      } else if (formData.sku?.trim()) {
+			finalSku = cleanSKU(`${formData.sku.toUpperCase().trim()}-${String(index + 1).padStart(3, '0')}`);
+		      } else {
+			finalSku = cleanSKU(`VAR-${formData.id || Date.now()}-${String(index + 1).padStart(3, '0')}`);
+		      }
+		      
+		      // ✅ التحقق من التكرار
+		      if (skuSet.has(finalSku)) {
+			throw new Error(`⚠️ SKU "${finalSku}" مكرر في نفس المنتج`);
+		      }
+		      skuSet.add(finalSku);
+		      
+		      return {
+			id: isTemp ? undefined : (v.id ? Number(v.id) : undefined),
+			sku: finalSku,  // ← ← ← الآن نفس القيمة المرسلة للصورة!
+			price: Number(v.price) || Number(formData.price),
+			image: v.image || formData.image,
+			attributes: attributesToObject(v.attributes)
+		      };
+		    })
+		  : undefined;
 
       const productPayload = {
         id: Number(formData.id),
@@ -946,9 +953,18 @@ const AdminProducts = () => {
                               resourceType="products"
                               resourceData={{ 
                                 brand_id: formData.brand_id,
-                                sku: variant.sku?.trim() 
-			      ? variant.sku 
-			      : (formData.sku?.trim() ? `${formData.sku.trim()}-VAR-${variant.id}` : `VAR-${variant.id}`),
+                                    sku: (() => {
+				      // 1️⃣ إذا كان المتغير له SKU، نستخدمه
+				      if (variant.sku?.trim()) {
+					return variant.sku.trim().toUpperCase();
+				      }
+				      // 2️⃣ إذا كان للمنتج SKU، نولد منه + رقم تسلسلي
+				      if (formData.sku?.trim()) {
+					return `${formData.sku.trim().toUpperCase()}-${String(index + 1).padStart(3, '0')}`;
+				      }
+				      // 3️⃣ Fallback: توليد قيمة فريدة
+				      return `VAR-${formData.id || Date.now()}-${String(index + 1).padStart(3, '0')}`;
+				    })(),
                                 name_en: formData.name_en,
                                 name_ar: formData.name_ar,
                                 isVariant: true  // ✅ ✅ ✅ إضافة حقل للإشارة أن هذا متغير
