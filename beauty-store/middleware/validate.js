@@ -37,13 +37,18 @@ const productSchema = Joi.object({
   id: Joi.number().integer().positive().required(),
   brand_id: Joi.number().integer().positive().required(),
   category_id: Joi.number().integer().positive().required(),
+// للمنتجات (Products)
   sku: Joi.string()
-    .uppercase()
-    .trim()
-    .pattern(/^[A-Z0-9\-]{3,50}$/)
+    .uppercase()           // تحويل تلقائي لأحرف كبيرة
+    .trim()                // إزالة المسافات الزائدة
+    .min(1)                // الحد الأدنى: حرف واحد
+    .max(100)              // الحد الأقصى: 100 حرف
+    .pattern(/^[A-Za-z0-9\-_.\s]+$/)  // ✅ نمط مرن: أحرف، أرقام، شرطات، نقاط، مسافات 
     .required()
     .messages({
-      "string.pattern.base": "SKU يجب أن يحتوي على أحرف كبيرة وأرقام وشرطات فقط",
+    "string.pattern.base": "SKU يجب أن يحتوي على أحرف وأرقام فقط (بدون رموز خاصة)",
+    "string.min": "SKU يجب أن يكون حرفاً واحداً على الأقل",
+    "string.max": "SKU طويل جداً (الحد الأقصى 100 حرف)"
     }),
   name_ar: Joi.string().min(2).max(200).required(),
   name_en: Joi.string().min(2).max(200).required(),
@@ -69,7 +74,17 @@ const productSchema = Joi.object({
           Joi.number().integer().positive(),
           Joi.string().pattern(/^temp_/)
         ),
-        sku: Joi.string().uppercase().trim().pattern(/^[A-Z0-9\-]{3,50}$/),
+       // للمتغيرات (Variants) - داخل مصفوفة المنتجات
+	sku: Joi.string()
+	  .uppercase()
+	  .trim()
+	  .min(1)
+	  .max(100)
+	  .pattern(/^[A-Za-z0-9\-_.\s]+$/)
+	  .allow("")  // ✅ السماح بحقل فارغ للمتغيرات
+	  .messages({
+	    "string.pattern.base": "SKU يجب أن يحتوي على أحرف وأرقام فقط",
+	  }),
         price: Joi.number().min(0).max(10000).precision(2),
         
         // ✅ نفس الإصلاح لحقل image في المتغيرات

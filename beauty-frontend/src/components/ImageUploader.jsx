@@ -46,16 +46,21 @@ const ImageUploader = ({
     return true;
   }, [maxSize, lang]);
 
-  // ✅ ✅ ✅ دالة تنظيف الـ SKU - بسيطة وفعّالة 100%
-  const cleanSKU = useCallback((sku) => {
-    if (!sku) return "";
-    return sku
-      .toUpperCase()                    // تحويل لأحرف كبيرة
-      .trim()                           // إزالة المسافات
-      .normalize('NFD')                 // فصل التشكيل عن الأحرف
-      .replace(/[\u0300-\u036f]/g, '')  // إزالة علامات التشكيل
-      .replace(/[^A-Z0-9\-]/g, '');     // ✅ إبقاء فقط: أرقام، حروف إنجليزية، وشرطات
-  }, []);
+ // ✅ في دالة cleanSKU داخل ImageUploader.jsx
+const cleanSKU = useCallback((sku) => {
+  if (!sku) return "";
+  
+  return sku
+    .toString()
+    .toUpperCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^A-Z0-9\-_.]/g, '')
+    .substring(0, 100);
+}, []);
 
   // ✅ ✅ ✅ الدالة الرئيسية - مع تنظيف الـ SKU قبل الإرسال
   const handleFileSelect = useCallback(async (file) => {
