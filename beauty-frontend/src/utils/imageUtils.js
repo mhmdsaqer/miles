@@ -1,31 +1,40 @@
-// src/utils/imageUtils.js
+// src/utils/imageUtils.js - النسخة المُصححة ✅
 const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
 const CLOUDINARY_PREFIX = "https://res.cloudinary.com/";
 
 /**
- * دالة ذكية لمعالجة مسار الصورة - تدعم Cloudinary والمسار المحلي
- * @param {string} imagePath - مسار الصورة من الداتابيس
- * @returns {string} - الرابط النهائي للصورة
- */
+* دالة ذكية لمعالجة مسار الصورة - تدعم Cloudinary والمسار المحلي + تصحيح المسارات المكررة
+* @param {string} imagePath - مسار الصورة من الداتابيس
+* @returns {string} - الرابط النهائي للصورة
+*/
 export const getImageUrl = (imagePath) => {
   if (!imagePath) return "";
   
-  // ✅ إذا كان رابط Cloudinary، نستخدمه مباشرة
-  if (imagePath.startsWith(CLOUDINARY_PREFIX)) {
-    return imagePath;
+  // ✅ ✅ ✅ إصلاح المسار إذا كان يحتوي على تكرار (مثل /products/products/)
+  let fixedPath = imagePath;
+  
+  // تصحيح التكرار في المسارات
+  fixedPath = fixedPath
+    .replace(/\/products\/products\//g, '/products/')
+    .replace(/\/brands\/brands\//g, '/brands/')
+    .replace(/\/categories\/categories\//g, '/categories/');
+  
+  // ✅ إذا كان رابط Cloudinary، نستخدمه بعد الإصلاح
+  if (fixedPath.startsWith(CLOUDINARY_PREFIX)) {
+    return fixedPath;
   }
   
   // ✅ fallback للمسار المحلي (assets/...)
-  const cleanPath = imagePath.replace(/^assets\//i, "");
+  const cleanPath = fixedPath.replace(/^assets\//i, "");
   return `${API_URL}/assets/${cleanPath}`;
 };
 
 /**
- * دالة لتحسين صور Cloudinary (اختياري - للتحجيم والجودة)
- * @param {string} url - رابط Cloudinary الأصلي
- * @param {Object} options - خيارات التحسين
- * @returns {string} - الرابط المُحسّن
- */
+* دالة لتحسين صور Cloudinary (اختياري - للتحجيم والجودة)
+* @param {string} url - رابط Cloudinary الأصلي
+* @param {Object} options - خيارات التحسين
+* @returns {string} - الرابط المُحسّن
+*/
 export const optimizeCloudinaryImage = (url, options = {}) => {
   if (!url?.startsWith(CLOUDINARY_PREFIX)) return url;
   
