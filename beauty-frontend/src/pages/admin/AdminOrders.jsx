@@ -8,7 +8,8 @@ import { io } from "socket.io-client";
 import { adminApi } from "../../utils/adminAuth";
 
 const API_URL = "http://localhost:3000";
-const SOCKET_URL = "http://localhost:3000";
+const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || "http://localhost:3000";
+
 
 // ✅ دالة تصدير Excel - مع دعم اللغة والوضع الليلي
 const exportOrdersToExcel = (orders, lang, isDark) => {

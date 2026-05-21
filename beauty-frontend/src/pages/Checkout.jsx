@@ -8,10 +8,23 @@ import { toast } from "sonner";
 import axios from "axios"; // ✅ استيراد axios لإرسال الطلب للـ Backend
 import { useCart } from "../context/CartContext";
 import { useLang } from "../context/LanguageContext";
+import { io } from "socket.io-client";
+
 
 // ===== إعدادات النظام =====
 const WHATSAPP_NUMBER = "970595761050";
 const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
+const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || "http://localhost:3000";
+
+export const socket = io(SOCKET_URL, {
+  transports: ['polling', 'websocket'], // ✅ جرب polling أولاً
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  // ✅ مهم لـ Vercel/Render
+  withCredentials: true,
+  autoConnect: false // ✅ اتصل يدويًا عند الحاجة
+});
 
 // ✅ دالة مساعدة عادية (ليست هوك) - يمكن تعريفها خارج المكون
 const extractSkuFromImage = (imagePath) => {

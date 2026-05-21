@@ -273,8 +273,11 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: isProd ? '*' : corsOrigins,
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    // ✅ السماح لكل النطاقات في الإنتاج (أو حدد نطاق Vercel فقط)
+    origin: process.env.NODE_ENV === 'production' 
+      ? [process.env.CORS_ORIGIN, "https://miles-six-gamma.vercel.app"].filter(Boolean)
+      : ['http://localhost:5173', 'http://localhost:3000'],
+    methods: ['GET', 'POST'],
     credentials: true
   },
   transports: ['polling', 'websocket'],
@@ -286,6 +289,15 @@ app.set('io', io);
 io.on("connection", (socket) => {
   console.log("🔌 Connected:", socket.id);
   socket.on("disconnect", () => console.log(`🔌 Disconnected: ${socket.id}`));
+});
+
+// ✅ أضف هذا في server.js للتأكد من أن Socket.io يعمل
+app.get("/api/health", (req, res) => {
+  res.json({ 
+    status: "ok", 
+    socket: io ? "connected" : "not initialized",
+    environment: process.env.NODE_ENV 
+  });
 });
 
 // 🚀 تشغيل السيرفر
