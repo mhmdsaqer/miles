@@ -218,65 +218,67 @@ const parseFormData = (req, res, next) => {
   });
 };
 
-// ✅ Middleware النهائي للرفع
-const uploadCompressed = (fieldName = "image",{ required = true } = {}) => {
+// ✅ ✅ ✅ Middleware النهائي للرفع - يتعامل مع الملفات والروابط ✅
+const uploadCompressed = (fieldName = "image", { required = true } = {}) => {
   return async (req, res, next) => {
     try {
-      // أولاً: نحلل الـ FormData
-      await new Promise((resolve, reject) => {
-        parseFormData(req, res, (err) => {
-          if (err) reject(err);
-          else resolve();
+      // 1️⃣ أولاً: نحلل الـ FormData فقط إذا كان Content-Type مناسباً
+      const contentType = req.headers['content-type'] || '';
+      
+      if (contentType.includes('multipart/form-data')) {
+        await new Promise((resolve, reject) => {
+          parseFormData(req, res, (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
         });
-      });
-
-      // ✅ ✅ ✅ التحقق من وجود الملف مع رسالة أوضح
-      if (!req._uploadData?.file) {
-        if (required) {
-          console.warn("⚠️ No file in request:", {
-            hasUploadData: !!req._uploadData,
-            hasFile: !!req._uploadData?.file,
-            body: req.body
-          });
-          return res.status(400).json({ 
-            message: "❌ No file uploaded - please select an image file" 
-          });
-        }
-        // ✅ إذا كان اختياريًا، نمرر بدون ملف
+      }
+      
+      // 2️⃣ ✅ إذا كان هناك ملف، نرفعه لـ Cloudinary
+      if (req._uploadData?.file) {
+        const { file, resourceType, brandName, categoryName, brandId, sku, productName } = req._uploadData;
+        
+        const uploadResult = await uploadToCloudinary(
+          file.buffer,
+          file.originalname,
+          { resourceType, brandName, categoryName, brandId, sku, productName }
+        );
+        
+        req.uploadedPath = uploadResult.secure_url;
+        req.cloudinaryPublicId = uploadResult.public_id;
+        console.log("✅ File uploaded:", req.uploadedPath);
         return next();
       }
-
-      const { file, resourceType, brandName, categoryName, brandId, sku, productName } = req._uploadData;
-
-      // ✅ نرفع لـ Cloudinary يدوياً مع التحكم الكامل
-      const uploadResult = await uploadToCloudinary(
-        file.buffer,
-        file.originalname,
-        {
-          resourceType,
-          brandName,
-          categoryName,
-          brandId,
-          sku,
-          productName
-        }
-      );
-
-      // نحفظ النتيجة في الـ request للاستخدام في الـ route
-      req.uploadedPath = uploadResult.secure_url;
-      req.cloudinaryPublicId = uploadResult.public_id;
-
-      console.log("✅ Upload complete:", {
-        url: uploadResult.secure_url,
-        public_id: uploadResult.public_id
+      
+      // 3️⃣ ✅ ✅ ✅ إذا لم يكن هناك ملف، ولكن هناك رابط صورة صحيح في الـ body، نستخدمه
+      if (req.body?.image && /^https:\/\//i.test(req.body.image)) {
+        console.log("✅ Using existing image URL from body:", req.body.image);
+        req.uploadedPath = req.body.image;
+        return next();
+      }
+      
+      // 4️⃣ ✅ إذا كان الحقل اختياريًا، نمرر بدون صورة
+      if (!required) {
+        console.log("✅ Image is optional, proceeding without image");
+        return next();
+      }
+      
+      // 5️⃣ ❌ إذا وصلنا هنا، يعني لا يوجد ملف ولا رابط صحيح
+      console.warn("⚠️ No image provided:", {
+        hasBodyImage: !!req.body?.image,
+        isHttps: req.body?.image?.startsWith('https://'),
+        hasFormData: !!req._uploadData?.file
       });
-
-      next();
+      
+      return res.status(400).json({
+        message: "❌ No image provided - please upload a file or provide a valid HTTPS image URL"
+      });
+      
     } catch (err) {
       console.error("❌ Upload middleware error:", err);
-      return res.status(500).json({ 
-        message: "❌ Upload failed", 
-        error: err.message 
+      return res.status(500).json({
+        message: "❌ Upload failed",
+        error: err.message
       });
     }
   };
