@@ -215,7 +215,8 @@ const cleanSKU = (sku) => {
           const variantsData = res.data.variants || [];
           const transformed = variantsData.map(v => ({
             ...v,
-            attributes: attributesToArray(v.attributes)
+            attributes: attributesToArray(v.attributes),
+            _originalSku: v.sku 
           }));
           setVariants(transformed);
         } catch (err) {
@@ -336,6 +337,20 @@ const cleanSKU = (sku) => {
       const skuSet = new Set();
       
       if (cleanMainSku) {
+          if (editingId) {
+	      // عند التعديل: نتحقق فقط إذا تغير الـ SKU عن الأصلي
+	      const originalProduct = products.find(p => p.id === editingId);
+	      const originalSkuClean = originalProduct?.sku ? cleanSKU(originalProduct.sku) : null;
+	      
+	      if (originalSkuClean !== cleanMainSku) {
+		// الـ SKU تغير، نتحقق من التكرار
+		if (skuSet.has(cleanMainSku)) {
+		  throw new Error(`⚠️ SKU "${cleanMainSku}" مكرر في نفس المنتج`);
+		}
+	      }
+	      // إذا لم يتغير، لا نضيفه للتحقق (موجود مسبقاً في الداتابيس)
+	    }
+      
         skuSet.add(cleanMainSku);
       }
 
@@ -343,23 +358,33 @@ const cleanSKU = (sku) => {
 		const variantsPayload = variants.length > 0 
 		  ? variants.map((v, index) => {
 		      const isTemp = v.id?.startsWith?.('temp_');
+		      const isExisting = !isTemp && editingId;
 		      
 		      // ✅ ✅ ✅ نفس المنطق بالضبط لتوليد الـ SKU
 		      let finalSku;
 		      if (v.sku?.trim()) {
 			finalSku = cleanSKU(v.sku);
-		      } else if (formData.sku?.trim()) {
+		      }else if (isExisting && v._originalSku) {
+          // ✅ متغير موجود: نستخدم الـ SKU الأصلي المخزن (لم يتغير)
+          finalSku = cleanSKU(v._originalSku);
+        } 
+		       else if (formData.sku?.trim()) {
 			finalSku = cleanSKU(`${formData.sku.toUpperCase().trim()}-${String(index + 1).padStart(3, '0')}`);
 		      } else {
 			finalSku = cleanSKU(`VAR-${formData.id || Date.now()}-${String(index + 1).padStart(3, '0')}`);
 		      }
 		      
-		      // ✅ التحقق من التكرار
-		      if (skuSet.has(finalSku)) {
-			throw new Error(`⚠️ SKU "${finalSku}" مكرر في نفس المنتج`);
-		      }
-		      skuSet.add(finalSku);
-		      
+		             // ✅ التحقق من التكرار: فقط للقيم الجديدة أو المتغيرة
+        if (isExisting && v._originalSku && cleanSKU(v._originalSku) === finalSku) {
+          // الـ SKU لم يتغير، لا نتحقق من التكرار (موجود مسبقاً في الداتابيس)
+          skuSet.add(finalSku);
+        } else {
+          // SKU جديدة أو متغيرة: نتحقق من التكرار
+          if (skuSet.has(finalSku)) {
+            throw new Error(`⚠️ SKU "${finalSku}" مكرر في نفس المنتج`);
+          }
+          skuSet.add(finalSku);
+        }
 		      return {
 			id: isTemp ? undefined : (v.id ? Number(v.id) : undefined),
 			sku: finalSku,  // ← ← ← الآن نفس القيمة المرسلة للصورة!
