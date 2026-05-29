@@ -228,86 +228,105 @@ const Checkout = () => {
   // ✅ الإجمالي النهائي
   const grandTotal = useMemo(() => cartTotal + deliveryFee, [cartTotal, deliveryFee]);
 
-// ✅ دالة إرسال الطلب - النسخة النهائية (بدون localStorage)
-    const onSubmit = useCallback(async (data) => {
-      setIsSubmitting(true);
-      try {
-        const orderId = Date.now();
-        const orderItems = cartItems.map(item => ({
-          name: getProductName(item),
-          sku: getProductSku(item) || 'N/A',
-          variant: item.selectedVariant ? getVariantText(item.selectedVariant.attributes) : '',
-          qty: item.quantity,
-          price: item.selectedVariant?.price ?? item.price
-        }));
-        
-        const newOrder = {
-          id: orderId,
-          receivedAt: new Date().toISOString(),
-          fullName: data.fullName,
-          phone: data.phone,
-          altPhone: data.altPhone || '',
-          email: data.email || '',
-          city: data.city,
-          address: data.address,
-          notes: data.notes || '',
-          paymentMethod: data.paymentMethod,
-          items: orderItems,
-          subtotal: cartTotal,
-          deliveryFee: deliveryFee,
-          total: grandTotal,
-          status: "pending",
-          adminNotes: ""
-        };
-        
-      // ✅ ✅ ✅ إرسال الطلب للـ Backend (الـ endpoint العام)
-        try {
-          await axios.post(`${API_URL}/api/orders`, newOrder, {
-            timeout: 5000
-          });
-          console.log("✅ Order saved to MongoDB with real-time notification");
-        } catch (err) {
-          // ⚠️ لا نوقف العملية إذا فشل الإرسال للسيرفر
-          console.warn("⚠️ Failed to save order to backend:", err.message);
-          toast.warning(
-            lang === "ar" 
-              ? "⚠️ فشل الاتصال بالسيرفر، لكن سيتم إرسال تفاصيل طلبك عبر الواتساب" 
-              : "⚠️ Server connection failed, but order details will be sent via WhatsApp"
-          );
-        }
-        
-        // فتح الواتساب
-        const whatsappURL = `https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappMessage}`;
-        const whatsappWindow = window.open(whatsappURL, "_blank");
-        
-        toast.success(
-          <div className="space-y-1">
-            <p className="font-bold text-lg">{t("orderReceived")}</p>
-            <p className="text-sm text-gray-500">{lang === "ar" ? "جاري تحويلك للواتساب لإكمال الطلب..." : "Redirecting to WhatsApp to complete order..."}</p>
-          </div>,
-          { duration: 4500 }
-        );
-        
-        setTimeout(() => {
-          clearCart();
-          setOrderSuccess(true);
-          reset();
-        }, 1200);
-        
-        if (!whatsappWindow || whatsappWindow.closed || typeof whatsappWindow.closed === 'undefined') {
-          toast.warning(lang === "ar" 
-            ? "⚠️ لم يفتح الواتساب. يرجى السماح بالنوافذ المنبثقة وإعادة المحاولة." 
-            : "⚠️ WhatsApp didn't open. Please allow pop-ups."
-          );
-        }
-      } catch (err) {
-        console.error("❌ Checkout Error:", err);
-        toast.error(<p className="font-medium">{lang === "ar" ? "❌ حدث خطأ أثناء الإرسال. يرجى التحقق من البيانات." : "❌ Error sending order. Please verify data."}</p>, { duration: 5000 });
-      } finally {
-        setIsSubmitting(false);
-      }
-    }, [formValues, cartItems, cartTotal, deliveryFee, grandTotal, clearCart, lang, reset, whatsappMessage, getProductName, getProductSku, t]);
-
+// ✅ دالة إرسال الطلب - النسخة المُصححة نهائيًا لمشكلة النوافذ المنبثقة ✅
+const onSubmit = useCallback(async (data) => {
+  setIsSubmitting(true);
+  
+  // ✅ ✅ ✅ الخطوة 1: فتح نافذة فارغة فوراً (ضمن حدث المستخدم المباشر)
+  // هذا يمنع المتصفح من حظر النافذة كـ "popup"
+  const whatsappWindow = window.open('about:blank', '_blank');
+  
+  try {
+    const orderId = Date.now();
+    const orderItems = cartItems.map(item => ({
+      name: getProductName(item),
+      sku: getProductSku(item) || 'N/A',
+      variant: item.selectedVariant ? getVariantText(item.selectedVariant.attributes) : '',
+      qty: item.quantity,
+      price: item.selectedVariant?.price ?? item.price
+    }));
+    
+    const newOrder = {
+      id: orderId,
+      receivedAt: new Date().toISOString(),
+      fullName: data.fullName,
+      phone: data.phone,
+      altPhone: data.altPhone || '',
+      email: data.email || '',
+      city: data.city,
+      address: data.address,
+      notes: data.notes || '',
+      paymentMethod: data.paymentMethod,
+      items: orderItems,
+      subtotal: cartTotal,
+      deliveryFee: deliveryFee,
+      total: grandTotal,
+      status: "pending",
+      adminNotes: ""
+    };
+    
+    // ✅ ✅ ✅ الخطوة 2: إرسال الطلب للـ Backend
+    try {
+      await axios.post(`${API_URL}/api/orders`, newOrder, {
+        timeout: 5000
+      });
+      console.log("✅ Order saved to MongoDB with real-time notification");
+    } catch (err) {
+      // ⚠️ لا نوقف العملية إذا فشل الإرسال للسيرفر
+      console.warn("⚠️ Failed to save order to backend:", err.message);
+      toast.warning(
+        lang === "ar" 
+          ? "⚠️ فشل الاتصال بالسيرفر، لكن سيتم إرسال تفاصيل طلبك عبر الواتساب" 
+          : "⚠️ Server connection failed, but order details will be sent via WhatsApp"
+      );
+    }
+    
+    // ✅ ✅ ✅ الخطوة 3: توجيه النافذة التي فُتحت مسبقاً للواتساب
+    // هذه الطريقة مقبولة 100% من جميع المتصفحات (Chrome, Safari, Firefox)
+    const whatsappURL = `https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappMessage}`;
+    
+    if (whatsappWindow && !whatsappWindow.closed) {
+      // ✅ تغيير عنوان النافذة المفتوحة مسبقاً (مقبول من المتصفح)
+      whatsappWindow.location.href = whatsappURL;
+    } else {
+      // ✅ Fallback: إذا حُظرت النافذة لأي سبب، نستخدم التوجيه المباشر
+      window.location.href = whatsappURL;
+    }
+    
+    // ✅ إشعار النجاح
+    toast.success(
+      <div className="space-y-1">
+        <p className="font-bold text-lg">{t("orderReceived")}</p>
+        <p className="text-sm text-gray-500">{lang === "ar" ? "جاري تحويلك للواتساب لإكمال الطلب..." : "Redirecting to WhatsApp to complete order..."}</p>
+      </div>,
+      { duration: 4500 }
+    );
+    
+    // ✅ تفريغ السلة وإظهار صفحة النجاح
+    setTimeout(() => {
+      clearCart();
+      setOrderSuccess(true);
+      reset();
+    }, 1200);
+    
+  } catch (err) {
+    console.error("❌ Checkout Error:", err);
+    
+    // ✅ في حال الخطأ، نغلق النافذة الفارغة إذا كانت مفتوحة
+    if (whatsappWindow && !whatsappWindow.closed) {
+      whatsappWindow.close();
+    }
+    
+    toast.error(
+      <p className="font-medium">
+        {lang === "ar" ? "❌ حدث خطأ أثناء الإرسال. يرجى التحقق من البيانات." : "❌ Error sending order. Please verify data."}
+      </p>, 
+      { duration: 5000 }
+    );
+  } finally {
+    setIsSubmitting(false);
+  }
+}, [formValues, cartItems, cartTotal, deliveryFee, grandTotal, clearCart, lang, reset, whatsappMessage, getProductName, getProductSku, t]);
   // ===== Order Success State =====
   if (orderSuccess) {
     return (
