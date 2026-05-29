@@ -127,12 +127,43 @@ app.get("/products", async (req, res) => {
     const { brand, category, min, max, search, page = 1, limit = 20 } = req.query;
     let query = {};
 
-    if (search) {
-      query.$or = [
-        { name_en: { $regex: search, $options: "i" } },
-        { name_ar: { $regex: search, $options: "i" } },
-      ];
-    }
+	if (search) {
+	  const s = search.trim();
+
+	  try {
+	    // ✅ 1️⃣ ابحث في SKU المتغيرات (مع Index سريع)
+	    const matchingVariantProductIds = await Variant.find({
+	      sku: { $regex: `^${s}`, $options: "i" }  // ✅ يبدأ بـ... لأسرع أداء
+	    }).distinct("product_id");
+
+	    // ✅ 2️⃣ ابحث في خصائص المتغيرات (attributes) - اختياري
+	    // إذا بدك تبحث داخل الـ attributes (مثل: "Red", "50ml", إلخ)
+	    const matchingAttributeProductIds = await Variant.find({
+	      attributes: { $regex: s, $options: "i" }  // ⚠️ Mixed field - أبطأ قليلاً
+	    }).distinct("product_id");
+
+	    // ✅ 3️⃣ ادمج كل الـ IDs (بدون تكرار)
+	    const allMatchingIds = [
+	      ...new Set([...matchingVariantProductIds, ...matchingAttributeProductIds])
+	    ];
+
+	    // ✅ 4️⃣ ابني شرط الـ $or الشامل
+	    query.$or = [
+	      { name_ar: { $regex: s, $options: "i" } },
+	      { name_en: { $regex: s, $options: "i" } },
+	      { sku: { $regex: s, $options: "i" } },  // SKU المنتج الأساسي
+	      { id: { $in: allMatchingIds } }          // المنتجات اللي عندها متغيرات مطابقة
+	    ];
+
+	  } catch (err) {
+	    console.warn("⚠️ Variant search skipped:", err.message);
+	    // Fallback: ابحث في أسماء المنتجات فقط إذا فشل بحث المتغيرات
+	    query.$or = [
+	      { name_ar: { $regex: s, $options: "i" } },
+	      { name_en: { $regex: s, $options: "i" } }
+	    ];
+	  }
+	}
     if (brand) query.brand_id = Number(brand);
     if (category) {
       const catIds = await getCategoryAndChildrenIds(Number(category));
