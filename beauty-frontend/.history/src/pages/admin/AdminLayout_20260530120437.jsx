@@ -171,7 +171,7 @@ const AdminLayout = () => {
           <div className="mb-8 flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <h2 className={`text-2xl font-black tracking-tighter truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Miles<span className="text-pink-600">.</span>
+                MILES<span className="text-pink-600">.</span>
               </h2>
               <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 truncate ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
                 {t('adminPanel')}
@@ -273,7 +273,7 @@ const AdminLayout = () => {
         {/* Header */}
         <div className="mb-8">
           <h2 className={`text-2xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Miles<span className="text-pink-600">.</span>
+            MILES<span className="text-pink-600">.</span>
           </h2>
           <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
             {t('adminPanel')}
