@@ -1,9 +1,11 @@
-// src/pages/admin/AdminLayout.jsx - النسخة المُصححة نهائياً 🌙
+// src/pages/admin/AdminLayout.jsx - مع شعار الشركة والأنيميشن 🚀
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { adminAuth } from "../../utils/adminAuth";
 import { useLang } from "../../context/LanguageContext";
 import { useTheme } from "../../context/ThemeContext";
+
+const LOGO_URL = "https://res.cloudinary.com/dvd2u8csu/image/upload/v1780130628/logo_pykvwk.png";
 
 const AdminLayout = () => {
   const navigate = useNavigate();
@@ -11,6 +13,7 @@ const AdminLayout = () => {
   const { lang, toggleLang, t } = useLang();
   const { isDark, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [logoLoaded, setLogoLoaded] = useState(false);
   const isRTL = lang === "ar";
 
   // ✅ حماية المسار
@@ -53,7 +56,7 @@ const AdminLayout = () => {
     return items;
   }, [t, lang]);
 
-  // ✅ مكون Toggle Switch للوضع الليلي (قابل لإعادة الاستخدام)
+  // ✅ مكون Toggle Switch للوضع الليلي
   const ThemeToggle = useCallback(({ isMobile = false }) => (
     <button
       onClick={toggleTheme}
@@ -70,9 +73,7 @@ const AdminLayout = () => {
         : (lang === "ar" ? "تفعيل الوضع الليلي 🌙" : "Switch to Dark Mode 🌙")
       }
     >
-      {/* ✅ أيقونة + نص */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        {/* ✅ أيقونة متحركة */}
         <div className={`
           relative w-8 h-8 rounded-lg flex items-center justify-center 
           transition-all duration-500 transform group-hover:scale-110
@@ -87,14 +88,12 @@ const AdminLayout = () => {
           `}>
             {isDark ? "☀️" : "🌙"}
           </span>
-          {/* ✅ تأثير وميض خفيف */}
           <span className={`
             absolute inset-0 rounded-lg animate-ping opacity-20
             ${isDark ? 'bg-amber-400' : 'bg-indigo-500'}
           `}></span>
         </div>
         
-        {/* ✅ النص */}
         <span className={`
           text-sm font-bold truncate transition-colors
           ${isDark ? 'text-gray-200' : 'text-gray-700'}
@@ -106,7 +105,6 @@ const AdminLayout = () => {
         </span>
       </div>
 
-      {/* ✅ Toggle Switch أنيق */}
       <div className={`
         relative inline-flex h-6 w-11 items-center rounded-full 
         transition-colors duration-300 flex-shrink-0
@@ -120,7 +118,6 @@ const AdminLayout = () => {
             : (isRTL ? 'translate-x-6' : 'translate-x-1')
           }
         `} />
-        {/* ✅ مؤشر صغير داخل الـ Toggle */}
         <span className={`
           absolute inset-0 flex items-center justify-center text-[8px] font-black
           transition-opacity duration-300
@@ -138,6 +135,47 @@ const AdminLayout = () => {
       </div>
     </button>
   ), [isDark, isRTL, lang, toggleTheme]);
+
+  // ✅ مكون شعار الشركة مع أنيميشن
+  const Logo = useCallback(({ className = "", withEffects = true }) => (
+    <div className={`relative inline-flex items-center justify-center ${className}`}>
+      {withEffects && (
+        <>
+          {/* هالة خفيفة */}
+          <div className={`absolute inset-0 bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-pink-500/20 rounded-full blur-lg opacity-50 ${isDark ? 'animate-pulse' : ''}`}></div>
+          {/* نقطة مضيئة */}
+          <div className="absolute -inset-1 rounded-full border border-pink-500/20 animate-ping opacity-30"></div>
+        </>
+      )}
+      
+      {/* الشعار */}
+      <img
+        src={LOGO_URL}
+        alt="Company Logo"
+        className={`
+          relative z-10 w-auto object-contain drop-shadow-md
+          transition-all duration-500
+          ${logoLoaded ? 'opacity-100' : 'opacity-0'}
+          ${withEffects ? 'hover:drop-shadow-[0_8px_25px_rgba(236,72,153,0.25)] hover:scale-105' : ''}
+        `}
+        onLoad={() => setLogoLoaded(true)}
+        onError={(e) => {
+          console.warn("Failed to load logo");
+          e.target.style.display = 'none';
+        }}
+        loading="eager"
+      />
+      
+      {/* Loading Spinner */}
+      {!logoLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className={`w-6 h-6 md:w-8 md:h-8 border-2 rounded-full animate-spin ${
+            isDark ? 'border-gray-600 border-t-pink-500' : 'border-gray-200 border-t-pink-500'
+          }`}></div>
+        </div>
+      )}
+    </div>
+  ), [isDark, logoLoaded]);
 
   return (
     <div 
@@ -167,15 +205,15 @@ const AdminLayout = () => {
         `}
       >
         <div className="flex flex-col h-full p-6">
-          {/* Header */}
+          {/* Header - مع الشعار */}
           <div className="mb-8 flex items-center justify-between">
-            <div className="flex-1 min-w-0">
-              <h2 className={`text-2xl font-black tracking-tighter truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                MILES<span className="text-pink-600">.</span>
-              </h2>
-              <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 truncate ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
-                {t('adminPanel')}
-              </p>
+            <div className="flex-1 min-w-0 flex items-center gap-3">
+              <Logo className="h-8" withEffects={false} />
+              <div>
+                <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 truncate ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
+                  {t('adminPanel')}
+                </p>
+              </div>
             </div>
             <button 
               onClick={() => setSidebarOpen(false)}
@@ -212,10 +250,8 @@ const AdminLayout = () => {
 
           {/* Footer */}
           <div className={`mt-auto pt-4 border-t space-y-3 ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
-            {/* ✅ Toggle Switch للوضع الليلي - موبايل */}
             <ThemeToggle isMobile={true} />
 
-            {/* زر تبديل اللغة */}
             <button
               onClick={toggleLang}
               className={`
@@ -231,7 +267,6 @@ const AdminLayout = () => {
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/25">
                   <span className="text-sm font-black">{lang === "ar" ? "ع" : "🌍"}</span>
                 </div>
-                {/* ✅ ✅ ✅ الإصلاح هنا: استخدام isDark بدلاً من dark: */}
                 <span className={`truncate ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
                   {lang === "ar" ? "English" : "العربية"}
                 </span>
@@ -241,7 +276,6 @@ const AdminLayout = () => {
               </span>
             </button>
 
-            {/* زر تسجيل الخروج */}
             <button
               onClick={() => {
                 if (window.confirm(lang === "ar" 
@@ -270,12 +304,12 @@ const AdminLayout = () => {
         ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}
         border-gray-100
       `}>
-        {/* Header */}
+        {/* Header - مع الشعار والأنيميشن */}
         <div className="mb-8">
-          <h2 className={`text-2xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            MILES<span className="text-pink-600">.</span>
-          </h2>
-          <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
+          <div className="flex items-center gap-3 mb-2">
+            <Logo className="h-10" />
+          </div>
+          <p className={`text-[10px] font-bold uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
             {t('adminPanel')}
           </p>
         </div>
@@ -308,10 +342,8 @@ const AdminLayout = () => {
 
         {/* Footer */}
         <div className={`mt-auto pt-4 border-t space-y-3 ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
-          {/* ✅ Toggle Switch للوضع الليلي - ديسكتوب */}
           <ThemeToggle />
 
-          {/* زر تبديل اللغة - ديسكتوب */}
           <button
             onClick={toggleLang}
             className={`
@@ -327,7 +359,6 @@ const AdminLayout = () => {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/25">
                 <span className="text-sm font-black">{lang === "ar" ? "ع" : "🌍"}</span>
               </div>
-              {/* ✅ ✅ ✅ ✅ الإصلاح النهائي: استخدام isDark بدلاً من dark: */}
               <span className={`truncate ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
                 {lang === "ar" ? "English" : "العربية"}
               </span>
@@ -337,7 +368,6 @@ const AdminLayout = () => {
             </span>
           </button>
 
-          {/* زر تسجيل الخروج */}
           <button
             onClick={() => {
               if (window.confirm(lang === "ar" 
@@ -375,11 +405,10 @@ const AdminLayout = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <h1 className={`text-lg font-black truncate flex-1 text-center px-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            {navItems.find(i => i.path === location.pathname)?.label || t('dashboard')}
-          </h1>
           
-          {/* ✅ زر الوضع الليلي السريع للموبايل في الـ Header */}
+          {/* شعار في الـ Header للموبايل */}
+          <Logo className="h-7" withEffects={false} />
+          
           <button
             onClick={toggleTheme}
             className={`

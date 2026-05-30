@@ -1,8 +1,10 @@
-// src/components/Navbar.jsx - النسخة المُحسَّنة (اختيارية)
+// src/components/Navbar.jsx - مع شعار الشركة والأنيميشن 🚀
 import { Link, useLocation } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useLang } from "../context/LanguageContext";
 import { useState, useEffect, useMemo, useCallback } from "react";
+
+const LOGO_URL = "https://res.cloudinary.com/dvd2u8csu/image/upload/v1780130628/logo_pykvwk.png";
 
 const Navbar = () => {
   const { cartItems, cartCount } = useCart();
@@ -10,8 +12,9 @@ const Navbar = () => {
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [logoLoaded, setLogoLoaded] = useState(false);
 
-  // ✅ حساب إجمالي قيمة السلة - محفوظ بـ useMemo
+  // ✅ حساب إجمالي قيمة السلة
   const cartTotal = useMemo(() => {
     return cartItems.reduce((total, item) => {
       const price = item.selectedVariant?.price ?? item.price;
@@ -19,7 +22,7 @@ const Navbar = () => {
     }, 0);
   }, [cartItems]);
 
-  // ✅ تأثير السكرول للـ Navbar
+  // ✅ تأثير السكرول
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
@@ -37,17 +40,14 @@ const Navbar = () => {
     return () => { document.body.style.overflow = "unset"; };
   }, [isMobileMenuOpen]);
 
-  // ✅ روابط التنقل مع الترجمة - محفوظة بـ useMemo
+  // ✅ روابط التنقل
   const navLinks = useMemo(() => [
     { name: t('home'), path: "/" },
     { name: t('brands'), path: "/brands" },
     { name: t('shop'), path: "/shop" }
   ], [t]);
 
-  // ✅ دالة إغلاق القائمة - محفوظة بـ useCallback
-  const closeMobileMenu = useCallback(() => {
-    setIsMobileMenuOpen(false);
-  }, []);
+  const closeMobileMenu = useCallback(() => setIsMobileMenuOpen(false), []);
 
   return (
     <>
@@ -105,7 +105,7 @@ const Navbar = () => {
                 )}
               </Link>
 
-              {/* ✅ زر تبديل اللغة - ديسكتوب */}
+              {/* زر تبديل اللغة - ديسكتوب */}
               <button
                 onClick={toggleLang}
                 className="hidden md:flex items-center gap-2 bg-gray-50/80 backdrop-blur-sm px-4 py-2.5 rounded-2xl border border-gray-100 hover:border-pink-200 transition-all group"
@@ -140,15 +140,49 @@ const Navbar = () => {
               ))}
             </div>
 
-            {/* ===== الجانب الأيسر: الشعار ===== */}
+            {/* ===== الجانب الأيسر: شعار الشركة مع أنيميشن خرافي ✨ ===== */}
             <div className="flex-shrink-0">
-              <Link to="/" className="group flex flex-col items-end" aria-label={t('home')}>
-                <span className="text-xl md:text-2xl font-black tracking-[-0.05em] text-gray-900 group-hover:text-pink-600 transition-colors duration-500">
-                  MILES<span className="text-pink-600 group-hover:text-black">.</span>
-                </span>
-                <span className="text-[7px] font-bold tracking-[0.4em] text-gray-300 -mt-1 group-hover:text-gray-900 transition-color">
-                  BEAUTY STORE
-                </span>
+              <Link 
+                to="/" 
+                className="group relative flex items-center justify-center"
+                aria-label={t('home')}
+              >
+                {/* ✅ تأثير هالة خفيفة حول الشعار */}
+                <div className="absolute inset-0 bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-pink-500/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 animate-pulse"></div>
+                
+                {/* ✅ حاوية الشعار مع أنيميشن */}
+                <div className="relative z-10 transition-all duration-700 ease-out group-hover:scale-105 group-hover:rotate-1">
+                  {/* ✅ تأثير وميض عند التحويم */}
+                  <div className="absolute inset-0 bg-white/30 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
+                  
+                  {/* ✅ الشعار نفسه */}
+                  <img
+                    src={LOGO_URL}
+                    alt="Company Logo"
+                    className={`
+                      relative z-10 h-10 md:h-12 lg:h-14 w-auto object-contain drop-shadow-lg
+                      transition-all duration-700 ease-out
+                      ${logoLoaded ? 'opacity-100' : 'opacity-0'}
+                      group-hover:drop-shadow-[0_10px_30px_rgba(236,72,153,0.3)]
+                    `}
+                    onLoad={() => setLogoLoaded(true)}
+                    onError={(e) => {
+                      console.warn("Failed to load logo");
+                      e.target.style.display = 'none';
+                    }}
+                    loading="eager"
+                  />
+                  
+                  {/* ✅ Loading Spinner أثناء تحميل الشعار */}
+                  {!logoLoaded && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-8 h-8 md:w-10 md:h-10 border-2 border-gray-200 border-t-pink-500 rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* ✅ نقطة مضيئة تتحرك حول الشعار */}
+                <div className="absolute -inset-1 rounded-full border border-pink-500/30 animate-ping opacity-20 group-hover:opacity-40 transition-opacity duration-500"></div>
               </Link>
             </div>
 
@@ -175,9 +209,17 @@ const Navbar = () => {
         aria-modal="true"
         aria-label="Mobile menu"
       >
-        {/* Header */}
+        {/* Header - مع الشعار */}
         <div className="p-6 border-b border-gray-50 flex items-center justify-between">
-          <span className="text-lg font-black text-gray-900">{t('menu')}</span>
+          <Link to="/" onClick={closeMobileMenu} className="flex items-center gap-3">
+            <img
+              src={LOGO_URL}
+              alt="Logo"
+              className="h-8 w-auto object-contain"
+              loading="lazy"
+              onError={(e) => e.target.style.display = 'none'}
+            />
+          </Link>
           <button 
             onClick={closeMobileMenu}
             className="p-2 hover:bg-gray-50 rounded-xl transition-colors"
@@ -208,7 +250,7 @@ const Navbar = () => {
           ))}
         </nav>
 
-        {/* ✅ Language Toggle in Mobile */}
+        {/* Language Toggle in Mobile */}
         <div className="px-6 py-4 border-t border-gray-50">
           <button
             onClick={() => { toggleLang(); closeMobileMenu(); }}
