@@ -374,6 +374,14 @@ router.delete("/products/:id",
   async (req, res) => {
     try {
       const productId = Number(req.params.id);
+            // 1️⃣ جلب المتغيرات أولاً لحذف صورهم من Cloudinary
+      const variants = await Variant.find({ product_id: productId });
+      for (const variant of variants) {
+        if (variant.image?.startsWith("https://res.cloudinary.com/")) {
+          const publicId = extractPublicIdFromUrl(variant.image);
+          if (publicId) await deleteFromCloudinary(publicId);
+        }
+      }
       await Variant.deleteMany({ product_id: productId });
       const product = await Product.findOneAndDelete({ id: productId });
       
