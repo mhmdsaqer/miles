@@ -205,22 +205,24 @@ const AdminLayout = () => {
         `}
       >
         <div className="flex flex-col h-full p-6">
-        {/* Header - مع الشعار */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Logo className="h-6" withEffects={false} />
-            <p className={`text-[9px] font-bold uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
-              {t('adminPanel')}
-            </p>
+          {/* Header - مع الشعار */}
+          <div className="mb-8 flex items-center justify-between">
+            <div className="flex-1 min-w-0 flex items-center gap-3">
+              <Logo className="h-8" withEffects={false} />
+              <div>
+                <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 truncate ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
+                  {t('adminPanel')}
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setSidebarOpen(false)}
+              className={`p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+              aria-label={t('close')}
+            >
+              <span className={isDark ? 'text-white' : 'text-gray-900'}>✕</span>
+            </button>
           </div>
-          <button 
-            onClick={() => setSidebarOpen(false)}
-            className={`p-2 rounded-xl transition-colors ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-            aria-label={t('close')}
-          >
-            <span className={isDark ? 'text-white' : 'text-gray-900'}>✕</span>
-          </button>
-        </div>
 
           {/* Navigation */}
           <nav className="flex-1 space-y-2 overflow-y-auto">
@@ -302,15 +304,15 @@ const AdminLayout = () => {
         ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}
         border-gray-100
       `}>
-        {/* Header - مع الشعار المصغر */}
-      <div className="mb-6 flex flex-col items-center">
-        {/* ✅ الشعار بحجم مناسب */}
-        <Logo className="h-8 md:h-9" withEffects={true} />
-        {/* ✅ نص لوحة التحكم تحت الشعار */}
-        <p className={`text-[9px] font-bold uppercase tracking-widest mt-2 ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
-          {t('adminPanel')}
-        </p>
-      </div>
+        {/* Header - مع الشعار والأنيميشن */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <Logo className="h-10" />
+          </div>
+          <p className={`text-[10px] font-bold uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
+            {t('adminPanel')}
+          </p>
+        </div>
 
         {/* Navigation */}
         <nav className="flex-1 space-y-2 overflow-y-auto">

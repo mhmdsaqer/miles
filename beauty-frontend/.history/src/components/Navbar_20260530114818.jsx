@@ -140,45 +140,52 @@ const Navbar = () => {
               ))}
             </div>
 
-{/* ===== الجانب الأيسر: شعار الشركة مع أنيميشن عائم ✨ ===== */}
-  <div className="flex-shrink-0">
-    <Link 
-      to="/" 
-      className="group relative flex items-center justify-center"
-      aria-label={t('home')}
-    >
-    {/* ✅ حاوية الشعار مع أنيميشن عائم بطيء */}
-    <div className="relative z-10 animate-float-slow">
-      {/* ✅ الشعار - حجم أكبر */}
-      <img
-        src={LOGO_URL}
-        alt="Company Logo"
-        className={`
-          relative z-10 h-14 md:h-16 lg:h-20 w-auto object-contain drop-shadow-xl
-          transition-all duration-500 ease-out
-          ${logoLoaded ? 'opacity-100' : 'opacity-0'}
-          group-hover:drop-shadow-[0_15px_40px_rgba(236,72,153,0.4)]
-        `}
-        onLoad={() => setLogoLoaded(true)}
-        onError={(e) => {
-          console.warn("Failed to load logo");
-          e.target.style.display = 'none';
-        }}
-        loading="eager"
-      />
-      
-      {/* ✅ Loading Spinner أثناء تحميل الشعار */}
-      {!logoLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-10 h-10 md:w-12 md:h-12 border-2 border-gray-200 border-t-pink-500 rounded-full animate-spin"></div>
-        </div>
-      )}
-    </div>
-    
-    {/* ✅ هالة ناعمة تظهر عند التحويم */}
-    <div className="absolute inset-0 bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-pink-500/10 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
-  </Link>
-</div>
+            {/* ===== الجانب الأيسر: شعار الشركة مع أنيميشن خرافي ✨ ===== */}
+            <div className="flex-shrink-0">
+              <Link 
+                to="/" 
+                className="group relative flex items-center justify-center"
+                aria-label={t('home')}
+              >
+                {/* ✅ تأثير هالة خفيفة حول الشعار */}
+                <div className="absolute inset-0 bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-pink-500/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 animate-pulse"></div>
+                
+                {/* ✅ حاوية الشعار مع أنيميشن */}
+                <div className="relative z-10 transition-all duration-700 ease-out group-hover:scale-105 group-hover:rotate-1">
+                  {/* ✅ تأثير وميض عند التحويم */}
+                  <div className="absolute inset-0 bg-white/30 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm"></div>
+                  
+                  {/* ✅ الشعار نفسه */}
+                  <img
+                    src={LOGO_URL}
+                    alt="Company Logo"
+                    className={`
+                      relative z-10 h-10 md:h-12 lg:h-14 w-auto object-contain drop-shadow-lg
+                      transition-all duration-700 ease-out
+                      ${logoLoaded ? 'opacity-100' : 'opacity-0'}
+                      group-hover:drop-shadow-[0_10px_30px_rgba(236,72,153,0.3)]
+                    `}
+                    onLoad={() => setLogoLoaded(true)}
+                    onError={(e) => {
+                      console.warn("Failed to load logo");
+                      e.target.style.display = 'none';
+                    }}
+                    loading="eager"
+                  />
+                  
+                  {/* ✅ Loading Spinner أثناء تحميل الشعار */}
+                  {!logoLoaded && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-8 h-8 md:w-10 md:h-10 border-2 border-gray-200 border-t-pink-500 rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* ✅ نقطة مضيئة تتحرك حول الشعار */}
+                <div className="absolute -inset-1 rounded-full border border-pink-500/30 animate-ping opacity-20 group-hover:opacity-40 transition-opacity duration-500"></div>
+              </Link>
+            </div>
+
           </div>
         </div>
       </nav>
