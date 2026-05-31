@@ -884,21 +884,53 @@ router.delete("/brands/:id",
   async (req, res) => {
     try {
       const brandId = Number(req.params.id);
-      const products = await Product.find({ brand_id: brandId }).select('id');
+      
+      // ✅ 1️⃣ جلب المنتجات مع الصور (لحذفها من Cloudinary)
+      const products = await Product.find({ brand_id: brandId }).select('id image');
       const productIds = products.map(p => p.id);
       
+      // ✅ 2️⃣ حذف صور المنتجات من Cloudinary
+      for (const product of products) {
+        if (product.image?.startsWith("https://res.cloudinary.com/")) {
+          const publicId = extractPublicIdFromUrl(product.image);
+          if (publicId) {
+            await deleteFromCloudinary(publicId);
+            console.log(`🗑️ Deleted product image from Cloudinary: ${publicId}`);
+          }
+        }
+      }
+      
+      // ✅ 3️⃣ جلب المتغيرات مع الصور (لحذفها من Cloudinary)
       if (productIds.length > 0) {
+        const variants = await Variant.find({ product_id: { $in: productIds } }).select('image');
+        
+        // ✅ 4️⃣ حذف صور المتغيرات من Cloudinary
+        for (const variant of variants) {
+          if (variant.image?.startsWith("https://res.cloudinary.com/")) {
+            const publicId = extractPublicIdFromUrl(variant.image);
+            if (publicId) {
+              await deleteFromCloudinary(publicId);
+              console.log(`🗑️ Deleted variant image from Cloudinary: ${publicId}`);
+            }
+          }
+        }
+        
+        // ✅ 5️⃣ حذف المتغيرات من الداتابيز
         await Variant.deleteMany({ product_id: { $in: productIds } });
       }
+      
+      // ✅ 6️⃣ حذف المنتجات من الداتابيز
       if (productIds.length > 0) {
         await Product.deleteMany({ id: { $in: productIds } });
       }
       
+      // ✅ 7️⃣ حذف البراند من الداتابيز
       const brand = await Brand.findOneAndDelete({ id: brandId });
       if (!brand) {
         return res.status(404).json({ message: "Brand not found" });
       }
 
+      // ✅ 8️⃣ حذف صورة البراند من Cloudinary
       if (brand.image?.startsWith("https://res.cloudinary.com/")) {
         const publicId = extractPublicIdFromUrl(brand.image);
         if (publicId) {
@@ -907,14 +939,16 @@ router.delete("/brands/:id",
         }
       }
 
+      // ✅ 9️⃣ تسجيل عملية الحذف في الـ Audit Log
       await audit.delete(req.user, "brand", brand.toObject(), req);
 
       res.json({
-        message: "✅ تم حذف البراند وجميع منتجاته ومتغيراته بنجاح",
+        message: "✅ تم حذف البراند وجميع منتجاته ومتغيراته وصورهم بنجاح",
         deleted: {
           brand: brand.name,
           productsCount: productIds.length,
-          variantsDeleted: productIds.length > 0 ? "جميع المتغيرات المرتبطة" : 0
+          variantsDeleted: productIds.length > 0 ? "جميع المتغيرات المرتبطة" : 0,
+          cloudinaryCleanup: "تم حذف جميع الصور من التخزين السحابي"
         }
       });
     } catch (err) {
@@ -926,7 +960,6 @@ router.delete("/brands/:id",
     }
   }
 );
-
 // ================= 🗂️ CATEGORIES CRUD =================
 router.get("/categories", 
   authMiddleware,
