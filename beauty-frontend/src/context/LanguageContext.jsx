@@ -1,5 +1,5 @@
 // src/context/LanguageContext.jsx
-import { createContext, useState, useContext, useEffect, useMemo, useCallback } from "react";
+import { createContext, useState, useContext, useEffect, useMemo, useCallback , useRef } from "react";
 
 const LanguageContext = createContext();
 
@@ -302,11 +302,11 @@ export const LanguageProvider = ({ children }) => {
   const [lang, setLang] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("miles_lang");
-      const isSwitchingRef = useRef(false);
       return saved || "ar";
     }
     return "ar";
   });
+   const isSwitchingRef = useRef(false);
 
   // حفظ اللغة وتحديث اتجاه الصفحة
   useEffect(() => {
