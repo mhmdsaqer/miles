@@ -947,23 +947,22 @@ const cleanSKU = (sku) => {
   }`}>
     
     {/* ✅ زر "اجعله منتج" - يظهر فقط للمتغيرات المحفوظة (ليست مؤقتة) */}
+        {/* ✅ زر "اجعله منتج" - يظهر فقط للمتغيرات المحفوظة */}
     {!String(variant.id).startsWith('temp_') && (
       <button
         type="button"
         onClick={async () => {
           if (!confirm(lang === "ar" 
-            ? "⚠️ هل تريد تحويل هذا المتغير إلى منتج مستقل جديد؟\nسيتم نسخ البيانات تلقائياً وإنشاء منتج جديد." 
+            ? "⚠️ هل تريد تحويل هذا المتغير إلى منتج مستقل جديد؟" 
             : "⚠️ Promote this variant to a standalone product?")) return;
           
           try {
-            setUploading(true);
-            
             // ✅ إرسال طلب التحويل للـ Backend
             const res = await adminApi.post(`/variants/${variant.id}/promote`, {}, { 
               params: { lang } 
             });
             
-            // ✅ إشعار النجاح مع تفاصيل المنتج الجديد
+            // ✅ إشعار النجاح
             toast.success(
               <div className="flex items-center gap-2">
                 <span className="text-xl">📦</span>
@@ -975,19 +974,16 @@ const cleanSKU = (sku) => {
               { duration: 5000 }
             );
             
-            // ✅ اختياري: فتح المنتج الجديد في تبويب جديد للتعديل عليه
+            // ✅ فتح المنتج الجديد في تبويب جديد + تحديث القائمة
             window.open(`/admin/products?id=${res.data.product.id}`, '_blank');
-            
-            // ✅ تحديث قائمة المنتجات وإغلاق المودال
             closeModal();
             fetchData();
             
           } catch (err) {
             console.error("Promote variant error:", err);
             toast.error(err.response?.data?.message || (lang === "ar" ? "فشل تحويل المتغير" : "Failed to promote variant"));
-          } finally {
-            setUploading(false);
           }
+          // ✅ تم إزالة setUploading(true/false) لأنها غير معرفة في هذا المكون
         }}
         className={`absolute top-3 ${lang === "ar" ? "left-3" : "right-3"} px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1.5 z-10
         ${isDark 
@@ -999,6 +995,7 @@ const cleanSKU = (sku) => {
       </button>
     )}
     
+    {/* ... باقي كود المتغير (الـ inputs والـ ImageUploader) كما هو ... */}
     <div className="flex items-center justify-between">
       <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{t("variant")} #{index + 1}</span>
       <button type="button" onClick={() => removeVariant(variant.id)} className={`text-xs font-bold transition ${isDark ? 'text-red-400 hover:text-red-300' : 'text-red-400 hover:text-red-600'}`}>{t("remove")}</button>
