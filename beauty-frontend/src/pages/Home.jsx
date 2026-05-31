@@ -128,6 +128,7 @@ const Home = () => {
       <section className="relative h-screen flex items-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img 
+            key={`hero-image-${lang}`} 
             src={`/assets/hero/hero-main-${lang}.jpg`} 
             alt="MILES Beauty" 
             className="w-full h-full object-cover"
