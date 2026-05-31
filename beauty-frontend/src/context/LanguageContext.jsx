@@ -302,6 +302,7 @@ export const LanguageProvider = ({ children }) => {
   const [lang, setLang] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("miles_lang");
+      const isSwitchingRef = useRef(false);
       return saved || "ar";
     }
     return "ar";
@@ -317,8 +318,32 @@ export const LanguageProvider = ({ children }) => {
   }, [lang]);
 
   const toggleLang = useCallback(() => {
-    setLang((prev) => (prev === "ar" ? "en" : "ar"));
-  }, []);
+  // ✅ منع النقر المتكرر السريع (Debounce بسيط)
+	  if (isSwitchingRef.current) return;
+	  isSwitchingRef.current = true;
+	  
+	  // ✅ إضافة تأثير بصري ناعم قبل التغيير
+	  if (typeof document !== "undefined") {
+	    document.documentElement.style.transition = "opacity 0.15s ease";
+	    document.documentElement.style.opacity = "0.85";
+	  }
+	  
+	  // ✅ تأخير بسيط 180 ميلي ثانية للإحساس بالتفاعل
+	  setTimeout(() => {
+	    setLang((prev) => (prev === "ar" ? "en" : "ar"));
+	    
+	    // ✅ إعادة الـ opacity بعد التغيير
+	    setTimeout(() => {
+	      if (typeof document !== "undefined") {
+		document.documentElement.style.opacity = "1";
+	      }
+	      // ✅ إعادة تفعيل التبديل بعد 300 ميلي ثانية
+	      setTimeout(() => {
+		isSwitchingRef.current = false;
+	      }, 120);
+	    }, 150);
+	  }, 180);
+	}, []);
 
   // ✅ دالة الترجمة مُحسّنة بـ useMemo
   const t = useCallback((key) => {
