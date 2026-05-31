@@ -942,83 +942,139 @@ const cleanSKU = (sku) => {
                     </button>
                     
                     {variants.map((variant, index) => (
-                      <div key={variant.id} className={`rounded-xl p-4 border space-y-3 transition-colors ${
-                        isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-100'
-                      }`}>
-                        <div className="flex items-center justify-between">
-                          <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{t("variant")} #{index + 1}</span>
-                          <button type="button" onClick={() => removeVariant(variant.id)} className={`text-xs font-bold transition ${isDark ? 'text-red-400 hover:text-red-300' : 'text-red-400 hover:text-red-600'}`}>{t("remove")}</button>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          <input 
-                            type="text" 
-                            value={variant.sku || ""} 
-                            onChange={(e) => updateVariant(variant.id, "sku", e.target.value)} 
-                            placeholder="SKU (اختياري)" 
-                            className={`border rounded-lg px-3 py-2 text-xs transition-colors ${
-                              isDark 
-                                ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400' 
-                                : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
-                            }`} 
-                          />
-                          <input 
-                            type="number" step="0.5" 
-                            value={variant.price || ""} 
-                            onChange={(e) => updateVariant(variant.id, "price", e.target.value)} 
-                            placeholder={t("price")} 
-                            className={`border rounded-lg px-3 py-2 text-xs transition-colors ${
-                              isDark 
-                                ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400' 
-                                : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
-                            }`} 
-                          />
-                          <div className="col-span-3">
-                            <ImageUploader 
-                              currentImage={variant.image} 
-                              onImageSelect={(p) => updateVariant(variant.id, "image", p)} 
-                              resourceType="products"
-                              resourceData={{ 
-                                brand_id: formData.brand_id,
-                                    sku: (() => {
-				      // 1️⃣ إذا كان المتغير له SKU، نستخدمه
-				      if (variant.sku?.trim()) {
-					return variant.sku.trim().toUpperCase();
-				      }
-				      // 2️⃣ إذا كان للمنتج SKU، نولد منه + رقم تسلسلي
-				      if (formData.sku?.trim()) {
-					return `${formData.sku.trim().toUpperCase()}-${String(index + 1).padStart(3, '0')}`;
-				      }
-				      // 3️⃣ Fallback: توليد قيمة فريدة
-				      return `VAR-${formData.id || Date.now()}-${String(index + 1).padStart(3, '0')}`;
-				    })(),
-                                name_en: formData.name_en,
-                                name_ar: formData.name_ar,
-                                isVariant: true  // ✅ ✅ ✅ إضافة حقل للإشارة أن هذا متغير
-                              }}
-                              label={null} 
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className={`text-[10px] font-bold uppercase ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{t("attributes")}</span>
-                            <button type="button" onClick={() => addVariantAttribute(variant.id)} className={`text-[10px] font-bold hover:underline ${isDark ? 'text-pink-400' : 'text-pink-600'}`}>+ {t("add")}</button>
-                          </div>
-                          {variant.attributes.map((attr) => (
-                            <VariantAttributeField 
-                              key={attr.tempId} 
-                              attribute={attr} 
-                              onUpdate={updateVariantAttribute} 
-                              onRemove={removeVariantAttribute} 
-                              lang={lang}
-                              isDark={isDark} // ✅ تمرير isDark للمكون الفرعي
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+  <div key={variant.id} className={`relative rounded-xl p-4 border space-y-3 transition-colors ${
+    isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-100'
+  }`}>
+    
+    {/* ✅ زر "اجعله منتج" - يظهر فقط للمتغيرات المحفوظة (ليست مؤقتة) */}
+    {!String(variant.id).startsWith('temp_') && (
+      <button
+        type="button"
+        onClick={async () => {
+          if (!confirm(lang === "ar" 
+            ? "⚠️ هل تريد تحويل هذا المتغير إلى منتج مستقل جديد؟\nسيتم نسخ البيانات تلقائياً وإنشاء منتج جديد." 
+            : "⚠️ Promote this variant to a standalone product?")) return;
+          
+          try {
+            setUploading(true);
+            
+            // ✅ إرسال طلب التحويل للـ Backend
+            const res = await adminApi.post(`/variants/${variant.id}/promote`, {}, { 
+              params: { lang } 
+            });
+            
+            // ✅ إشعار النجاح مع تفاصيل المنتج الجديد
+            toast.success(
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📦</span>
+                <div>
+                  <p className="font-bold text-sm">{res.data.message}</p>
+                  <p className="text-xs text-gray-400">SKU: {res.data.product.sku} • ID: {res.data.product.id}</p>
+                </div>
+              </div>,
+              { duration: 5000 }
+            );
+            
+            // ✅ اختياري: فتح المنتج الجديد في تبويب جديد للتعديل عليه
+            window.open(`/admin/products?id=${res.data.product.id}`, '_blank');
+            
+            // ✅ تحديث قائمة المنتجات وإغلاق المودال
+            closeModal();
+            fetchData();
+            
+          } catch (err) {
+            console.error("Promote variant error:", err);
+            toast.error(err.response?.data?.message || (lang === "ar" ? "فشل تحويل المتغير" : "Failed to promote variant"));
+          } finally {
+            setUploading(false);
+          }
+        }}
+        className={`absolute top-3 ${lang === "ar" ? "left-3" : "right-3"} px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1.5 z-10
+        ${isDark 
+          ? "bg-indigo-900/40 text-indigo-300 hover:bg-indigo-800/50 border border-indigo-700" 
+          : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"}`}
+        title={lang === "ar" ? "تحويل هذا المتغير إلى منتج مستقل" : "Promote this variant to standalone product"}
+      >
+        <span>📦</span> {lang === "ar" ? "اجعله منتج" : "Make Product"}
+      </button>
+    )}
+    
+    <div className="flex items-center justify-between">
+      <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{t("variant")} #{index + 1}</span>
+      <button type="button" onClick={() => removeVariant(variant.id)} className={`text-xs font-bold transition ${isDark ? 'text-red-400 hover:text-red-300' : 'text-red-400 hover:text-red-600'}`}>{t("remove")}</button>
+    </div>
+    
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <input 
+        type="text" 
+        value={variant.sku || ""} 
+        onChange={(e) => updateVariant(variant.id, "sku", e.target.value)} 
+        placeholder="SKU (اختياري)" 
+        className={`border rounded-lg px-3 py-2 text-xs transition-colors ${
+          isDark 
+            ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400' 
+            : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+        }`} 
+      />
+      <input 
+        type="number" step="0.5" 
+        value={variant.price || ""} 
+        onChange={(e) => updateVariant(variant.id, "price", e.target.value)} 
+        placeholder={t("price")} 
+        className={`border rounded-lg px-3 py-2 text-xs transition-colors ${
+          isDark 
+            ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400' 
+            : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+        }`} 
+      />
+      <div className="col-span-3">
+        <ImageUploader 
+          currentImage={variant.image} 
+          onImageSelect={(p) => updateVariant(variant.id, "image", p)} 
+          resourceType="products"
+          resourceData={{ 
+            brand_id: formData.brand_id,
+            sku: (() => {
+              // 1️⃣ إذا كان المتغير له SKU، نستخدمه
+              if (variant.sku?.trim()) {
+                return variant.sku.trim().toUpperCase();
+              }
+              // 2️⃣ إذا كان للمنتج SKU، نولد منه + رقم تسلسلي
+              if (formData.sku?.trim()) {
+                return `${formData.sku.trim().toUpperCase()}-${String(index + 1).padStart(3, '0')}`;
+              }
+              // 3️⃣ Fallback: توليد قيمة فريدة
+              return `VAR-${formData.id || Date.now()}-${String(index + 1).padStart(3, '0')}`;
+            })(),
+            name_en: formData.name_en,
+            name_ar: formData.name_ar,
+            isVariant: true  // ✅ ✅ ✅ إضافة حقل للإشارة أن هذا متغير
+          }}
+          label={null} 
+        />
+      </div>
+    </div>
+    
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className={`text-[10px] font-bold uppercase ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{t("attributes")}</span>
+        <button type="button" onClick={() => addVariantAttribute(variant.id)} className={`text-[10px] font-bold hover:underline ${isDark ? 'text-pink-400' : 'text-pink-600'}`}>+ {t("add")}</button>
+      </div>
+      {variant.attributes.map((attr) => (
+        <VariantAttributeField 
+          key={attr.tempId} 
+          attribute={attr} 
+          onUpdate={updateVariantAttribute} 
+          onRemove={removeVariantAttribute} 
+          lang={lang}
+          isDark={isDark}
+        />
+      ))}
+    </div>
+  </div>
+))}
+                    
+                    
                   </div>
                 )}
               </div>
