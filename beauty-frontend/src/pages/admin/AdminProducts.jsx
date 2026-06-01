@@ -261,7 +261,42 @@ const cleanSKU = (sku) => {
       { duration: 3000 }
     );
   }, [lang, isDark]);
-
+  // ✅ دالة حذف المتغير نهائياً من الداتابيس (للمتغيرات المحفوظة فقط)
+	const handleDeleteVariant = useCallback(async (variantId) => {
+	  if (!confirm(lang === "ar" 
+	    ? "⚠️ هل تريد حذف هذا المتغير نهائياً؟ لا يمكن التراجع!" 
+	    : "⚠️ Delete this variant permanently?")) return;
+	    
+	  try {
+	    await adminApi.delete(`/variants/${variantId}`);
+	    
+	    toast.success(
+	      <div className="flex items-center gap-2">
+		<span className="text-xl">🗑️</span>
+		<span className={`font-bold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
+		  {lang === "ar" ? "تم حذف المتغير" : "Variant deleted"}
+		</span>
+	      </div>,
+	      { duration: 3000 }
+	    );
+	    
+	    // ✅ تحديث القائمة وإغلاق النافذة لضمان مزامنة البيانات
+	    closeModal();
+	    fetchData();
+	    
+	  } catch (err) {
+	    console.error("Delete variant error:", err);
+	    toast.error(
+	      <div className="flex items-center gap-2">
+		<span className="text-xl">❌</span>
+		<span className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+		  {err.response?.data?.message || (lang === "ar" ? "فشل حذف المتغير" : "Failed to delete variant")}
+		</span>
+	      </div>,
+	      { duration: 4000 }
+	    );
+	  }
+	}, [lang, fetchData, closeModal, isDark]);
   const removeVariant = useCallback((id) => {
     setVariants(prev => prev.filter(v => v.id !== id));
     toast.info(
@@ -947,53 +982,68 @@ const cleanSKU = (sku) => {
   }`}>
     
     {/* ✅ زر "اجعله منتج" - يظهر فقط للمتغيرات المحفوظة (ليست مؤقتة) */}
-        {/* ✅ زر "اجعله منتج" - يظهر فقط للمتغيرات المحفوظة */}
-    {!String(variant.id).startsWith('temp_') && (
-      <button
-        type="button"
-        onClick={async () => {
-          if (!confirm(lang === "ar" 
-            ? "⚠️ هل تريد تحويل هذا المتغير إلى منتج مستقل جديد؟" 
-            : "⚠️ Promote this variant to a standalone product?")) return;
+ {/* ✅ حاوية الأزرار (تحويل + حذف) - تظهر فقط للمتغيرات المحفوظة */}
+{!String(variant.id).startsWith('temp_') && (
+  <div className={`absolute top-3 flex gap-2 ${lang === "ar" ? "left-3" : "right-3"}`}>
+    
+    {/* زر التحويل لمنتج */}
+    <button
+      type="button"
+      onClick={async () => {
+        if (!confirm(lang === "ar" 
+          ? "⚠️ هل تريد تحويل هذا المتغير إلى منتج مستقل جديد؟" 
+          : "⚠️ Promote this variant to a standalone product?")) return;
+        
+        try {
+          const res = await adminApi.post(`/variants/${variant.id}/promote`, {}, { 
+            params: { lang } 
+          });
           
-          try {
-            // ✅ إرسال طلب التحويل للـ Backend
-            const res = await adminApi.post(`/variants/${variant.id}/promote`, {}, { 
-              params: { lang } 
-            });
-            
-            // ✅ إشعار النجاح
-            toast.success(
-              <div className="flex items-center gap-2">
-                <span className="text-xl">📦</span>
-                <div>
-                  <p className="font-bold text-sm">{res.data.message}</p>
-                  <p className="text-xs text-gray-400">SKU: {res.data.product.sku} • ID: {res.data.product.id}</p>
-                </div>
-              </div>,
-              { duration: 5000 }
-            );
-            
-            // ✅ فتح المنتج الجديد في تبويب جديد + تحديث القائمة
-            window.open(`/admin/products?id=${res.data.product.id}`, '_blank');
-            closeModal();
-            fetchData();
-            
-          } catch (err) {
-            console.error("Promote variant error:", err);
-            toast.error(err.response?.data?.message || (lang === "ar" ? "فشل تحويل المتغير" : "Failed to promote variant"));
-          }
-          // ✅ تم إزالة setUploading(true/false) لأنها غير معرفة في هذا المكون
-        }}
-        className={`absolute top-3 ${lang === "ar" ? "left-3" : "right-3"} px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1.5 z-10
-        ${isDark 
+          toast.success(
+            <div className="flex items-center gap-2">
+              <span className="text-xl">📦</span>
+              <div>
+                <p className="font-bold text-sm">{res.data.message}</p>
+                <p className="text-xs text-gray-400">SKU: {res.data.product.sku}</p>
+              </div>
+            </div>,
+            { duration: 5000 }
+          );
+          
+          closeModal();
+          fetchData();
+          
+        } catch (err) {
+          console.error("Promote variant error:", err);
+          toast.error(err.response?.data?.message || (lang === "ar" ? "فشل تحويل المتغير" : "Failed to promote variant"));
+        }
+      }}
+      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1.5 z-10 ${
+        isDark 
           ? "bg-indigo-900/40 text-indigo-300 hover:bg-indigo-800/50 border border-indigo-700" 
-          : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"}`}
-        title={lang === "ar" ? "تحويل هذا المتغير إلى منتج مستقل" : "Promote this variant to standalone product"}
-      >
-        <span>📦</span> {lang === "ar" ? "اجعله منتج" : "Make Product"}
-      </button>
-    )}
+          : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
+      }`}
+      title={lang === "ar" ? "تحويل هذا المتغير إلى منتج مستقل" : "Promote this variant to standalone product"}
+    >
+      <span>📦</span> {lang === "ar" ? "اجعله منتج" : "Make Product"}
+    </button>
+
+    {/* ✅ زر الحذف المباشر الجديد */}
+    <button
+      type="button"
+      onClick={() => handleDeleteVariant(variant.id)}
+      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1.5 z-10 ${
+        isDark 
+          ? "bg-red-900/40 text-red-300 hover:bg-red-800/50 border border-red-700" 
+          : "bg-red-50 text-red-700 hover:bg-red-100 border border-red-200"
+      }`}
+      title={lang === "ar" ? "حذف هذا المتغير نهائياً" : "Delete this variant permanently"}
+    >
+      <span>🗑️</span> {lang === "ar" ? "حذف" : "Delete"}
+    </button>
+    
+  </div>
+)}
     
     {/* ... باقي كود المتغير (الـ inputs والـ ImageUploader) كما هو ... */}
     <div className="flex items-center justify-between">

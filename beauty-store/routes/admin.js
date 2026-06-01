@@ -686,23 +686,18 @@ router.post("/variants/:id/promote",
       const parentProduct = await Product.findOne({ id: variant.product_id });
       if (!parentProduct) return res.status(400).json({ message: "Parent product not found" });
 
-      // ✅ 1. توليد ID جديد (آخر ID + 1)
+      // ✅ 1. إنشاء المنتج الجديد (نفس المنطق السابق)
       const lastProduct = await Product.findOne().sort({ id: -1 });
       const newProductId = lastProduct ? lastProduct.id + 1 : 10000;
-
-      // ✅ 2. معالجة الاسم (إضافة خصائص المتغير للاسم الأصلي)
+      
       const attrs = variant.attributes || {};
       const attrStr = Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(" - ");
       const suffix = attrStr ? ` (${attrStr})` : "";
 
-      // ✅ 3. معالجة الـ SKU (منع التكرار مع المنتجات الموجودة)
       let finalSku = variant.sku ? variant.sku.toUpperCase().trim() : `PROMO-${newProductId}`;
       const existingSku = await Product.findOne({ sku: finalSku });
-      if (existingSku) {
-        finalSku = `P-${finalSku}`; // إضافة بادئة تلقائية لتفادي التكرار
-      }
+      if (existingSku) finalSku = `P-${finalSku}`;
 
-      // ✅ 4. إنشاء المنتج الجديد
       const newProduct = new Product({
         id: newProductId,
         brand_id: parentProduct.brand_id,
@@ -716,15 +711,27 @@ router.post("/variants/:id/promote",
         price: variant.price,
         has_variants: false
       });
-
       await newProduct.save();
-      await audit.create(req.user, "product", newProduct.toObject(), req, { 
-        promotedFromVariant: variant.id, 
-        parentProductId: parentProduct.id 
+
+      // ✅ 2. حذف المتغير الأصلي من الداتابيس
+      await Variant.deleteOne({ id: variant.id });
+
+      // ✅ 3. تحديث has_variants للمنتج الأب إذا لم يتبقى متغيرات
+      const remainingVariants = await Variant.countDocuments({ product_id: parentProduct.id });
+      if (remainingVariants === 0) {
+        await Product.findOneAndUpdate(
+          { id: parentProduct.id },
+          { $set: { has_variants: false } }
+        );
+      }
+
+      await audit.create(req.user, "product", newProduct.toObject(), req, {
+        promotedFromVariant: variant.id,
+        parentProductId: parentProduct.id
       });
 
       res.status(201).json({
-        message: lang === "ar" ? "✅ تم تحويل المتغير إلى منتج مستقل بنجاح" : "✅ Variant promoted to standalone product",
+        message: lang === "ar" ? "✅ تم تحويل المتغير إلى منتج مستقل وحذفه من الأصل" : "✅ Variant promoted and removed from parent",
         product: { id: newProduct.id, sku: newProduct.sku }
       });
     } catch (err) {
