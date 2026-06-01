@@ -230,7 +230,6 @@ router.post("/products",
 );
 
 // ✅ تعديل منتج
-// ✅ تعديل منتج - مع نقل الصورة تلقائياً عند تغيير البراند
 router.put("/products/:id",
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.UPDATE),
@@ -270,47 +269,129 @@ router.put("/products/:id",
       const oldProduct = await Product.findOne({ id: productId }).lean();
       if (!oldProduct) return res.status(404).json({ message: "Product not found" });
 
+      // 🔍🔍🔍 DEBUG LOGGING START 🔍🔍🔍
+      console.log("🔍 [DEBUG] Product Update - Initial State:", {
+        productId,
+        oldBrandId: oldProduct.brand_id,
+        newBrandId: productData.brand_id,
+        oldImage: oldProduct.image,
+        hasNewImage: !!req.uploadedPath,
+        brandIdType_old: typeof oldProduct.brand_id,
+        brandIdType_new: typeof productData.brand_id
+      });
+
       // ✅ ✅ ✅ 3. 🚀 نقل الصورة تلقائياً إذا تغيّر البراند ولم يتم رفع صورة جديدة
-      const isNewBrand = productData.brand_id !== undefined && productData.brand_id !== oldProduct.brand_id;
+      // ⚠️ ملاحظة: نقارن كـ String لتجنب مشاكل نوع البيانات (Number vs String)
+      const isNewBrand = productData.brand_id !== undefined && 
+                         String(productData.brand_id) !== String(oldProduct.brand_id);
       const isCloudinaryImage = oldProduct.image?.startsWith("https://res.cloudinary.com/");
+
+      console.log("🔍 [DEBUG] Brand Change Check:", {
+        isNewBrand,
+        isCloudinaryImage,
+        noNewImageUploaded: !req.uploadedPath,
+        willAttemptTransfer: isNewBrand && isCloudinaryImage && !req.uploadedPath
+      });
 
       if (isNewBrand && isCloudinaryImage && !req.uploadedPath) {
         try {
+          console.log("📦 [DEBUG] Starting image transfer process...");
+          
           const oldPublicId = extractPublicIdFromUrl(oldProduct.image);
+          console.log("🔍 [DEBUG] extractPublicIdFromUrl result:", {
+            originalUrl: oldProduct.image,
+            extractedPublicId: oldPublicId
+          });
+          
           if (oldPublicId) {
             const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
+            console.log("🔍 [DEBUG] baseUrl from env:", baseUrl);
+            
             const newBrandSlug = await getBrandSlugById(productData.brand_id);
+            console.log("🔍 [DEBUG] getBrandSlugById result:", {
+              newBrandId: productData.brand_id,
+              newBrandSlug: newBrandSlug,
+              expectedFormat: "lowercase-with-hyphens (e.g., 'urban-care')"
+            });
+            
             const currentSku = productData.sku || oldProduct.sku;
+            console.log("🔍 [DEBUG] SKU for new path:", {
+              fromProductData: productData.sku,
+              fromOldProduct: oldProduct.sku,
+              finalSku: currentSku
+            });
+            
             const newPublicId = `${baseUrl}/products/${newBrandSlug || 'unknown'}/${currentSku}`;
+            console.log("🎯 [DEBUG] Public ID Comparison:", {
+              oldPublicId: oldPublicId,
+              newPublicId: newPublicId,
+              areDifferent: oldPublicId !== newPublicId
+            });
 
             // 🔁 إعادة تسمية/نقل الصورة داخل Cloudinary
-            await cloudinary.uploader.rename(oldPublicId, newPublicId, {
+            console.log("☁️ [DEBUG] Calling cloudinary.uploader.rename...");
+            const renameResult = await cloudinary.uploader.rename(oldPublicId, newPublicId, {
               overwrite: true,
               invalidate: true // ✅ مهم: إبطال الـ CDN Cache فوراً
             });
+            console.log("✅ [DEBUG] Cloudinary rename result:", renameResult);
 
-            // 📝 تحديث الرابط في الداتابيس
-            const newUrl = oldProduct.image.replace(oldPublicId, newPublicId);
-            productData.image = newUrl;
-
-            console.log(`📦 تم نقل صورة المنتج: ${oldProduct.brand_id} -> ${productData.brand_id} (${oldPublicId.split('/').pop()})`);
+            if (renameResult.result === "ok" || renameResult.result === "created") {
+              // 📝 تحديث الرابط في الداتابيس
+              const newUrl = oldProduct.image.replace(oldPublicId, newPublicId);
+              console.log("🔗 [DEBUG] URL Update:", {
+                oldUrl: oldProduct.image,
+                newUrl: newUrl,
+                replaced: oldProduct.image !== newUrl
+              });
+              
+              productData.image = newUrl;
+              console.log("💾 [DEBUG] productData.image updated, ready for MongoDB save");
+            } else {
+              console.warn("⚠️ [DEBUG] Cloudinary rename did not return 'ok':", renameResult);
+            }
+          } else {
+            console.warn("⚠️ [DEBUG] Failed to extract oldPublicId from URL");
           }
         } catch (err) {
-          console.warn("⚠️ فشل نقل الصورة أثناء تغيير البراند:", err.message);
+          console.error("❌ [DEBUG] Image transfer failed with error:", {
+            message: err.message,
+            code: err.error?.code,
+            http_code: err.error?.http_code,
+            stack: err.stack
+          });
           // ✅ Fallback آمن: يبقى الرابط القديم ولا يتعطل الطلب
         }
+      } else {
+        console.log("⏭️ [DEBUG] Skipping image transfer because:", {
+          isNewBrand,
+          isCloudinaryImage,
+          hasNewImage: !!req.uploadedPath,
+          reason: !isNewBrand ? "Brand not changed" : 
+                  !isCloudinaryImage ? "Image not from Cloudinary" :
+                  "New image uploaded"
+        });
       }
+      // 🔍🔍🔍 DEBUG LOGGING END 🔍🔍🔍
 
       // ✅ 4. حفظ المنتج في MongoDB
+      console.log("💾 [DEBUG] Saving to MongoDB with productData:", {
+        imageWillBe: productData.image,
+        brand_id: productData.brand_id,
+        sku: productData.sku
+      });
+      
       const product = await Product.findOneAndUpdate(
         { id: productId },
         { $set: productData },
         { returnDocument: 'after', runValidators: true }
       ).lean();
 
+      console.log("✅ [DEBUG] MongoDB save result - returned product image:", product?.image);
+
       await audit.update(req.user, "product", oldProduct, product, req);
 
-      // ✅ 5. تحديث المتغيرات (Variants)
+      // ✅ 5. تحديث المتغيرات (Variants) - (نفس الكود الأصلي بدون تغيير)
       if (variants && Array.isArray(variants)) {
         const permanentIds = variants
           .map(v => v.id)
@@ -391,6 +472,7 @@ router.put("/products/:id",
     }
   }
 );
+
 router.delete("/products/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.DELETE),
