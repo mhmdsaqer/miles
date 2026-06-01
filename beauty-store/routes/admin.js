@@ -337,7 +337,7 @@ router.put("/products/:id",
             });
             console.log("✅ [DEBUG] Cloudinary rename result:", renameResult);
 
-            if (renameResult.result === "ok" || renameResult.result === "created") {
+            if (renameResult.public_id === newPublicId) {
               // 📝 تحديث الرابط في الداتابيس
               const newUrl = oldProduct.image.replace(oldPublicId, newPublicId);
               console.log("🔗 [DEBUG] URL Update:", {
