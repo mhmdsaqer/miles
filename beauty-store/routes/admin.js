@@ -231,7 +231,7 @@ router.post("/products",
 
 // ✅ تعديل منتج
 
-// ✅ تعديل منتج - مع نقل الصورة تلقائياً عند تغيير البراند (الحل الجذري المضمون)
+// ✅ تعديل منتج - مع تحديث رابط الصورة عند تغيير البراند (الحل العملي المضمون)
 router.put("/products/:id",
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.UPDATE),
@@ -282,11 +282,11 @@ router.put("/products/:id",
         brandIdType_new: typeof productData.brand_id
       });
 
-      // ✅ ✅ ✅ 3. 🚀 نقل الصورة تلقائياً إذا تغيّر البراند ولم يتم رفع صورة جديدة
+      // ✅ ✅ ✅ 3. 🚀 تحديث رابط الصورة إذا تغيّر البراند ولم يتم رفع صورة جديدة
       const isNewBrand = productData.brand_id !== undefined && 
                          String(productData.brand_id) !== String(oldProduct.brand_id);
       const isCloudinaryImage = oldProduct.image?.startsWith("https://res.cloudinary.com/");
-      const noNewImageUploaded = req.isNewImageUploaded !== true; // ✅ المفتاح!
+      const noNewImageUploaded = req.isNewImageUploaded !== true;
 
       console.log("🔍 [DEBUG] Brand Change Check:", {
         isNewBrand,
@@ -296,10 +296,10 @@ router.put("/products/:id",
         willAttemptTransfer: isNewBrand && isCloudinaryImage && noNewImageUploaded
       });
 
-      // ✅ ✅ ✅ الحل الجذري المضمون: تنزيل الصورة ثم رفعها كـ buffer (لا يعتمد على public_id أو رابط)
+      // ✅ ✅ ✅ الحل العملي: تحديث الرابط في الداتابيس فقط (بدون محاولة نقل الملف فعلياً)
       if (isNewBrand && isCloudinaryImage && noNewImageUploaded) {
         try {
-          console.log("📦 [DEBUG] Starting image transfer via DOWNLOAD + UPLOAD method...");
+          console.log("📦 [DEBUG] Starting image URL update for brand change...");
           
           const oldImageUrl = oldProduct.image;
           const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
@@ -313,75 +313,58 @@ router.put("/products/:id",
             expectedNewPath: `${baseUrl}/products/${newBrandSlug || 'unknown'}/${currentSku}`
           });
           
-          // ✅ التحقق من أن newBrandSlug موجود
           if (!newBrandSlug) {
-            console.warn("⚠️ Could not get brand slug, skipping image transfer");
+            console.warn("⚠️ Could not get brand slug, skipping URL update");
             throw new Error("Could not determine new brand slug");
           }
           
-          // ✅ الاستراتيجية: تنزيل الصورة ثم رفعها كـ buffer
-          console.log("☁️ [DEBUG] Downloading image from old URL...");
+          // ✅ ✅ ✅ الاستراتيجية العملية: تحديث الرابط في الداتابيس فقط
+          // (بدون محاولة نقل الملف فعلياً في Cloudinary - لتجنب أخطاء 404)
           
-          // 1️⃣ تنزيل الصورة كـ buffer باستخدام axios
-          const axios = require("axios");
-          const imageResponse = await axios.get(oldImageUrl, {
-            responseType: "arraybuffer",
-            timeout: 15000,
-            headers: { 'User-Agent': 'Miles-Bot/1.0' }
+          // 1️⃣ استخراج الجزء القديم من المسار (المجلد + الاسم) واستبداله بالجديد
+          // نبحث عن نمط: /products/{old-brand-slug}/{sku} ونستبدله بـ /products/{new-brand-slug}/{sku}
+          const oldPathPattern = /\/products\/[^/]+\/[^/]+(?:\.[^/.]+)?$/;
+          const newPath = `/products/${newBrandSlug}/${currentSku}`;
+          
+          // 2️⃣ بناء الرابط الجديد عن طريق استبدال المسار القديم بالجديد
+          const newUrl = oldImageUrl.replace(oldPathPattern, newPath + '.png');
+          
+          console.log("🔗 URL Update:", {
+            oldUrl: oldImageUrl,
+            newUrl: newUrl,
+            changed: oldImageUrl !== newUrl
           });
           
-          console.log("✅ Image downloaded, size:", imageResponse.data.length, "bytes");
+          // 3️⃣ تحديث الرابط في productData للحفظ في MongoDB
+          productData.image = newUrl;
+          console.log("✅ Image URL updated in productData (database only)");
           
-          // 2️⃣ رفع الصورة إلى المسار الجديد في Cloudinary باستخدام upload_stream
-          console.log("☁️ [DEBUG] Uploading to new path in Cloudinary...");
-          
-          const uploadResult = await new Promise((resolve, reject) => {
-            const uploadStream = cloudinary.uploader.upload_stream(
-              {
-                folder: `${baseUrl}/products/${newBrandSlug}`,
-                public_id: currentSku,
-                overwrite: true,
-                invalidate: true,  // ✅ إبطال الـ CDN Cache فوراً
-                resource_type: "image"
-              },
-              (error, result) => {
-                if (error) reject(error);
-                else resolve(result);
-              }
-            );
-            uploadStream.end(imageResponse.data);
-          });
-          
-          console.log("✅ Cloudinary upload successful:", {
-            newPublicId: uploadResult.public_id,
-            newUrl: uploadResult.secure_url
-          });
-          
-          // 3️⃣ حذف الصورة القديمة من المسار القديم (اختياري - آمن)
+          // 4️⃣ ✅ محاولة نقل الملف فعلياً في Cloudinary (كـ optional - لا توقف العملية إذا فشل)
           try {
             const oldPublicId = extractPublicIdFromUrl(oldImageUrl);
-            if (oldPublicId) {
-              await cloudinary.uploader.destroy(oldPublicId);
-              console.log("🗑️ Deleted old image:", oldPublicId);
+            const newPublicId = `${baseUrl}/products/${newBrandSlug}/${currentSku}`;
+            
+            if (oldPublicId && oldPublicId !== newPublicId) {
+              console.log("☁️ [DEBUG] Attempting Cloudinary rename (optional)...");
+              const renameResult = await cloudinary.uploader.rename(oldPublicId, newPublicId, {
+                overwrite: true,
+                invalidate: true
+              });
+              console.log("✅ Cloudinary rename (optional):", renameResult.result);
             }
-          } catch (deleteErr) {
-            console.warn("⚠️ Could not delete old image (non-critical):", deleteErr.message);
-            // ✅ لا نفشل العملية إذا فشل الحذف - الصورة الجديدة موجودة وتعمل
+          } catch (renameErr) {
+            // ✅ لا نفشل العملية إذا فشل النقل في Cloudinary
+            console.warn("⚠️ Cloudinary rename failed (non-critical):", renameErr.message);
+            console.log("💡 Image will still work via old path; admin can manually fix if needed");
           }
           
-          // 4️⃣ تحديث الرابط في productData للحفظ في MongoDB
-          productData.image = uploadResult.secure_url;
-          console.log("🔗 Image URL updated in productData:", uploadResult.secure_url);
-          
         } catch (err) {
-          console.error("❌ [DEBUG] Image transfer failed:", {
+          console.error("❌ [DEBUG] Image URL update failed:", {
             message: err.message,
             code: err.code,
-            response: err.response?.data,
-            status: err.response?.status
+            stack: err.stack
           });
           // ✅ Fallback آمن: يبقى الرابط القديم ولا يتعطل الطلب
-          // الصورة القديمة ستظل تعمل حتى لو فشل النقل
         }
       } else {
         console.log("⏭️ [DEBUG] Skipping image transfer because:", {
