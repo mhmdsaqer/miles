@@ -59,12 +59,32 @@ const getBrandSlugById = async (brandId) => {
 };
 
 // دالة استخراج public_id من الرابط
+// ✅ ✅ ✅ الدالة المُصححة لاستخراج public_id
 const extractPublicIdFromUrl = (url) => {
   if (!url?.startsWith("https://res.cloudinary.com/")) return null;
   try {
+    // إزالة الجزء الثابت من رابط Cloudinary
     const afterBase = url.replace(/^https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\//, '');
+    
+    // إزالة رقم الإصدار (v123456/)
     const withoutVersion = afterBase.replace(/^v\d+\//, '');
-    return withoutVersion.replace(/\.[^/.]+$/, "") || null;
+    
+    // إزالة الامتداد (.png, .jpg, إلخ)
+    let publicId = withoutVersion.replace(/\.[^/.]+$/, "") || null;
+    
+    if (!publicId) return null;
+    
+    // ✅ ✅ ✅ الإصلاح: إزالة الـ base folder إذا كان موجوداً
+    // لأن public_id الفعلي في Cloudinary يبدأ من ما بعد الـ folder المحدد عند الرفع
+    const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
+    
+    // إذا كان publicId يبدأ بـ baseUrl، نزيله + الشرطة التالية
+    if (publicId.startsWith(`${baseUrl}/`)) {
+      publicId = publicId.replace(`${baseUrl}/`, '');
+      console.log("🔧 Fixed public_id by removing base folder:", publicId);
+    }
+    
+    return publicId;
   } catch (err) {
     console.error("❌ Error extracting publicId:", err);
     return null;
