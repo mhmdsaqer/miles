@@ -1,10 +1,10 @@
-// src/pages/admin/AdminProducts.jsx - النسخة مع دعم الوضع الليلي 🌙 + ميزة Promote Variant
+// src/pages/admin/AdminProducts.jsx - النسخة مع دعم الوضع الليلي 🌙
 import { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import { adminApi } from "../../utils/adminAuth";
 import { useLang } from "../../context/LanguageContext";
 import { useAuth } from "../../context/AuthContext";
-import { useTheme } from "../../context/ThemeContext";
+import { useTheme } from "../../context/ThemeContext"; // ✅ إضافة جديدة
 import { toast } from "sonner";
 import ImageUploader from "../../components/ImageUploader";
 
@@ -52,7 +52,7 @@ const VariantAttributeField = ({ attribute, onUpdate, onRemove, lang, isDark }) 
 const AdminProducts = () => {
   const { lang, t } = useLang();
   const { user, hasPermission } = useAuth();
-  const { isDark } = useTheme();
+  const { isDark } = useTheme(); // ✅ إضافة جديدة
   
   const [products, setProducts] = useState([]);
   const [brands, setBrands] = useState([]);
@@ -81,11 +81,6 @@ const AdminProducts = () => {
   // بيانات المتغيرات (Variants)
   const [variants, setVariants] = useState([]);
 
-  // ✅ ✅ ✅ حالات جديدة لتحويل المتغير إلى منتج (Promote Feature)
-  const [showPromoteModal, setShowPromoteModal] = useState(false);
-  const [promoteDraft, setPromoteDraft] = useState(null);
-  const [promoteLoading, setPromoteLoading] = useState(false);
-
   // ✅ ✅ ✅ دوال التحقق من الصلاحيات
   const canCreate = useMemo(() => hasPermission("products:create"), [hasPermission]);
   const canUpdate = useMemo(() => hasPermission("products:update"), [hasPermission]);
@@ -93,17 +88,17 @@ const AdminProducts = () => {
   const canRead = useMemo(() => hasPermission("products:read"), [hasPermission]);
   
   // ✅ ✅ ✅ دالة تنظيف الـ SKU - نفس الدالة في الـ Backend
-  const cleanSKU = (sku) => {
-    if (!sku) return "";
-    return sku
-      .toUpperCase()
-      .trim()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/[^A-Z0-9\-_.]/g, '')
-      .substring(0, 100);
-  };
+const cleanSKU = (sku) => {
+  if (!sku) return "";
+  return sku
+    .toUpperCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^A-Z0-9\-_.]/g, '')
+    .substring(0, 100);
+};
 
   // ✅ دوال التحويل بين الهيكلين
   const attributesToArray = useCallback((attributes) => {
@@ -190,7 +185,7 @@ const AdminProducts = () => {
     return res;
   }, [products, search, filterBrand, filterCategory, filterHasVariants]);
 
-  // ✅ فتح/إغلاق النموذج - مع إصلاح عرض المتغيرات
+  // ✅ فتح/إغلاق النموذج
   const openModal = useCallback(async (product = null) => {
     if (product && !canUpdate) {
       toast.error(lang === "ar" ? "❌ غير مصرح بتعديل المنتجات" : "❌ Forbidden - No update permission");
@@ -212,27 +207,18 @@ const AdminProducts = () => {
         description_ar: product.description_ar || "",
         description_en: product.description_en || ""
       });
+      setShowVariantsSection(product.has_variants || false);
       
-      // ✅ ✅ ✅ إصلاح: إظهار قسم المتغيرات تلقائياً إذا كان المنتج لديه متغيرات
-      const hasVariants = product.has_variants || product.options?.length > 0;
-      setShowVariantsSection(hasVariants);
-      
-      if (hasVariants) {
+      if (product.has_variants) {
         try {
-          // ✅ نجلب تفاصيل المنتج مع متغيراته من endpoint التفاصيل
           const res = await adminApi.get(`/products/${product.id}`);
-          const variantsData = res.data.variants || res.data.options || [];
-          
-          if (variantsData.length > 0) {
-            const transformed = variantsData.map(v => ({
-              ...v,
-              attributes: attributesToArray(v.attributes),
-              _originalSku: v.sku 
-            }));
-            setVariants(transformed);
-          } else {
-            setVariants([]);
-          }
+          const variantsData = res.data.variants || [];
+          const transformed = variantsData.map(v => ({
+            ...v,
+            attributes: attributesToArray(v.attributes),
+            _originalSku: v.sku 
+          }));
+          setVariants(transformed);
         } catch (err) {
           console.warn("Failed to load variants:", err);
           setVariants([]);
@@ -256,97 +242,6 @@ const AdminProducts = () => {
   const closeModal = useCallback(() => {
     setShowModal(false);
   }, []);
-
-  // ✅ ✅ ✅ دالة جلب بيانات التحويل الأولية (Promote Preview)
-  const fetchPromotePreview = useCallback(async (variantId) => {
-    setPromoteLoading(true);
-    try {
-      // ✅ نجلب بيانات معاينة التحويل من الـ Backend
-      const res = await adminApi.get(`/variants/${variantId}/promote-preview`, {
-        params: { lang }
-      });
-      if (res.data.success) {
-        setPromoteDraft(res.data.data);
-        setShowPromoteModal(true);
-      }
-    } catch (err) {
-      console.error("Failed to fetch promote preview:", err);
-      
-      // ✅ Fallback: إنشاء بيانات افتراضية للتحويل إذا فشل الـ endpoint
-      const variant = variants.find(v => String(v.id) === String(variantId));
-      if (variant) {
-        const productBase = formData;
-        setPromoteDraft({
-          variantId,
-          suggestedId: Date.now(),
-          suggestedSku: variant.sku || `PROMO-${Date.now()}`,
-          brand_id: productBase.brand_id,
-          category_id: productBase.category_id,
-          name_ar: `${productBase.name_ar} (${Object.values(attributesToObject(variant.attributes)).slice(0,2).join(' - ')})`,
-          name_en: `${productBase.name_en} (${Object.values(attributesToObject(variant.attributes)).slice(0,2).join(' - ')})`,
-          description_ar: productBase.description_ar,
-          description_en: productBase.description_en,
-          image: variant.image || productBase.image,
-          price: variant.price || productBase.price,
-          variantAttributes: attributesToObject(variant.attributes)
-        });
-        setShowPromoteModal(true);
-      } else {
-        toast.error(err.response?.data?.message || (lang === "ar" ? "فشل تحميل بيانات التحويل" : "Failed to load promote data"));
-      }
-    } finally {
-      setPromoteLoading(false);
-    }
-  }, [lang, variants, formData, attributesToObject]);
-
-  // ✅ ✅ ✅ دالة تنفيذ التحويل بعد التعديل
-  const handlePromoteSubmit = useCallback(async (e, variantId) => {
-    e.preventDefault();
-    if (!promoteDraft) return;
-    
-    setPromoteLoading(true);
-    try {
-      const payload = {
-        id: Number(promoteDraft.suggestedId),
-        sku: promoteDraft.suggestedSku,
-        brand_id: Number(promoteDraft.brand_id),
-        category_id: Number(promoteDraft.category_id),
-        name_ar: promoteDraft.name_ar,
-        name_en: promoteDraft.name_en,
-        description_ar: promoteDraft.description_ar || "",
-        description_en: promoteDraft.description_en || "",
-        image: promoteDraft.image,
-        price: Number(promoteDraft.price),
-        has_variants: false
-      };
-      
-      const res = await adminApi.post(`/variants/${variantId}/promote`, payload, {
-        params: { lang }
-      });
-      
-      toast.success(
-        <div className="flex items-center gap-2">
-          <span className="text-xl">📦</span>
-          <div>
-            <p className="font-bold text-sm">{res.data.message}</p>
-            <p className="text-xs text-gray-400">SKU: {res.data.product.sku} • ID: {res.data.product.id}</p>
-          </div>
-        </div>,
-        { duration: 5000 }
-      );
-      
-      // إغلاق المودال وتحديث القائمة
-      setShowPromoteModal(false);
-      setPromoteDraft(null);
-      fetchData(); // تحديث قائمة المنتجات
-      
-    } catch (err) {
-      console.error("Promote submit error:", err);
-      toast.error(err.response?.data?.message || (lang === "ar" ? "فشل في التحويل" : "Failed to promote"));
-    } finally {
-      setPromoteLoading(false);
-    }
-  }, [promoteDraft, lang, fetchData]);
 
   // ✅ دوال المتغيرات
   const addVariant = useCallback(() => {
@@ -442,53 +337,63 @@ const AdminProducts = () => {
       const skuSet = new Set();
       
       if (cleanMainSku) {
-        if (editingId) {
-          const originalProduct = products.find(p => p.id === editingId);
-          const originalSkuClean = originalProduct?.sku ? cleanSKU(originalProduct.sku) : null;
-          
-          if (originalSkuClean !== cleanMainSku) {
-            if (skuSet.has(cleanMainSku)) {
-              throw new Error(`⚠️ SKU "${cleanMainSku}" مكرر في نفس المنتج`);
-            }
-          }
-        }
+          if (editingId) {
+	      // عند التعديل: نتحقق فقط إذا تغير الـ SKU عن الأصلي
+	      const originalProduct = products.find(p => p.id === editingId);
+	      const originalSkuClean = originalProduct?.sku ? cleanSKU(originalProduct.sku) : null;
+	      
+	      if (originalSkuClean !== cleanMainSku) {
+		// الـ SKU تغير، نتحقق من التكرار
+		if (skuSet.has(cleanMainSku)) {
+		  throw new Error(`⚠️ SKU "${cleanMainSku}" مكرر في نفس المنتج`);
+		}
+	      }
+	      // إذا لم يتغير، لا نضيفه للتحقق (موجود مسبقاً في الداتابيس)
+	    }
+      
         skuSet.add(cleanMainSku);
       }
 
-      const variantsPayload = variants.length > 0 
-        ? variants.map((v, index) => {
-            const isTemp = v.id?.startsWith?.('temp_');
-            const isExisting = !isTemp && editingId;
-            
-            let finalSku;
-            if (v.sku?.trim()) {
-              finalSku = cleanSKU(v.sku);
-            } else if (isExisting && v._originalSku) {
-              finalSku = cleanSKU(v._originalSku);
-            } else if (formData.sku?.trim()) {
-              finalSku = cleanSKU(`${formData.sku.toUpperCase().trim()}-${String(index + 1).padStart(3, '0')}`);
-            } else {
-              finalSku = cleanSKU(`VAR-${formData.id || Date.now()}-${String(index + 1).padStart(3, '0')}`);
-            }
-            
-            if (isExisting && v._originalSku && cleanSKU(v._originalSku) === finalSku) {
-              skuSet.add(finalSku);
-            } else {
-              if (skuSet.has(finalSku)) {
-                throw new Error(`⚠️ SKU "${finalSku}" مكرر في نفس المنتج`);
-              }
-              skuSet.add(finalSku);
-            }
-            
-            return {
-              id: isTemp ? undefined : (v.id ? Number(v.id) : undefined),
-              sku: finalSku,
-              price: Number(v.price) || Number(formData.price),
-              image: v.image || formData.image,
-              attributes: attributesToObject(v.attributes)
-            };
-          })
-        : undefined;
+// ✅ في دالة handleSubmit - داخل variants.map
+		const variantsPayload = variants.length > 0 
+		  ? variants.map((v, index) => {
+		      const isTemp = v.id?.startsWith?.('temp_');
+		      const isExisting = !isTemp && editingId;
+		      
+		      // ✅ ✅ ✅ نفس المنطق بالضبط لتوليد الـ SKU
+		      let finalSku;
+		      if (v.sku?.trim()) {
+			finalSku = cleanSKU(v.sku);
+		      }else if (isExisting && v._originalSku) {
+          // ✅ متغير موجود: نستخدم الـ SKU الأصلي المخزن (لم يتغير)
+          finalSku = cleanSKU(v._originalSku);
+        } 
+		       else if (formData.sku?.trim()) {
+			finalSku = cleanSKU(`${formData.sku.toUpperCase().trim()}-${String(index + 1).padStart(3, '0')}`);
+		      } else {
+			finalSku = cleanSKU(`VAR-${formData.id || Date.now()}-${String(index + 1).padStart(3, '0')}`);
+		      }
+		      
+		             // ✅ التحقق من التكرار: فقط للقيم الجديدة أو المتغيرة
+        if (isExisting && v._originalSku && cleanSKU(v._originalSku) === finalSku) {
+          // الـ SKU لم يتغير، لا نتحقق من التكرار (موجود مسبقاً في الداتابيس)
+          skuSet.add(finalSku);
+        } else {
+          // SKU جديدة أو متغيرة: نتحقق من التكرار
+          if (skuSet.has(finalSku)) {
+            throw new Error(`⚠️ SKU "${finalSku}" مكرر في نفس المنتج`);
+          }
+          skuSet.add(finalSku);
+        }
+		      return {
+			id: isTemp ? undefined : (v.id ? Number(v.id) : undefined),
+			sku: finalSku,  // ← ← ← الآن نفس القيمة المرسلة للصورة!
+			price: Number(v.price) || Number(formData.price),
+			image: v.image || formData.image,
+			attributes: attributesToObject(v.attributes)
+		      };
+		    })
+		  : undefined;
 
       const productPayload = {
         id: Number(formData.id),
@@ -1037,106 +942,136 @@ const AdminProducts = () => {
                     </button>
                     
                     {variants.map((variant, index) => (
-                      <div key={variant.id} className={`relative rounded-xl p-4 border space-y-3 transition-colors ${
-                        isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-100'
-                      }`}>
-                        
-                        {/* ✅ زر "اجعله منتج" - مع فتح مودال المعاينة */}
-                        {!String(variant.id).startsWith('temp_') && (
-                          <button
-                            type="button"
-                            onClick={() => fetchPromotePreview(variant.id)}
-                            disabled={promoteLoading}
-                            className={`absolute top-3 ${lang === "ar" ? "left-3" : "right-3"} px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1.5 z-10
-                            ${isDark
-                              ? "bg-indigo-900/40 text-indigo-300 hover:bg-indigo-800/50 border border-indigo-700" 
-                              : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
-                            } ${promoteLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            title={lang === "ar" ? "تحويل هذا المتغير إلى منتج مستقل" : "Promote this variant to standalone product"}
-                          >
-                            {promoteLoading ? (
-                              <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                              </svg>
-                            ) : (
-                              <span>📦</span>
-                            )}
-                            {lang === "ar" ? "اجعله منتج" : "Make Product"}
-                          </button>
-                        )}
-                        
-                        <div className="flex items-center justify-between">
-                          <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{t("variant")} #{index + 1}</span>
-                          <button type="button" onClick={() => removeVariant(variant.id)} className={`text-xs font-bold transition ${isDark ? 'text-red-400 hover:text-red-300' : 'text-red-400 hover:text-red-600'}`}>{t("remove")}</button>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          <input 
-                            type="text" 
-                            value={variant.sku || ""} 
-                            onChange={(e) => updateVariant(variant.id, "sku", e.target.value)} 
-                            placeholder="SKU (اختياري)" 
-                            className={`border rounded-lg px-3 py-2 text-xs transition-colors ${
-                              isDark 
-                                ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400' 
-                                : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
-                            }`} 
-                          />
-                          <input 
-                            type="number" step="0.5" 
-                            value={variant.price || ""} 
-                            onChange={(e) => updateVariant(variant.id, "price", e.target.value)} 
-                            placeholder={t("price")} 
-                            className={`border rounded-lg px-3 py-2 text-xs transition-colors ${
-                              isDark 
-                                ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400' 
-                                : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
-                            }`} 
-                          />
-                          <div className="col-span-3">
-                            <ImageUploader 
-                              currentImage={variant.image} 
-                              onImageSelect={(p) => updateVariant(variant.id, "image", p)} 
-                              resourceType="products"
-                              resourceData={{ 
-                                brand_id: formData.brand_id,
-                                sku: (() => {
-                                  if (variant.sku?.trim()) {
-                                    return variant.sku.trim().toUpperCase();
-                                  }
-                                  if (formData.sku?.trim()) {
-                                    return `${formData.sku.trim().toUpperCase()}-${String(index + 1).padStart(3, '0')}`;
-                                  }
-                                  return `VAR-${formData.id || Date.now()}-${String(index + 1).padStart(3, '0')}`;
-                                })(),
-                                name_en: formData.name_en,
-                                name_ar: formData.name_ar,
-                                isVariant: true
-                              }}
-                              label={null} 
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className={`text-[10px] font-bold uppercase ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{t("attributes")}</span>
-                            <button type="button" onClick={() => addVariantAttribute(variant.id)} className={`text-[10px] font-bold hover:underline ${isDark ? 'text-pink-400' : 'text-pink-600'}`}>+ {t("add")}</button>
-                          </div>
-                          {variant.attributes.map((attr) => (
-                            <VariantAttributeField 
-                              key={attr.tempId} 
-                              attribute={attr} 
-                              onUpdate={updateVariantAttribute} 
-                              onRemove={removeVariantAttribute} 
-                              lang={lang}
-                              isDark={isDark}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+  <div key={variant.id} className={`relative rounded-xl p-4 border space-y-3 transition-colors ${
+    isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-100'
+  }`}>
+    
+    {/* ✅ زر "اجعله منتج" - يظهر فقط للمتغيرات المحفوظة (ليست مؤقتة) */}
+        {/* ✅ زر "اجعله منتج" - يظهر فقط للمتغيرات المحفوظة */}
+    {!String(variant.id).startsWith('temp_') && (
+      <button
+        type="button"
+        onClick={async () => {
+          if (!confirm(lang === "ar" 
+            ? "⚠️ هل تريد تحويل هذا المتغير إلى منتج مستقل جديد؟" 
+            : "⚠️ Promote this variant to a standalone product?")) return;
+          
+          try {
+            // ✅ إرسال طلب التحويل للـ Backend
+            const res = await adminApi.post(`/variants/${variant.id}/promote`, {}, { 
+              params: { lang } 
+            });
+            
+            // ✅ إشعار النجاح
+            toast.success(
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📦</span>
+                <div>
+                  <p className="font-bold text-sm">{res.data.message}</p>
+                  <p className="text-xs text-gray-400">SKU: {res.data.product.sku} • ID: {res.data.product.id}</p>
+                </div>
+              </div>,
+              { duration: 5000 }
+            );
+            
+            // ✅ فتح المنتج الجديد في تبويب جديد + تحديث القائمة
+            window.open(`/admin/products?id=${res.data.product.id}`, '_blank');
+            closeModal();
+            fetchData();
+            
+          } catch (err) {
+            console.error("Promote variant error:", err);
+            toast.error(err.response?.data?.message || (lang === "ar" ? "فشل تحويل المتغير" : "Failed to promote variant"));
+          }
+          // ✅ تم إزالة setUploading(true/false) لأنها غير معرفة في هذا المكون
+        }}
+        className={`absolute top-3 ${lang === "ar" ? "left-3" : "right-3"} px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1.5 z-10
+        ${isDark 
+          ? "bg-indigo-900/40 text-indigo-300 hover:bg-indigo-800/50 border border-indigo-700" 
+          : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"}`}
+        title={lang === "ar" ? "تحويل هذا المتغير إلى منتج مستقل" : "Promote this variant to standalone product"}
+      >
+        <span>📦</span> {lang === "ar" ? "اجعله منتج" : "Make Product"}
+      </button>
+    )}
+    
+    {/* ... باقي كود المتغير (الـ inputs والـ ImageUploader) كما هو ... */}
+    <div className="flex items-center justify-between">
+      <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{t("variant")} #{index + 1}</span>
+      <button type="button" onClick={() => removeVariant(variant.id)} className={`text-xs font-bold transition ${isDark ? 'text-red-400 hover:text-red-300' : 'text-red-400 hover:text-red-600'}`}>{t("remove")}</button>
+    </div>
+    
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <input 
+        type="text" 
+        value={variant.sku || ""} 
+        onChange={(e) => updateVariant(variant.id, "sku", e.target.value)} 
+        placeholder="SKU (اختياري)" 
+        className={`border rounded-lg px-3 py-2 text-xs transition-colors ${
+          isDark 
+            ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400' 
+            : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+        }`} 
+      />
+      <input 
+        type="number" step="0.5" 
+        value={variant.price || ""} 
+        onChange={(e) => updateVariant(variant.id, "price", e.target.value)} 
+        placeholder={t("price")} 
+        className={`border rounded-lg px-3 py-2 text-xs transition-colors ${
+          isDark 
+            ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400' 
+            : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+        }`} 
+      />
+      <div className="col-span-3">
+        <ImageUploader 
+          currentImage={variant.image} 
+          onImageSelect={(p) => updateVariant(variant.id, "image", p)} 
+          resourceType="products"
+          resourceData={{ 
+            brand_id: formData.brand_id,
+            sku: (() => {
+              // 1️⃣ إذا كان المتغير له SKU، نستخدمه
+              if (variant.sku?.trim()) {
+                return variant.sku.trim().toUpperCase();
+              }
+              // 2️⃣ إذا كان للمنتج SKU، نولد منه + رقم تسلسلي
+              if (formData.sku?.trim()) {
+                return `${formData.sku.trim().toUpperCase()}-${String(index + 1).padStart(3, '0')}`;
+              }
+              // 3️⃣ Fallback: توليد قيمة فريدة
+              return `VAR-${formData.id || Date.now()}-${String(index + 1).padStart(3, '0')}`;
+            })(),
+            name_en: formData.name_en,
+            name_ar: formData.name_ar,
+            isVariant: true  // ✅ ✅ ✅ إضافة حقل للإشارة أن هذا متغير
+          }}
+          label={null} 
+        />
+      </div>
+    </div>
+    
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className={`text-[10px] font-bold uppercase ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{t("attributes")}</span>
+        <button type="button" onClick={() => addVariantAttribute(variant.id)} className={`text-[10px] font-bold hover:underline ${isDark ? 'text-pink-400' : 'text-pink-600'}`}>+ {t("add")}</button>
+      </div>
+      {variant.attributes.map((attr) => (
+        <VariantAttributeField 
+          key={attr.tempId} 
+          attribute={attr} 
+          onUpdate={updateVariantAttribute} 
+          onRemove={removeVariantAttribute} 
+          lang={lang}
+          isDark={isDark}
+        />
+      ))}
+    </div>
+  </div>
+))}
+                    
+                    
                   </div>
                 )}
               </div>
@@ -1168,143 +1103,6 @@ const AdminProducts = () => {
                 <button type="button" onClick={closeModal} className={`flex-1 py-3 rounded-xl font-bold transition ${
                   isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}>{t("cancel")}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ✅ ✅ ✅ مودال معاينة وتأكيد التحويل (Promote Modal) */}
-      {showPromoteModal && promoteDraft && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className={`rounded-[2.5rem] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border transition-colors duration-300 ${
-            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
-          }`}>
-            <div className={`p-6 border-b flex justify-between items-center sticky top-0 rounded-t-[2.5rem] z-10 ${
-              isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
-            }`}>
-              <h2 className={`text-xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {lang === "ar" ? "📦 تحويل المتغير إلى منتج مستقل" : "📦 Promote Variant to Product"}
-              </h2>
-              <button 
-                onClick={() => { setShowPromoteModal(false); setPromoteDraft(null); }} 
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`}
-              >
-                ✕
-              </button>
-            </div>
-            
-            <form onSubmit={(e) => handlePromoteSubmit(e, promoteDraft.variantId)} className="p-6 space-y-4">
-              {/* معاينة البيانات */}
-              <div className={`p-4 rounded-xl ${isDark ? 'bg-gray-700' : 'bg-gray-50'}`}>
-                <p className={`text-xs font-bold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {lang === "ar" ? "معاينة المنتج الجديد:" : "Preview of new product:"}
-                </p>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className={`text-[10px] block ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>ID</span>
-                    <input 
-                      type="number"
-                      value={promoteDraft.suggestedId}
-                      onChange={(e) => setPromoteDraft(prev => prev ? {...prev, suggestedId: e.target.value} : null)}
-                      className={`w-full mt-1 px-3 py-2 rounded-lg text-xs border ${
-                        isDark ? 'bg-gray-600 border-gray-500 text-gray-100' : 'bg-white border-gray-200 text-gray-900'
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <span className={`text-[10px] block ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>SKU</span>
-                    <input 
-                      type="text"
-                      value={promoteDraft.suggestedSku}
-                      onChange={(e) => setPromoteDraft(prev => prev ? {...prev, suggestedSku: e.target.value} : null)}
-                      className={`w-full mt-1 px-3 py-2 rounded-lg text-xs border uppercase ${
-                        isDark ? 'bg-gray-600 border-gray-500 text-gray-100' : 'bg-white border-gray-200 text-gray-900'
-                      }`}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <span className={`text-[10px] block ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{lang === "ar" ? "الاسم بالعربي" : "Arabic Name"}</span>
-                    <input 
-                      type="text"
-                      value={promoteDraft.name_ar}
-                      onChange={(e) => setPromoteDraft(prev => prev ? {...prev, name_ar: e.target.value} : null)}
-                      className={`w-full mt-1 px-3 py-2 rounded-lg text-xs border ${
-                        isDark ? 'bg-gray-600 border-gray-500 text-gray-100' : 'bg-white border-gray-200 text-gray-900'
-                      }`}
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <span className={`text-[10px] block ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{lang === "ar" ? "الاسم بالإنجليزي" : "English Name"}</span>
-                    <input 
-                      type="text"
-                      value={promoteDraft.name_en}
-                      onChange={(e) => setPromoteDraft(prev => prev ? {...prev, name_en: e.target.value} : null)}
-                      className={`w-full mt-1 px-3 py-2 rounded-lg text-xs border ${
-                        isDark ? 'bg-gray-600 border-gray-500 text-gray-100' : 'bg-white border-gray-200 text-gray-900'
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <span className={`text-[10px] block ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{t("price")}</span>
-                    <input 
-                      type="number" step="0.5"
-                      value={promoteDraft.price}
-                      onChange={(e) => setPromoteDraft(prev => prev ? {...prev, price: e.target.value} : null)}
-                      className={`w-full mt-1 px-3 py-2 rounded-lg text-xs border ${
-                        isDark ? 'bg-gray-600 border-gray-500 text-gray-100' : 'bg-white border-gray-200 text-gray-900'
-                      }`}
-                    />
-                  </div>
-                </div>
-                
-                {promoteDraft.variantAttributes && Object.keys(promoteDraft.variantAttributes).length > 0 && (
-                  <div className={`mt-4 p-3 rounded-lg ${isDark ? 'bg-gray-600' : 'bg-gray-100'}`}>
-                    <p className={`text-[10px] font-bold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                      {lang === "ar" ? "خصائص المتغير الأصلية:" : "Original variant attributes:"}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {Object.entries(promoteDraft.variantAttributes).map(([key, val]) => (
-                        <span key={key} className={`text-[10px] px-2 py-1 rounded ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-600'}`}>
-                          {key}: {val}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {/* أزرار الحفظ والإلغاء */}
-              <div className={`flex gap-3 pt-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
-                <button 
-                  type="submit" 
-                  disabled={promoteLoading}
-                  className="flex-1 bg-gray-900 dark:bg-gray-700 text-white py-3 rounded-xl font-bold hover:bg-pink-600 transition flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {promoteLoading ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                      </svg>
-                      {lang === "ar" ? "جاري التحويل..." : "Converting..."}
-                    </>
-                  ) : (
-                    <>
-                      <span>🚀</span>
-                      {lang === "ar" ? "تأكيد التحويل" : "Confirm Promote"}
-                    </>
-                  )}
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => { setShowPromoteModal(false); setPromoteDraft(null); }} 
-                  className={`flex-1 py-3 rounded-xl font-bold transition ${
-                    isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {lang === "ar" ? "إلغاء" : "Cancel"}
-                </button>
               </div>
             </form>
           </div>

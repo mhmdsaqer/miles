@@ -673,130 +673,63 @@ router.delete("/variants/:id",
     }
   }
 );
-// ================= 🔄 PROMOTE VARIANT - PREVIEW (GET) =================
-router.get("/variants/:id/promote-preview",
+// ================= 🔄 PROMOTE VARIANT TO PRODUCT =================
+router.post("/variants/:id/promote",
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.CREATE),
   async (req, res) => {
     try {
+      const lang = req.query.lang || 'ar';
       const variant = await Variant.findOne({ id: Number(req.params.id) });
       if (!variant) return res.status(404).json({ message: "Variant not found" });
 
       const parentProduct = await Product.findOne({ id: variant.product_id });
       if (!parentProduct) return res.status(400).json({ message: "Parent product not found" });
 
-      const brand = await Brand.findOne({ id: parentProduct.brand_id });
-      
-      // ✅ توليد قيم مقترحة (بدون حفظ)
+      // ✅ 1. توليد ID جديد (آخر ID + 1)
+      const lastProduct = await Product.findOne().sort({ id: -1 });
+      const newProductId = lastProduct ? lastProduct.id + 1 : 10000;
+
+      // ✅ 2. معالجة الاسم (إضافة خصائص المتغير للاسم الأصلي)
       const attrs = variant.attributes || {};
       const attrStr = Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(" - ");
       const suffix = attrStr ? ` (${attrStr})` : "";
-      
-      const lastProduct = await Product.findOne().sort({ id: -1 });
-      const suggestedId = lastProduct ? lastProduct.id + 1 : 10000;
-      
-      let suggestedSku = variant.sku ? variant.sku.toUpperCase().trim() : `PROMO-${suggestedId}`;
-      
-      res.json({
-        success: true,
-        data: {
-          suggestedId,
-          suggestedSku,
-          brand_id: parentProduct.brand_id,
-          brand_name: brand?.name,
-          category_id: parentProduct.category_id,
-          name_ar_suggestion: `${parentProduct.name_ar}${suffix}`,
-          name_en_suggestion: `${parentProduct.name_en}${suffix}`,
-          description_ar: parentProduct.description_ar,
-          description_en: parentProduct.description_en,
-          image: variant.image,
-          price: variant.price,
-          variant_id: variant.id,
-          parent_product_id: parentProduct.id,
-          attributes: attrs
-        }
-      });
-    } catch (err) {
-      console.error("❌ Promote preview error:", err);
-      res.status(500).json({ message: "Failed to fetch promote preview", error: err.message });
-    }
-  }
-);
-// ================= 🔄 PROMOTE VARIANT TO PRODUCT (POST) =================
-router.post("/variants/:id/promote",
-  authMiddleware,
-  checkPermission(PERMISSIONS.PRODUCTS.CREATE),
-  validate(schemas.product, "body"), // ✅ نستخدم نفس مخطط التحقق من المنتجات
-  async (req, res) => {
-    try {
-      const variantId = Number(req.params.id);
-      const { 
-        id: newProductId, sku, brand_id, category_id,
-        name_ar, name_en, description_ar, description_en,
-        image, price 
-      } = req.body;
 
-      // ✅ التحقق من وجود المتغير والمنتج الأصلي
-      const variant = await Variant.findOne({ id: variantId });
-      if (!variant) return res.status(404).json({ message: "Variant not found" });
-
-      const parentProduct = await Product.findOne({ id: variant.product_id });
-      if (!parentProduct) return res.status(400).json({ message: "Parent product not found" });
-
-      // ✅ التحقق من عدم تكرار الـ ID
-      const existingId = await Product.findOne({ id: newProductId });
-      if (existingId) {
-        return res.status(400).json({ message: "⚠️ Product with this ID already exists" });
-      }
-
-      // ✅ التحقق من عدم تكرار الـ SKU
-      const cleanSku = sku?.toUpperCase()?.trim();
-      const existingSku = await Product.findOne({ sku: cleanSku });
+      // ✅ 3. معالجة الـ SKU (منع التكرار مع المنتجات الموجودة)
+      let finalSku = variant.sku ? variant.sku.toUpperCase().trim() : `PROMO-${newProductId}`;
+      const existingSku = await Product.findOne({ sku: finalSku });
       if (existingSku) {
-        return res.status(400).json({ 
-          message: `⚠️ SKU "${cleanSku}" is already used by another product (ID: ${existingSku.id})` 
-        });
+        finalSku = `P-${finalSku}`; // إضافة بادئة تلقائية لتفادي التكرار
       }
 
-      // ✅ إنشاء المنتج الجديد بالبيانات المستلمة
+      // ✅ 4. إنشاء المنتج الجديد
       const newProduct = new Product({
         id: newProductId,
-        brand_id,
-        category_id,
-        sku: cleanSku,
-        name_ar,
-        name_en,
-        description_ar: description_ar || "",
-        description_en: description_en || "",
-        image,
-        price: Number(price),
+        brand_id: parentProduct.brand_id,
+        category_id: parentProduct.category_id,
+        sku: finalSku,
+        name_ar: `${parentProduct.name_ar}${suffix}`,
+        name_en: `${parentProduct.name_en}${suffix}`,
+        description_ar: parentProduct.description_ar,
+        description_en: parentProduct.description_en,
+        image: variant.image,
+        price: variant.price,
         has_variants: false
       });
 
       await newProduct.save();
-      
       await audit.create(req.user, "product", newProduct.toObject(), req, { 
-        promotedFromVariant: variantId, 
+        promotedFromVariant: variant.id, 
         parentProductId: parentProduct.id 
       });
 
       res.status(201).json({
-        message: req.query.lang === "ar" 
-          ? "✅ تم تحويل المتغير إلى منتج مستقل بنجاح" 
-          : "✅ Variant promoted to standalone product",
-        product: { 
-          id: newProduct.id, 
-          sku: newProduct.sku, 
-          name_ar: newProduct.name_ar, 
-          name_en: newProduct.name_en 
-        }
+        message: lang === "ar" ? "✅ تم تحويل المتغير إلى منتج مستقل بنجاح" : "✅ Variant promoted to standalone product",
+        product: { id: newProduct.id, sku: newProduct.sku }
       });
     } catch (err) {
       console.error("❌ Promote variant error:", err);
-      res.status(500).json({ 
-        message: "Failed to promote variant", 
-        error: err.message 
-      });
+      res.status(500).json({ message: "Failed to promote variant", error: err.message });
     }
   }
 );
