@@ -289,7 +289,8 @@ router.put("/products/:id",
       console.log("🔍 [DEBUG] Brand Change Check:", {
         isNewBrand,
         isCloudinaryImage,
-        noNewImageUploaded: !req.uploadedPath,
+        isNewImageUploaded: req.isNewImageUploaded,
+        noNewImageUploaded,
         willAttemptTransfer: isNewBrand && isCloudinaryImage && !req.uploadedPath
       });
 
