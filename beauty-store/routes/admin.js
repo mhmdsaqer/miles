@@ -230,7 +230,8 @@ router.post("/products",
 );
 
 // ✅ تعديل منتج
-// ✅ تعديل منتج - مع نقل الصورة تلقائياً عند تغيير البراند (الحل الجذري)
+
+// ✅ تعديل منتج - مع نقل الصورة تلقائياً عند تغيير البراند (الحل الجذري المضمون)
 router.put("/products/:id",
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.UPDATE),
@@ -295,10 +296,10 @@ router.put("/products/:id",
         willAttemptTransfer: isNewBrand && isCloudinaryImage && noNewImageUploaded
       });
 
-      // ✅ ✅ ✅ الحل الجذري: نسخ الصورة عبر upload من الرابط القديم (لا يعتمد على public_id)
+      // ✅ ✅ ✅ الحل الجذري المضمون: تنزيل الصورة ثم رفعها كـ buffer (لا يعتمد على public_id أو رابط)
       if (isNewBrand && isCloudinaryImage && noNewImageUploaded) {
         try {
-          console.log("📦 [DEBUG] Starting image transfer via COPY method...");
+          console.log("📦 [DEBUG] Starting image transfer via DOWNLOAD + UPLOAD method...");
           
           const oldImageUrl = oldProduct.image;
           const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
@@ -312,24 +313,51 @@ router.put("/products/:id",
             expectedNewPath: `${baseUrl}/products/${newBrandSlug || 'unknown'}/${currentSku}`
           });
           
-          // ✅ الاستراتيجية الجديدة: نسخ الصورة عبر upload من الرابط القديم
-          // هذه الطريقة لا تعتمد على تخمين public_id وتعمل 100%
-          console.log("☁️ [DEBUG] Copying image via Cloudinary upload from URL...");
+          // ✅ التحقق من أن newBrandSlug موجود
+          if (!newBrandSlug) {
+            console.warn("⚠️ Could not get brand slug, skipping image transfer");
+            throw new Error("Could not determine new brand slug");
+          }
           
-          const uploadResult = await cloudinary.uploader.upload(oldImageUrl, {
-            folder: `${baseUrl}/products/${newBrandSlug || 'unknown'}`,
-            public_id: currentSku,
-            overwrite: true,
-            invalidate: true,  // ✅ إبطال الـ CDN Cache فوراً
-            resource_type: "image"
+          // ✅ الاستراتيجية: تنزيل الصورة ثم رفعها كـ buffer
+          console.log("☁️ [DEBUG] Downloading image from old URL...");
+          
+          // 1️⃣ تنزيل الصورة كـ buffer باستخدام axios
+          const axios = require("axios");
+          const imageResponse = await axios.get(oldImageUrl, {
+            responseType: "arraybuffer",
+            timeout: 15000,
+            headers: { 'User-Agent': 'Miles-Bot/1.0' }
           });
           
-          console.log("✅ Cloudinary copy successful:", {
+          console.log("✅ Image downloaded, size:", imageResponse.data.length, "bytes");
+          
+          // 2️⃣ رفع الصورة إلى المسار الجديد في Cloudinary باستخدام upload_stream
+          console.log("☁️ [DEBUG] Uploading to new path in Cloudinary...");
+          
+          const uploadResult = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+              {
+                folder: `${baseUrl}/products/${newBrandSlug}`,
+                public_id: currentSku,
+                overwrite: true,
+                invalidate: true,  // ✅ إبطال الـ CDN Cache فوراً
+                resource_type: "image"
+              },
+              (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+              }
+            );
+            uploadStream.end(imageResponse.data);
+          });
+          
+          console.log("✅ Cloudinary upload successful:", {
             newPublicId: uploadResult.public_id,
             newUrl: uploadResult.secure_url
           });
           
-          // 🗑️ حذف الصورة القديمة من المسار القديم (اختياري - آمن)
+          // 3️⃣ حذف الصورة القديمة من المسار القديم (اختياري - آمن)
           try {
             const oldPublicId = extractPublicIdFromUrl(oldImageUrl);
             if (oldPublicId) {
@@ -341,15 +369,16 @@ router.put("/products/:id",
             // ✅ لا نفشل العملية إذا فشل الحذف - الصورة الجديدة موجودة وتعمل
           }
           
-          // 📝 تحديث الرابط في productData للحفظ في MongoDB
+          // 4️⃣ تحديث الرابط في productData للحفظ في MongoDB
           productData.image = uploadResult.secure_url;
           console.log("🔗 Image URL updated in productData:", uploadResult.secure_url);
           
         } catch (err) {
           console.error("❌ [DEBUG] Image transfer failed:", {
             message: err.message,
-            code: err.error?.code,
-            http_code: err.error?.http_code
+            code: err.code,
+            response: err.response?.data,
+            status: err.response?.status
           });
           // ✅ Fallback آمن: يبقى الرابط القديم ولا يتعطل الطلب
           // الصورة القديمة ستظل تعمل حتى لو فشل النقل
