@@ -20,7 +20,7 @@ const authMiddleware = require("../middleware/auth");
 const { checkPermission, PERMISSIONS } = require("../middleware/authorize");
 
 // ✅ استيراد دالة رفع الصور + دالة الحذف من Cloudinary
-const { uploadCompressed, deleteFromCloudinary, extractPublicIdFromUrl } = require("../middleware/upload");
+const { uploadCompressed, deleteFromCloudinary, extractPublicIdFromUrl, cloudinary, getBrandSlugById } = require("../middleware/upload");
 
 // ✅ استيراد Audit Logger
 const audit = require("../utils/auditLogger");
@@ -230,12 +230,11 @@ router.post("/products",
 );
 
 // ✅ تعديل منتج
-router.put("/products/:id", 
+// ✅ تعديل منتج - مع نقل الصورة تلقائياً عند تغيير البراند
+router.put("/products/:id",
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.UPDATE),
-  
   uploadCompressed("image", { required: false }),
-  
   (req, res, next) => {
     const updateSchema = schemas.product.fork(
       ["id", "sku", "name_ar", "name_en", "image", "price"],
@@ -243,12 +242,12 @@ router.put("/products/:id",
     );
     validate(updateSchema, "body")(req, res, next);
   },
-  
   async (req, res) => {
     try {
       const productId = Number(req.params.id);
       const { variants, sku, ...productData } = req.body;
 
+      // ✅ 1. التحقق من الـ SKU إذا تم تعديله
       if (sku !== undefined) {
         if (!sku || !sku.trim()) {
           return res.status(400).json({ message: "⚠️ حقل SKU مطلوب ولا يمكن أن يكون فارغاً" });
@@ -263,22 +262,55 @@ router.put("/products/:id",
         productData.sku = normalizedSku;
       }
 
+      // ✅ 2. إذا تم رفع صورة جديدة، نستخدمها مباشرة
       if (req.uploadedPath) {
         productData.image = req.uploadedPath;
       }
 
       const oldProduct = await Product.findOne({ id: productId }).lean();
+      if (!oldProduct) return res.status(404).json({ message: "Product not found" });
 
+      // ✅ ✅ ✅ 3. 🚀 نقل الصورة تلقائياً إذا تغيّر البراند ولم يتم رفع صورة جديدة
+      const isNewBrand = productData.brand_id !== undefined && productData.brand_id !== oldProduct.brand_id;
+      const isCloudinaryImage = oldProduct.image?.startsWith("https://res.cloudinary.com/");
+
+      if (isNewBrand && isCloudinaryImage && !req.uploadedPath) {
+        try {
+          const oldPublicId = extractPublicIdFromUrl(oldProduct.image);
+          if (oldPublicId) {
+            const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
+            const newBrandSlug = await getBrandSlugById(productData.brand_id);
+            const currentSku = productData.sku || oldProduct.sku;
+            const newPublicId = `${baseUrl}/products/${newBrandSlug || 'unknown'}/${currentSku}`;
+
+            // 🔁 إعادة تسمية/نقل الصورة داخل Cloudinary
+            await cloudinary.uploader.rename(oldPublicId, newPublicId, {
+              overwrite: true,
+              invalidate: true // ✅ مهم: إبطال الـ CDN Cache فوراً
+            });
+
+            // 📝 تحديث الرابط في الداتابيس
+            const newUrl = oldProduct.image.replace(oldPublicId, newPublicId);
+            productData.image = newUrl;
+
+            console.log(`📦 تم نقل صورة المنتج: ${oldProduct.brand_id} -> ${productData.brand_id} (${oldPublicId.split('/').pop()})`);
+          }
+        } catch (err) {
+          console.warn("⚠️ فشل نقل الصورة أثناء تغيير البراند:", err.message);
+          // ✅ Fallback آمن: يبقى الرابط القديم ولا يتعطل الطلب
+        }
+      }
+
+      // ✅ 4. حفظ المنتج في MongoDB
       const product = await Product.findOneAndUpdate(
         { id: productId },
         { $set: productData },
         { returnDocument: 'after', runValidators: true }
       ).lean();
 
-      if (!product) return res.status(404).json({ message: "Product not found" });
+      await audit.update(req.user, "product", oldProduct, product, req);
 
-      await audit.update(req.user, "product", oldProduct || {}, product, req);
-    
+      // ✅ 5. تحديث المتغيرات (Variants)
       if (variants && Array.isArray(variants)) {
         const permanentIds = variants
           .map(v => v.id)
@@ -287,10 +319,7 @@ router.put("/products/:id",
           .filter(id => !isNaN(id));
 
         if (permanentIds.length > 0) {
-          await Variant.deleteMany({
-            product_id: productId,
-            id: { $nin: permanentIds }
-          });
+          await Variant.deleteMany({ product_id: productId, id: { $nin: permanentIds } });
         } else if (variants.length === 0) {
           await Variant.deleteMany({ product_id: productId });
         }
@@ -299,9 +328,7 @@ router.put("/products/:id",
         for (const v of variants) {
           const rawSku = v.sku?.trim()?.toUpperCase();
           if (rawSku) {
-            if (skuMap.has(rawSku)) {
-              throw new Error(`⚠️ تكرار الـ SKU "${rawSku}" في نفس الطلب`);
-            }
+            if (skuMap.has(rawSku)) throw new Error(`⚠️ تكرار الـ SKU "${rawSku}" في نفس الطلب`);
             skuMap.set(rawSku, v.id);
           }
         }
@@ -318,9 +345,7 @@ router.put("/products/:id",
               product_id: productId,
               id: variantId ? { $ne: variantId } : { $exists: false }
             });
-            if (existingInDb) {
-              throw new Error(`⚠️ SKU "${variantSku}" مستخدم لمتغير آخر في هذا المنتج`);
-            }
+            if (existingInDb) throw new Error(`⚠️ SKU "${variantSku}" مستخدم لمتغير آخر في هذا المنتج`);
           }
 
           const updatePayload = {
@@ -337,9 +362,8 @@ router.put("/products/:id",
               { returnDocument: 'after', runValidators: true }
             );
           } else {
-            const newVariantId = Date.now() + Math.floor(Math.random() * 10000);
             await new Variant({
-              id: newVariantId,
+              id: Date.now() + Math.floor(Math.random() * 10000),
               product_id: productId,
               ...updatePayload
             }).save();
@@ -367,7 +391,6 @@ router.put("/products/:id",
     }
   }
 );
-
 router.delete("/products/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.DELETE),
