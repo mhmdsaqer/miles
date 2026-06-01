@@ -294,7 +294,7 @@ router.put("/products/:id",
         willAttemptTransfer: isNewBrand && isCloudinaryImage && !req.uploadedPath
       });
 
-      if (isNewBrand && isCloudinaryImage && !req.uploadedPath) {
+      if (isNewBrand && isCloudinaryImage && noNewImageUploaded) {
         try {
           console.log("📦 [DEBUG] Starting image transfer process...");
           
