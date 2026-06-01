@@ -246,6 +246,7 @@ const uploadCompressed = (fieldName = "image", { required = true } = {}) => {
         
         req.uploadedPath = uploadResult.secure_url;
         req.cloudinaryPublicId = uploadResult.public_id;
+        req.isNewImageUploaded = true; 
         console.log("✅ File uploaded:", req.uploadedPath);
         return next();
       }
@@ -254,6 +255,7 @@ const uploadCompressed = (fieldName = "image", { required = true } = {}) => {
       if (req.body?.image && /^https:\/\//i.test(req.body.image)) {
         console.log("✅ Using existing image URL from body:", req.body.image);
         req.uploadedPath = req.body.image;
+        req.isNewImageUploaded = false;
         return next();
       }
       

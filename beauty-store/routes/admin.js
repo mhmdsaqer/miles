@@ -285,7 +285,7 @@ router.put("/products/:id",
       const isNewBrand = productData.brand_id !== undefined && 
                          String(productData.brand_id) !== String(oldProduct.brand_id);
       const isCloudinaryImage = oldProduct.image?.startsWith("https://res.cloudinary.com/");
-
+      const noNewImageUploaded = req.isNewImageUploaded !== true;
       console.log("🔍 [DEBUG] Brand Change Check:", {
         isNewBrand,
         isCloudinaryImage,
