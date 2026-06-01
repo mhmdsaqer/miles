@@ -74,16 +74,6 @@ const extractPublicIdFromUrl = (url) => {
     
     if (!publicId) return null;
     
-    // ✅ ✅ ✅ الإصلاح: إزالة الـ base folder إذا كان موجوداً
-    // لأن public_id الفعلي في Cloudinary يبدأ من ما بعد الـ folder المحدد عند الرفع
-    const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
-    
-    // إذا كان publicId يبدأ بـ baseUrl، نزيله + الشرطة التالية
-    if (publicId.startsWith(`${baseUrl}/`)) {
-      publicId = publicId.replace(`${baseUrl}/`, '');
-      console.log("🔧 Fixed public_id by removing base folder:", publicId);
-    }
-    
     return publicId;
   } catch (err) {
     console.error("❌ Error extracting publicId:", err);
