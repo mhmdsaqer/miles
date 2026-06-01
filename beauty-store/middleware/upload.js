@@ -60,19 +60,23 @@ const getBrandSlugById = async (brandId) => {
 
 // دالة استخراج public_id من الرابط
 // ✅ ✅ ✅ الدالة المُصححة لاستخراج public_id
-const extractPublicIdFromUrl = (url) => {
+// ✅ ✅ ✅ الدالة المُحدّثة مع خيار إزالة baseUrl
+const extractPublicIdFromUrl = (url, removeBaseUrl = false) => {
   if (!url?.startsWith("https://res.cloudinary.com/")) return null;
   try {
-    // إزالة الجزء الثابت من رابط Cloudinary
     const afterBase = url.replace(/^https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\//, '');
-    
-    // إزالة رقم الإصدار (v123456/)
     const withoutVersion = afterBase.replace(/^v\d+\//, '');
-    
-    // إزالة الامتداد (.png, .jpg, إلخ)
     let publicId = withoutVersion.replace(/\.[^/.]+$/, "") || null;
     
     if (!publicId) return null;
+    
+    // ✅ إذا طُلب، نزيل الـ baseUrl من الـ public_id
+    if (removeBaseUrl) {
+      const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
+      if (publicId.startsWith(`${baseUrl}/`)) {
+        publicId = publicId.replace(`${baseUrl}/`, '');
+      }
+    }
     
     return publicId;
   } catch (err) {
@@ -80,7 +84,6 @@ const extractPublicIdFromUrl = (url) => {
     return null;
   }
 };
-
 // ✅ ✅ ✅ الدالة الرئيسية للرفع اليدوي لـ Cloudinary
 const uploadToCloudinary = async (fileBuffer, originalName, uploadParams) => {
   const {

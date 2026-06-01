@@ -230,6 +230,7 @@ router.post("/products",
 );
 
 // ✅ تعديل منتج
+// ✅ تعديل منتج - مع نقل الصورة تلقائياً عند تغيير البراند + Debug Logging
 router.put("/products/:id",
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.UPDATE),
@@ -281,17 +282,17 @@ router.put("/products/:id",
       });
 
       // ✅ ✅ ✅ 3. 🚀 نقل الصورة تلقائياً إذا تغيّر البراند ولم يتم رفع صورة جديدة
-      // ⚠️ ملاحظة: نقارن كـ String لتجنب مشاكل نوع البيانات (Number vs String)
       const isNewBrand = productData.brand_id !== undefined && 
                          String(productData.brand_id) !== String(oldProduct.brand_id);
       const isCloudinaryImage = oldProduct.image?.startsWith("https://res.cloudinary.com/");
-      const noNewImageUploaded = req.isNewImageUploaded !== true;
+      const noNewImageUploaded = req.isNewImageUploaded !== true; // ✅ المفتاح!
+
       console.log("🔍 [DEBUG] Brand Change Check:", {
         isNewBrand,
         isCloudinaryImage,
         isNewImageUploaded: req.isNewImageUploaded,
         noNewImageUploaded,
-        willAttemptTransfer: isNewBrand && isCloudinaryImage && !req.uploadedPath
+        willAttemptTransfer: isNewBrand && isCloudinaryImage && noNewImageUploaded
       });
 
       if (isNewBrand && isCloudinaryImage && noNewImageUploaded) {
@@ -337,7 +338,10 @@ router.put("/products/:id",
             });
             console.log("✅ [DEBUG] Cloudinary rename result:", renameResult);
 
+            // ✅ ✅ ✅ الإصلاح: التحقق من نجاح النقل عبر public_id
             if (renameResult.public_id === newPublicId) {
+              console.log("✅ Cloudinary rename successful");
+              
               // 📝 تحديث الرابط في الداتابيس
               const newUrl = oldProduct.image.replace(oldPublicId, newPublicId);
               console.log("🔗 [DEBUG] URL Update:", {
@@ -349,7 +353,10 @@ router.put("/products/:id",
               productData.image = newUrl;
               console.log("💾 [DEBUG] productData.image updated, ready for MongoDB save");
             } else {
-              console.warn("⚠️ [DEBUG] Cloudinary rename did not return 'ok':", renameResult);
+              console.warn("⚠️ [DEBUG] Rename succeeded but public_id mismatch:", {
+                expected: newPublicId,
+                got: renameResult.public_id
+              });
             }
           } else {
             console.warn("⚠️ [DEBUG] Failed to extract oldPublicId from URL");
@@ -367,10 +374,10 @@ router.put("/products/:id",
         console.log("⏭️ [DEBUG] Skipping image transfer because:", {
           isNewBrand,
           isCloudinaryImage,
-          hasNewImage: !!req.uploadedPath,
+          noNewImageUploaded,
           reason: !isNewBrand ? "Brand not changed" : 
                   !isCloudinaryImage ? "Image not from Cloudinary" :
-                  "New image uploaded"
+                  !noNewImageUploaded ? "New image uploaded" : "Unknown"
         });
       }
       // 🔍🔍🔍 DEBUG LOGGING END 🔍🔍🔍
@@ -392,7 +399,7 @@ router.put("/products/:id",
 
       await audit.update(req.user, "product", oldProduct, product, req);
 
-      // ✅ 5. تحديث المتغيرات (Variants) - (نفس الكود الأصلي بدون تغيير)
+      // ✅ 5. تحديث المتغيرات (Variants)
       if (variants && Array.isArray(variants)) {
         const permanentIds = variants
           .map(v => v.id)
