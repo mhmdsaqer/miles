@@ -1,4 +1,4 @@
-// src/pages/admin/AdminProducts.jsx - النسخة مع دعم الوضع الليلي 🌙 + Promote Variant Modal
+// src/pages/admin/AdminProducts.jsx - النسخة مع دعم الوضع الليلي 🌙 + ميزة Promote Variant
 import { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import { adminApi } from "../../utils/adminAuth";
@@ -19,8 +19,8 @@ const VariantAttributeField = ({ attribute, onUpdate, onRemove, lang, isDark }) 
       onChange={(e) => onUpdate(attribute.tempId, "key", e.target.value)}
       placeholder={lang === "ar" ? "المفتاح" : "Key"}
       className={`flex-1 border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-pink-500/30 outline-none transition-colors ${
-        isDark
-          ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400'
+        isDark 
+          ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
           : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
       }`}
     />
@@ -31,8 +31,8 @@ const VariantAttributeField = ({ attribute, onUpdate, onRemove, lang, isDark }) 
       onChange={(e) => onUpdate(attribute.tempId, "value", e.target.value)}
       placeholder={lang === "ar" ? "القيمة" : "Value"}
       className={`flex-1 border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-pink-500/30 outline-none transition-colors ${
-        isDark
-          ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400'
+        isDark 
+          ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
           : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
       }`}
     />
@@ -65,7 +65,7 @@ const AdminProducts = () => {
   const [filterCategory, setFilterCategory] = useState("");
   const [filterHasVariants, setFilterHasVariants] = useState("all");
   const [viewMode, setViewMode] = useState("table");
-  
+
   // حالة النموذج (Modal)
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -77,15 +77,15 @@ const AdminProducts = () => {
     name_ar: "", name_en: "", description_ar: "", description_en: "",
     image: "", price: "", has_variants: false
   });
-  
+
   // بيانات المتغيرات (Variants)
   const [variants, setVariants] = useState([]);
-  
-  // ✅ ✅ ✅ حالات جديدة للتحويل (Promote Variant)
+
+  // ✅ ✅ ✅ حالات جديدة لتحويل المتغير إلى منتج (Promote Feature)
   const [showPromoteModal, setShowPromoteModal] = useState(false);
   const [promoteDraft, setPromoteDraft] = useState(null);
   const [promoteLoading, setPromoteLoading] = useState(false);
-  
+
   // ✅ ✅ ✅ دوال التحقق من الصلاحيات
   const canCreate = useMemo(() => hasPermission("products:create"), [hasPermission]);
   const canUpdate = useMemo(() => hasPermission("products:update"), [hasPermission]);
@@ -104,7 +104,7 @@ const AdminProducts = () => {
       .replace(/[^A-Z0-9\-_.]/g, '')
       .substring(0, 100);
   };
-  
+
   // ✅ دوال التحويل بين الهيكلين
   const attributesToArray = useCallback((attributes) => {
     if (!attributes) return [];
@@ -113,7 +113,7 @@ const AdminProducts = () => {
       key, value
     }));
   }, []);
-  
+
   const attributesToObject = useCallback((attributesArray) => {
     if (!attributesArray) return {};
     if (Array.isArray(attributesArray)) {
@@ -124,13 +124,14 @@ const AdminProducts = () => {
     }
     return attributesArray;
   }, []);
-  
+
   // ✅ دالة جلب البيانات
   const fetchData = useCallback(async () => {
     if (!canRead) {
       toast.error(lang === "ar" ? "❌ غير مصرح بعرض المنتجات" : "❌ Forbidden - No read permission");
       return;
     }
+
     setLoading(true);
     try {
       const [prodRes, brandsRes, catsRes] = await Promise.all([
@@ -157,13 +158,110 @@ const AdminProducts = () => {
       setLoading(false);
     }
   }, [t, canRead, lang, isDark]);
-  
+
   useEffect(() => { fetchData(); }, [fetchData]);
-  
-  // ✅ ✅ ✅ دالة جلب بيانات التحويل الأولية (Preview)
+
+  // ✅ فلترة متقدمة
+  const filteredProducts = useMemo(() => {
+    let res = products;
+    
+    if (search) {
+      const q = search.toLowerCase();
+      res = res.filter(p => 
+        p.name_ar?.toLowerCase().includes(q) || 
+        p.name_en?.toLowerCase().includes(q) ||
+        p.brand_name?.toLowerCase().includes(q) ||
+        p.sku?.toLowerCase().includes(q)
+      );
+    }
+    
+    if (filterBrand) {
+      res = res.filter(p => String(p.brand_id) === filterBrand);
+    }
+    
+    if (filterCategory) {
+      res = res.filter(p => String(p.category_id) === filterCategory);
+    }
+    
+    if (filterHasVariants !== "all") {
+      res = res.filter(p => p.has_variants === (filterHasVariants === "true"));
+    }
+    
+    return res;
+  }, [products, search, filterBrand, filterCategory, filterHasVariants]);
+
+  // ✅ فتح/إغلاق النموذج - مع إصلاح عرض المتغيرات
+  const openModal = useCallback(async (product = null) => {
+    if (product && !canUpdate) {
+      toast.error(lang === "ar" ? "❌ غير مصرح بتعديل المنتجات" : "❌ Forbidden - No update permission");
+      return;
+    }
+    
+    if (!product && !canCreate) {
+      toast.error(lang === "ar" ? "❌ غير مصرح بإضافة منتجات" : "❌ Forbidden - No create permission");
+      return;
+    }
+
+    if (product) {
+      setEditingId(product.id);
+      setFormData({
+        ...product,
+        brand_id: String(product.brand_id || ""),
+        category_id: String(product.category_id || ""),
+        sku: product.sku ? String(product.sku).toUpperCase() : "",
+        description_ar: product.description_ar || "",
+        description_en: product.description_en || ""
+      });
+      
+      // ✅ ✅ ✅ إصلاح: إظهار قسم المتغيرات تلقائياً إذا كان المنتج لديه متغيرات
+      const hasVariants = product.has_variants || product.options?.length > 0;
+      setShowVariantsSection(hasVariants);
+      
+      if (hasVariants) {
+        try {
+          // ✅ نجلب تفاصيل المنتج مع متغيراته من endpoint التفاصيل
+          const res = await adminApi.get(`/products/${product.id}`);
+          const variantsData = res.data.variants || res.data.options || [];
+          
+          if (variantsData.length > 0) {
+            const transformed = variantsData.map(v => ({
+              ...v,
+              attributes: attributesToArray(v.attributes),
+              _originalSku: v.sku 
+            }));
+            setVariants(transformed);
+          } else {
+            setVariants([]);
+          }
+        } catch (err) {
+          console.warn("Failed to load variants:", err);
+          setVariants([]);
+        }
+      } else {
+        setVariants([]);
+      }
+    } else {
+      setEditingId(null);
+      setFormData({
+        id: "", brand_id: "", category_id: "",
+        name_ar: "", name_en: "", description_ar: "", description_en: "",
+        image: "", price: "", has_variants: false, sku: ""
+      });
+      setVariants([]);
+      setShowVariantsSection(false);
+    }
+    setShowModal(true);
+  }, [attributesToArray, canCreate, canUpdate, lang]);
+
+  const closeModal = useCallback(() => {
+    setShowModal(false);
+  }, []);
+
+  // ✅ ✅ ✅ دالة جلب بيانات التحويل الأولية (Promote Preview)
   const fetchPromotePreview = useCallback(async (variantId) => {
     setPromoteLoading(true);
     try {
+      // ✅ نجلب بيانات معاينة التحويل من الـ Backend
       const res = await adminApi.get(`/variants/${variantId}/promote-preview`, {
         params: { lang }
       });
@@ -173,12 +271,34 @@ const AdminProducts = () => {
       }
     } catch (err) {
       console.error("Failed to fetch promote preview:", err);
-      toast.error(err.response?.data?.message || (lang === "ar" ? "فشل تحميل بيانات التحويل" : "Failed to load promote data"));
+      
+      // ✅ Fallback: إنشاء بيانات افتراضية للتحويل إذا فشل الـ endpoint
+      const variant = variants.find(v => String(v.id) === String(variantId));
+      if (variant) {
+        const productBase = formData;
+        setPromoteDraft({
+          variantId,
+          suggestedId: Date.now(),
+          suggestedSku: variant.sku || `PROMO-${Date.now()}`,
+          brand_id: productBase.brand_id,
+          category_id: productBase.category_id,
+          name_ar: `${productBase.name_ar} (${Object.values(attributesToObject(variant.attributes)).slice(0,2).join(' - ')})`,
+          name_en: `${productBase.name_en} (${Object.values(attributesToObject(variant.attributes)).slice(0,2).join(' - ')})`,
+          description_ar: productBase.description_ar,
+          description_en: productBase.description_en,
+          image: variant.image || productBase.image,
+          price: variant.price || productBase.price,
+          variantAttributes: attributesToObject(variant.attributes)
+        });
+        setShowPromoteModal(true);
+      } else {
+        toast.error(err.response?.data?.message || (lang === "ar" ? "فشل تحميل بيانات التحويل" : "Failed to load promote data"));
+      }
     } finally {
       setPromoteLoading(false);
     }
-  }, [lang]);
-  
+  }, [lang, variants, formData, attributesToObject]);
+
   // ✅ ✅ ✅ دالة تنفيذ التحويل بعد التعديل
   const handlePromoteSubmit = useCallback(async (e, variantId) => {
     e.preventDefault();
@@ -227,86 +347,7 @@ const AdminProducts = () => {
       setPromoteLoading(false);
     }
   }, [promoteDraft, lang, fetchData]);
-  
-  // ✅ فلترة متقدمة
-  const filteredProducts = useMemo(() => {
-    let res = products;
-    if (search) {
-      const q = search.toLowerCase();
-      res = res.filter(p =>
-        p.name_ar?.toLowerCase().includes(q) ||
-        p.name_en?.toLowerCase().includes(q) ||
-        p.brand_name?.toLowerCase().includes(q) ||
-        p.sku?.toLowerCase().includes(q)
-      );
-    }
-    if (filterBrand) {
-      res = res.filter(p => String(p.brand_id) === filterBrand);
-    }
-    if (filterCategory) {
-      res = res.filter(p => String(p.category_id) === filterCategory);
-    }
-    if (filterHasVariants !== "all") {
-      res = res.filter(p => p.has_variants === (filterHasVariants === "true"));
-    }
-    return res;
-  }, [products, search, filterBrand, filterCategory, filterHasVariants]);
-  
-  // ✅ فتح/إغلاق النموذج
-  const openModal = useCallback(async (product = null) => {
-    if (product && !canUpdate) {
-      toast.error(lang === "ar" ? "❌ غير مصرح بتعديل المنتجات" : "❌ Forbidden - No update permission");
-      return;
-    }
-    if (!product && !canCreate) {
-      toast.error(lang === "ar" ? "❌ غير مصرح بإضافة منتجات" : "❌ Forbidden - No create permission");
-      return;
-    }
-    if (product) {
-      setEditingId(product.id);
-      setFormData({
-        ...product,
-        brand_id: String(product.brand_id || ""),
-        category_id: String(product.category_id || ""),
-        sku: product.sku ? String(product.sku).toUpperCase() : "",
-        description_ar: product.description_ar || "",
-        description_en: product.description_en || ""
-      });
-      setShowVariantsSection(product.has_variants || false);
-      if (product.has_variants) {
-        try {
-          const res = await adminApi.get(`/products/${product.id}`);
-          const variantsData = res.data.variants || [];
-          const transformed = variantsData.map(v => ({
-            ...v,
-            attributes: attributesToArray(v.attributes),
-            _originalSku: v.sku
-          }));
-          setVariants(transformed);
-        } catch (err) {
-          console.warn("Failed to load variants:", err);
-          setVariants([]);
-        }
-      } else {
-        setVariants([]);
-      }
-    } else {
-      setEditingId(null);
-      setFormData({
-        id: "", brand_id: "", category_id: "",
-        name_ar: "", name_en: "", description_ar: "", description_en: "",
-        image: "", price: "", has_variants: false, sku: ""
-      });
-      setVariants([]);
-      setShowVariantsSection(false);
-    }
-    setShowModal(true);
-  }, [attributesToArray, canCreate, canUpdate, lang]);
-  
-  const closeModal = useCallback(() => {
-    setShowModal(false);
-  }, []);
-  
+
   // ✅ دوال المتغيرات
   const addVariant = useCallback(() => {
     const newVariant = {
@@ -325,7 +366,7 @@ const AdminProducts = () => {
       { duration: 3000 }
     );
   }, [lang, isDark]);
-  
+
   const removeVariant = useCallback((id) => {
     setVariants(prev => prev.filter(v => v.id !== id));
     toast.info(
@@ -339,42 +380,43 @@ const AdminProducts = () => {
       { duration: 4000 }
     );
   }, [lang, isDark]);
-  
+
   const updateVariant = useCallback((id, field, value) => {
-    setVariants(prev => prev.map(v =>
+    setVariants(prev => prev.map(v => 
       v.id === id ? { ...v, [field]: value || "" } : v
     ));
   }, []);
-  
+
   const addVariantAttribute = useCallback((variantId) => {
     const newAttribute = {
       tempId: crypto.randomUUID?.() || `attr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       key: "", value: ""
     };
-    setVariants(prev => prev.map(v =>
+    setVariants(prev => prev.map(v => 
       v.id === variantId ? { ...v, attributes: [...v.attributes, newAttribute] } : v
     ));
   }, []);
-  
+
   const updateVariantAttribute = useCallback((tempId, field, value) => {
     setVariants(prev => prev.map(v => ({
       ...v,
-      attributes: v.attributes.map(attr =>
+      attributes: v.attributes.map(attr => 
         attr.tempId === tempId ? { ...attr, [field]: value } : attr
       )
     })));
   }, []);
-  
+
   const removeVariantAttribute = useCallback((tempId) => {
     setVariants(prev => prev.map(v => ({
       ...v,
       attributes: v.attributes.filter(attr => attr.tempId !== tempId)
     })));
   }, []);
-  
+
   // ✅ دالة حفظ المنتج
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
     if (editingId && !canUpdate) {
       toast.error(lang === "ar" ? "❌ غير مصرح بتحديث المنتجات" : "❌ Forbidden - No update permission");
       return;
@@ -383,6 +425,7 @@ const AdminProducts = () => {
       toast.error(lang === "ar" ? "❌ غير مصرح بإضافة منتجات" : "❌ Forbidden - No create permission");
       return;
     }
+    
     if (!formData.id || !formData.name_ar || !formData.name_en || !formData.price) {
       toast.warning(
         <div className="flex items-center gap-3">
@@ -393,13 +436,16 @@ const AdminProducts = () => {
       );
       return;
     }
+
     try {
       const cleanMainSku = cleanSKU(formData.sku);
       const skuSet = new Set();
+      
       if (cleanMainSku) {
         if (editingId) {
           const originalProduct = products.find(p => p.id === editingId);
           const originalSkuClean = originalProduct?.sku ? cleanSKU(originalProduct.sku) : null;
+          
           if (originalSkuClean !== cleanMainSku) {
             if (skuSet.has(cleanMainSku)) {
               throw new Error(`⚠️ SKU "${cleanMainSku}" مكرر في نفس المنتج`);
@@ -408,10 +454,12 @@ const AdminProducts = () => {
         }
         skuSet.add(cleanMainSku);
       }
-      const variantsPayload = variants.length > 0
+
+      const variantsPayload = variants.length > 0 
         ? variants.map((v, index) => {
             const isTemp = v.id?.startsWith?.('temp_');
             const isExisting = !isTemp && editingId;
+            
             let finalSku;
             if (v.sku?.trim()) {
               finalSku = cleanSKU(v.sku);
@@ -422,6 +470,7 @@ const AdminProducts = () => {
             } else {
               finalSku = cleanSKU(`VAR-${formData.id || Date.now()}-${String(index + 1).padStart(3, '0')}`);
             }
+            
             if (isExisting && v._originalSku && cleanSKU(v._originalSku) === finalSku) {
               skuSet.add(finalSku);
             } else {
@@ -430,6 +479,7 @@ const AdminProducts = () => {
               }
               skuSet.add(finalSku);
             }
+            
             return {
               id: isTemp ? undefined : (v.id ? Number(v.id) : undefined),
               sku: finalSku,
@@ -439,7 +489,7 @@ const AdminProducts = () => {
             };
           })
         : undefined;
-      
+
       const productPayload = {
         id: Number(formData.id),
         brand_id: Number(formData.brand_id),
@@ -454,7 +504,7 @@ const AdminProducts = () => {
         has_variants: variants.length > 0,
         variants: variantsPayload
       };
-      
+
       if (editingId) {
         await adminApi.put(`/products/${editingId}`, productPayload);
         toast.success(
@@ -484,11 +534,15 @@ const AdminProducts = () => {
           { duration: 5000 }
         );
       }
+      
       closeModal();
       fetchData();
+      
     } catch (err) {
       console.error("❌ Save Error:", err);
+      
       const errorMsg = err.response?.data?.message || err.message || (lang === "ar" ? "فشل في الحفظ" : "Save failed");
+      
       if (errorMsg.toLowerCase().includes('sku') || errorMsg.toLowerCase().includes('duplicate') || errorMsg.toLowerCase().includes('مكرر')) {
         toast.error(
           <div className="flex items-center gap-2">
@@ -511,15 +565,17 @@ const AdminProducts = () => {
       }
     }
   };
-  
+
   // ✅ حذف منتج
   const handleDelete = async (id) => {
     if (!canDelete) {
       toast.error(lang === "ar" ? "❌ غير مصرح بحذف المنتجات" : "❌ Forbidden - No delete permission");
       return;
     }
+    
     const product = products.find(p => p.id === id);
     if (!window.confirm(lang === "ar" ? `هل أنت متأكد من حذف "${product?.name_ar || product?.name_en}"؟` : `Are you sure you want to delete "${product?.name_en || product?.name_ar}"?`)) return;
+    
     try {
       await adminApi.delete(`/products/${id}`);
       toast.success(
@@ -537,46 +593,51 @@ const AdminProducts = () => {
       toast.error(lang === "ar" ? "فشل في الحذف" : "Delete failed");
     }
   };
-  
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   };
-  
+
   // ✅ دالة بناء خيارات التصنيف
   const buildCategoryOptions = useCallback((cats, parentId = null, level = 0) => {
     let opts = [];
     const children = cats.filter(c => c.parent_id === parentId);
+    
     children.forEach(cat => {
       const prefix = "─ ".repeat(level);
       const displayName = lang === "ar" ? cat.name_ar : cat.name_en;
+      
       const hasChildren = cats.some(c => c.parent_id === cat.id);
-      opts.push({
-        id: String(cat.id),
+      
+      opts.push({ 
+        id: String(cat.id), 
         label: `${prefix}${displayName}`,
         level,
         hasChildren,
         disabled: hasChildren,
-        tooltip: hasChildren
+        tooltip: hasChildren 
           ? (lang === "ar" ? "هذا تصنيف رئيسي، اختر فرعاً منه" : "This is a parent category, please select a sub-category")
           : ""
       });
+      
       opts.push(...buildCategoryOptions(cats, cat.id, level + 1));
     });
+    
     return opts;
   }, [lang]);
-  
+
   const categoryOptions = useMemo(() => buildCategoryOptions(categories), [categories, buildCategoryOptions]);
-  
+
   // ✅ الحصول على منتجات مقترحة
   const getSuggestedProducts = useCallback((currentProduct) => {
     if (!currentProduct) return [];
-    return products.filter(p =>
-      p.id !== currentProduct.id &&
+    return products.filter(p => 
+      p.id !== currentProduct.id && 
       (p.brand_id === currentProduct.brand_id || p.category_id === currentProduct.category_id)
     ).slice(0, 4);
   }, [products]);
-  
+
   // ✅ حالة عدم وجود صلاحية القراءة - مع دعم الوضع الليلي
   if (!canRead) {
     return (
@@ -593,19 +654,21 @@ const AdminProducts = () => {
       </div>
     );
   }
-  
+
   return (
     <div className={`space-y-6 transition-colors duration-300 ${isDark ? 'dark bg-gray-900' : ''}`} dir={lang === "ar" ? "rtl" : "ltr"}>
       {/* ✅ Header & Filters */}
       <div className={`p-4 rounded-2xl border transition-colors duration-300 ${
         isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
       }`}>
+
         <div className={lang === "ar" ? "text-right" : "text-left"}>
           <h1 className={`text-2xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-gray-900'}`}>{t("products")}</h1>
           <p className={`text-xs mt-1 font-bold ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
             {lang === "ar" ? "إجمالي" : "Total"}:{" "}
             <span className={isDark ? 'text-gray-200' : 'text-gray-900'}>{products.length}</span>{" "}
             {lang === "ar" ? "منتج" : "products"}
+            
             {(search || filterBrand || filterCategory || filterHasVariants !== "all") && (
               <>
                 {" "}|{" "}
@@ -613,7 +676,7 @@ const AdminProducts = () => {
                   {lang === "ar" ? "النتائج" : "Results"}:{" "}
                   <span className={`font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{filteredProducts.length}</span>
                 </span>
-                <button
+                  <button 
                   onClick={() => {
                     setSearch("");
                     setFilterBrand("");
@@ -628,40 +691,43 @@ const AdminProducts = () => {
             )}
           </p>
         </div>
+        
         <div className="flex flex-wrap gap-3 w-full lg:w-auto">
           {/* بحث */}
           <input
             type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder={t("searchPlaceholder")}
             className={`flex-1 lg:w-56 border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500/30 outline-none transition-colors ${
-              isDark
-                ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400'
+              isDark 
+                ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
                 : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
             }`}
           />
+          
           {/* فلتر البراند */}
           <select value={filterBrand} onChange={e => setFilterBrand(e.target.value)} className={`border rounded-xl px-3 py-2 text-sm w-36 transition-colors ${
-            isDark
-              ? 'bg-gray-700 border-gray-600 text-gray-100'
+            isDark 
+              ? 'bg-gray-700 border-gray-600 text-gray-100' 
               : 'bg-gray-50 border-gray-200 text-gray-900'
           }`}>
             <option value="">{t("allBrands")}</option>
             {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
+          
           {/* فلتر التصنيف */}
           <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className={`border rounded-xl px-3 py-2 text-sm w-40 transition-colors ${
-            isDark
-              ? 'bg-gray-700 border-gray-600 text-gray-100'
+            isDark 
+              ? 'bg-gray-700 border-gray-600 text-gray-100' 
               : 'bg-gray-50 border-gray-200 text-gray-900'
           }`}>
             <option value="">{t("allCategories")}</option>
             {categoryOptions.map(o => (
-              <option
-                key={o.id}
+              <option 
+                key={o.id} 
                 value={o.id}
                 disabled={o.disabled}
                 title={o.tooltip}
-                style={{
+                style={{ 
                   fontWeight: o.hasChildren ? 'bold' : 'normal',
                   color: o.disabled ? '#ec4899' : (isDark ? 'inherit' : 'inherit'),
                   paddingLeft: `${o.level * 20}px`
@@ -671,36 +737,39 @@ const AdminProducts = () => {
               </option>
             ))}
           </select>
+          
           {/* فلتر المتغيرات */}
           <select value={filterHasVariants} onChange={e => setFilterHasVariants(e.target.value)} className={`border rounded-xl px-3 py-2 text-sm w-32 transition-colors ${
-            isDark
-              ? 'bg-gray-700 border-gray-600 text-gray-100'
+            isDark 
+              ? 'bg-gray-700 border-gray-600 text-gray-100' 
               : 'bg-gray-50 border-gray-200 text-gray-900'
           }`}>
             <option value="all">{t("allVariants")}</option>
             <option value="true">{t("withVariants")}</option>
             <option value="false">{t("withoutVariants")}</option>
           </select>
+          
           {/* تبديل العرض */}
           <div className={`flex rounded-xl p-1 transition-colors ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
             <button onClick={() => setViewMode("table")} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-              viewMode === "table"
-                ? (isDark ? 'bg-gray-600 text-white' : 'bg-white shadow-sm text-gray-900')
+              viewMode === "table" 
+                ? (isDark ? 'bg-gray-600 text-white' : 'bg-white shadow-sm text-gray-900') 
                 : (isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700')
             }`}>☰</button>
             <button onClick={() => setViewMode("grid")} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-              viewMode === "grid"
-                ? (isDark ? 'bg-gray-600 text-white' : 'bg-white shadow-sm text-gray-900')
+              viewMode === "grid" 
+                ? (isDark ? 'bg-gray-600 text-white' : 'bg-white shadow-sm text-gray-900') 
                 : (isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700')
             }`}>▦</button>
           </div>
+          
           {/* ✅ زر الإضافة */}
           {canCreate && (
             <button onClick={() => openModal()} className="bg-gray-900 dark:bg-gray-700 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-pink-600 transition">+ {t("add")}</button>
           )}
         </div>
       </div>
-      
+
       {/* ✅ Table View */}
       {viewMode === "table" && (
         <div className={`rounded-2xl border overflow-hidden transition-colors duration-300 ${
@@ -753,7 +822,7 @@ const AdminProducts = () => {
           )}
         </div>
       )}
-      
+
       {/* ✅ Grid View */}
       {viewMode === "grid" && (
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -762,11 +831,11 @@ const AdminProducts = () => {
               isDark ? 'bg-gray-800 border-gray-700 hover:border-gray-600' : 'bg-white border-gray-100 hover:border-gray-200'
             }`}>
               <div className={`aspect-square rounded-xl mb-3 overflow-hidden flex items-center justify-center ${isDark ? 'bg-gray-700' : 'bg-gray-50'}`}>
-                <img
-                  src={p.image ? `${API_URL}/${p.image.replace(/^assets\//i, "")}` : ""}
-                  alt=""
-                  className="max-h-full object-contain p-4 group-hover:scale-105 transition"
-                  onError={e => e.target.style.display='none'}
+                <img 
+                  src={p.image ? `${API_URL}/${p.image.replace(/^assets\//i, "")}` : ""} 
+                  alt="" 
+                  className="max-h-full object-contain p-4 group-hover:scale-105 transition" 
+                  onError={e => e.target.style.display='none'} 
                 />
               </div>
               <div className={lang === "ar" ? "text-right" : "text-left"}>
@@ -783,9 +852,9 @@ const AdminProducts = () => {
           ))}
         </div>
       )}
-      
+
       {filteredProducts.length === 0 && !loading && <div className={`text-center py-12 font-bold ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{t("noResults")}</div>}
-      
+
       {/* ✅ Modal Form */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -798,8 +867,298 @@ const AdminProducts = () => {
               <h2 className={`text-xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{editingId ? t("editProduct") : t("addProduct")}</h2>
               <button onClick={closeModal} className={`w-8 h-8 rounded-full flex items-center justify-center transition ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`}>✕</button>
             </div>
+            
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              {/* ... (نفس كود الفورم الأصلي للمنتجات) ... */}
+              {/* القسم الأساسي */}
+              <div className="space-y-4">
+                <h3 className={`text-sm font-black flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  <span className="w-1.5 h-5 bg-pink-500 rounded-full"></span>
+                  {t("basicInfo")}
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input name="id" type="number" value={formData.id} onChange={handleChange} placeholder="ID" required className={`border rounded-xl px-4 py-2.5 text-sm transition-colors ${
+                    isDark 
+                      ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30' 
+                      : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
+                  }`} />
+                  <input name="sku" type="text" value={formData.sku || ""} onChange={handleChange} placeholder="SKU (رمز المنتج الفريد)" required className={`border rounded-xl px-4 py-2.5 text-sm uppercase transition-colors ${
+                    isDark 
+                      ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30' 
+                      : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
+                  }`} />
+                  <input name="price" type="number" step="0.5" value={formData.price} onChange={handleChange} placeholder={t("price")} required className={`border rounded-xl px-4 py-2.5 text-sm transition-colors ${
+                    isDark 
+                      ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30' 
+                      : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
+                  }`} />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <select name="brand_id" value={formData.brand_id} onChange={handleChange} required className={`border rounded-xl px-4 py-2.5 text-sm transition-colors ${
+                    isDark 
+                      ? 'bg-gray-700 border-gray-600 text-gray-100' 
+                      : 'bg-gray-50 border-gray-200 text-gray-900'
+                  }`}>
+                    <option value="">{t("selectBrand")}</option>
+                    {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
+                  
+                  {/* ✅ Select التصنيفات */}
+                  <div className="relative">
+                    <select 
+                      name="category_id" 
+                      value={formData.category_id} 
+                      onChange={handleChange} 
+                      required 
+                      className={`border rounded-xl px-4 py-2.5 text-sm w-full pr-10 transition-colors ${
+                        isDark 
+                          ? 'bg-gray-700 border-gray-600 text-gray-100' 
+                          : 'bg-gray-50 border-gray-200 text-gray-900'
+                      }`}
+                    >
+                      <option value="">{t("selectCategory")}</option>
+                      {categoryOptions.map(opt => (
+                        <option 
+                          key={opt.id} 
+                          value={opt.id}
+                          disabled={opt.disabled}
+                          title={opt.tooltip}
+                          style={{ 
+                            fontWeight: opt.hasChildren ? 'bold' : 'normal',
+                            color: opt.disabled ? '#ec4899' : 'inherit',
+                            paddingLeft: `${opt.level * 20}px`
+                          }}
+                        >
+                          {opt.label}{opt.disabled ? (lang === "ar" ? " 🔒" : " 🔒") : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-400'}`} title={lang === "ar" ? "التصنيفات الوردية لا يمكن اختيارها - اختر فرعاً منها" : "Pink categories cannot be selected - choose a sub-category"}>
+                      ℹ️
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input 
+                    name="name_ar" 
+                    value={formData.name_ar} 
+                    onChange={handleChange} 
+                    placeholder="الاسم بالعربي *" 
+                    required 
+                    className={`col-span-2 border rounded-xl px-4 py-2.5 text-sm transition-colors ${
+                      isDark 
+                        ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
+                        : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+                    }`} 
+                  />
+                  <input 
+                    name="name_en" 
+                    value={formData.name_en} 
+                    onChange={handleChange} 
+                    placeholder="English Name *" 
+                    required 
+                    className={`col-span-2 border rounded-xl px-4 py-2.5 text-sm transition-colors ${
+                      isDark 
+                        ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
+                        : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+                    }`} 
+                  />
+                </div>
+                
+                <textarea name="description_ar" value={formData.description_ar} onChange={handleChange} placeholder="الوصف بالعربي" rows="2" className={`w-full border rounded-xl px-4 py-2.5 text-sm resize-none transition-colors ${
+                  isDark 
+                    ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
+                    : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+                }`} />
+                <textarea 
+                  name="description_en" 
+                  value={formData.description_en} 
+                  onChange={handleChange} 
+                  placeholder="Description in English" 
+                  rows="2" 
+                  className={`w-full border rounded-xl px-4 py-2.5 text-sm resize-none transition-colors ${
+                    isDark 
+                      ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
+                      : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+                  }`} 
+                />
+                
+                <ImageUploader
+                  label={t("productImage")}
+                  currentImage={formData.image}
+                  resourceType="products"
+                  resourceData={{ 
+                    brand_id: formData.brand_id,
+                    sku: formData.sku,
+                    name_en: formData.name_en,
+                    name_ar: formData.name_ar
+                  }}
+                  onImageSelect={(path) => setFormData(prev => ({ ...prev, image: path }))}
+                />
+              </div>
+
+              {/* قسم المتغيرات */}
+              <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => setShowVariantsSection(!showVariantsSection)}
+                  className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
+                    showVariantsSection 
+                      ? (isDark ? 'border-pink-500 bg-pink-900/20' : 'border-pink-500 bg-pink-50/50') 
+                      : (isDark ? 'border-gray-600 bg-gray-700 hover:border-gray-500' : 'border-gray-100 bg-gray-50 hover:border-gray-200')
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🔀</span>
+                    <div className="text-right">
+                      <p className={`font-black text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{t("manageVariants")}</p>
+                      <p className={`text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
+                        {variants.length > 0 ? `${variants.length} ${lang === "ar" ? "متغير مُعد" : "variant(s) configured"}` : (lang === "ar" ? "اضغط لإضافة أحجام، ألوان، إلخ..." : "Click to add sizes, colors, etc...")}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-transform ${
+                    isDark ? 'bg-gray-600' : 'bg-gray-200'
+                  } ${showVariantsSection ? "rotate-180" : ""}`}>▼</span>
+                </button>
+                
+                {showVariantsSection && (
+                  <div className={`space-y-4 p-4 rounded-xl border transition-colors ${
+                    isDark ? 'bg-gray-750 border-gray-600' : 'bg-gray-50 border-gray-100'
+                  }`}>
+                    <button type="button" onClick={addVariant} className={`w-full py-3 rounded-xl border-2 border-dashed text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                      isDark 
+                        ? 'border-gray-600 text-gray-400 hover:border-pink-500 hover:text-pink-400 hover:bg-pink-900/20' 
+                        : 'border-gray-300 text-gray-500 hover:border-pink-500 hover:text-pink-600 hover:bg-pink-50/50'
+                    }`}>
+                      <span>➕</span> {t("addVariant")}
+                    </button>
+                    
+                    {variants.map((variant, index) => (
+                      <div key={variant.id} className={`relative rounded-xl p-4 border space-y-3 transition-colors ${
+                        isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-100'
+                      }`}>
+                        
+                        {/* ✅ زر "اجعله منتج" - مع فتح مودال المعاينة */}
+                        {!String(variant.id).startsWith('temp_') && (
+                          <button
+                            type="button"
+                            onClick={() => fetchPromotePreview(variant.id)}
+                            disabled={promoteLoading}
+                            className={`absolute top-3 ${lang === "ar" ? "left-3" : "right-3"} px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1.5 z-10
+                            ${isDark
+                              ? "bg-indigo-900/40 text-indigo-300 hover:bg-indigo-800/50 border border-indigo-700" 
+                              : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
+                            } ${promoteLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            title={lang === "ar" ? "تحويل هذا المتغير إلى منتج مستقل" : "Promote this variant to standalone product"}
+                          >
+                            {promoteLoading ? (
+                              <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                              </svg>
+                            ) : (
+                              <span>📦</span>
+                            )}
+                            {lang === "ar" ? "اجعله منتج" : "Make Product"}
+                          </button>
+                        )}
+                        
+                        <div className="flex items-center justify-between">
+                          <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{t("variant")} #{index + 1}</span>
+                          <button type="button" onClick={() => removeVariant(variant.id)} className={`text-xs font-bold transition ${isDark ? 'text-red-400 hover:text-red-300' : 'text-red-400 hover:text-red-600'}`}>{t("remove")}</button>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <input 
+                            type="text" 
+                            value={variant.sku || ""} 
+                            onChange={(e) => updateVariant(variant.id, "sku", e.target.value)} 
+                            placeholder="SKU (اختياري)" 
+                            className={`border rounded-lg px-3 py-2 text-xs transition-colors ${
+                              isDark 
+                                ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400' 
+                                : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+                            }`} 
+                          />
+                          <input 
+                            type="number" step="0.5" 
+                            value={variant.price || ""} 
+                            onChange={(e) => updateVariant(variant.id, "price", e.target.value)} 
+                            placeholder={t("price")} 
+                            className={`border rounded-lg px-3 py-2 text-xs transition-colors ${
+                              isDark 
+                                ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400' 
+                                : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+                            }`} 
+                          />
+                          <div className="col-span-3">
+                            <ImageUploader 
+                              currentImage={variant.image} 
+                              onImageSelect={(p) => updateVariant(variant.id, "image", p)} 
+                              resourceType="products"
+                              resourceData={{ 
+                                brand_id: formData.brand_id,
+                                sku: (() => {
+                                  if (variant.sku?.trim()) {
+                                    return variant.sku.trim().toUpperCase();
+                                  }
+                                  if (formData.sku?.trim()) {
+                                    return `${formData.sku.trim().toUpperCase()}-${String(index + 1).padStart(3, '0')}`;
+                                  }
+                                  return `VAR-${formData.id || Date.now()}-${String(index + 1).padStart(3, '0')}`;
+                                })(),
+                                name_en: formData.name_en,
+                                name_ar: formData.name_ar,
+                                isVariant: true
+                              }}
+                              label={null} 
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className={`text-[10px] font-bold uppercase ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{t("attributes")}</span>
+                            <button type="button" onClick={() => addVariantAttribute(variant.id)} className={`text-[10px] font-bold hover:underline ${isDark ? 'text-pink-400' : 'text-pink-600'}`}>+ {t("add")}</button>
+                          </div>
+                          {variant.attributes.map((attr) => (
+                            <VariantAttributeField 
+                              key={attr.tempId} 
+                              attribute={attr} 
+                              onUpdate={updateVariantAttribute} 
+                              onRemove={removeVariantAttribute} 
+                              lang={lang}
+                              isDark={isDark}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* ✅ منتجات مقترحة */}
+              {editingId && products.find(p => p.id === editingId) && (
+                <div className={`pt-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+                  <h4 className={`text-sm font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>{t("relatedProducts")}</h4>
+                  <div className="flex gap-3 overflow-x-auto pb-2">
+                    {getSuggestedProducts(products.find(p => p.id === editingId)).map(sp => (
+                      <div key={sp.id} className={`min-w-[120px] p-3 rounded-xl border transition-colors ${
+                        isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-100'
+                      }`}>
+                        <img src={`${API_URL}/${sp.image?.replace(/^assets\//i, "")}`} alt="" className="w-16 h-16 mx-auto object-contain mb-2" onError={e => e.target.style.display='none'} />
+                        <p className={`text-[10px] font-bold truncate text-center ${isDark ? 'text-white' : 'text-gray-900'}`}>{lang === "ar" ? sp.name_ar : sp.name_en}</p>
+                        <p className="text-[10px] text-pink-500 dark:text-pink-400 text-center font-black">₪{sp.price}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               {/* أزرار الحفظ والإلغاء */}
               <div className={`flex gap-3 pt-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
                 <button type="submit" className="flex-1 bg-gray-900 dark:bg-gray-700 text-white py-3 rounded-xl font-bold hover:bg-pink-600 transition flex items-center justify-center gap-2">
@@ -814,230 +1173,111 @@ const AdminProducts = () => {
           </div>
         </div>
       )}
-      
-      {/* ✅ ✅ ✅ Promote Variant Modal - جديد */}
+
+      {/* ✅ ✅ ✅ مودال معاينة وتأكيد التحويل (Promote Modal) */}
       {showPromoteModal && promoteDraft && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className={`rounded-[2.5rem] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border transition-colors duration-300 ${
             isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
           }`}>
-            {/* Modal Header */}
             <div className={`p-6 border-b flex justify-between items-center sticky top-0 rounded-t-[2.5rem] z-10 ${
               isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
             }`}>
-              <div className={lang === "ar" ? "text-right" : "text-left"}>
-                <h2 className={`text-xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  {lang === "ar" ? "📦 تحويل المتغير إلى منتج" : "📦 Promote Variant to Product"}
-                </h2>
-                <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
-                  {lang === "ar" ? "راجع وعدّل البيانات قبل الحفظ" : "Review and edit details before saving"}
-                </p>
-              </div>
+              <h2 className={`text-xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {lang === "ar" ? "📦 تحويل المتغير إلى منتج مستقل" : "📦 Promote Variant to Product"}
+              </h2>
               <button 
                 onClick={() => { setShowPromoteModal(false); setPromoteDraft(null); }} 
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition ${
-                  isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'
-                }`}
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition ${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`}
               >
                 ✕
               </button>
             </div>
             
-            {/* Modal Form */}
-            <form onSubmit={(e) => handlePromoteSubmit(e, promoteDraft.variant_id)} className="p-6 space-y-5">
-              {/* Product ID & SKU */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {lang === "ar" ? "ID المنتج *" : "Product ID *"}
-                  </label>
-                  <input
-                    type="number"
-                    value={promoteDraft.suggestedId}
-                    onChange={(e) => setPromoteDraft(prev => prev ? { ...prev, suggestedId: e.target.value } : null)}
-                    required
-                    className={`w-full border rounded-xl px-4 py-2.5 text-sm transition-colors ${
-                      isDark
-                        ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30'
-                        : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {lang === "ar" ? "SKU *" : "SKU *"}
-                  </label>
-                  <input
-                    type="text"
-                    value={promoteDraft.suggestedSku}
-                    onChange={(e) => setPromoteDraft(prev => prev ? { ...prev, suggestedSku: e.target.value.toUpperCase() } : null)}
-                    required
-                    className={`w-full border rounded-xl px-4 py-2.5 text-sm uppercase transition-colors ${
-                      isDark
-                        ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30'
-                        : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
-                    }`}
-                  />
-                </div>
-              </div>
-              
-              {/* Brand & Category (Read-only) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {lang === "ar" ? "البراند" : "Brand"}
-                  </label>
-                  <input
-                    type="text"
-                    value={promoteDraft.brand_name || ""}
-                    disabled
-                    className={`w-full border rounded-xl px-4 py-2.5 text-sm bg-gray-100 dark:bg-gray-700 ${
-                      isDark ? 'text-gray-400 border-gray-600' : 'text-gray-500 border-gray-200'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {lang === "ar" ? "التصنيف" : "Category"}
-                  </label>
-                  <input
-                    type="text"
-                    value={promoteDraft.category_id || ""}
-                    disabled
-                    className={`w-full border rounded-xl px-4 py-2.5 text-sm bg-gray-100 dark:bg-gray-700 ${
-                      isDark ? 'text-gray-400 border-gray-600' : 'text-gray-500 border-gray-200'
-                    }`}
-                  />
-                </div>
-              </div>
-              
-              {/* Product Names */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {lang === "ar" ? "الاسم بالعربي *" : "Arabic Name *"}
-                  </label>
-                  <input
-                    type="text"
-                    value={promoteDraft.name_ar}
-                    onChange={(e) => setPromoteDraft(prev => prev ? { ...prev, name_ar: e.target.value } : null)}
-                    required
-                    className={`w-full border rounded-xl px-4 py-2.5 text-sm transition-colors ${
-                      isDark
-                        ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30'
-                        : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {lang === "ar" ? "English Name *" : "English Name *"}
-                  </label>
-                  <input
-                    type="text"
-                    value={promoteDraft.name_en}
-                    onChange={(e) => setPromoteDraft(prev => prev ? { ...prev, name_en: e.target.value } : null)}
-                    required
-                    className={`w-full border rounded-xl px-4 py-2.5 text-sm transition-colors ${
-                      isDark
-                        ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30'
-                        : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
-                    }`}
-                  />
-                </div>
-              </div>
-              
-              {/* Descriptions */}
-              <div className="space-y-3">
-                <div>
-                  <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {lang === "ar" ? "الوصف بالعربي" : "Description (Arabic)"}
-                  </label>
-                  <textarea
-                    value={promoteDraft.description_ar || ""}
-                    onChange={(e) => setPromoteDraft(prev => prev ? { ...prev, description_ar: e.target.value } : null)}
-                    rows="2"
-                    className={`w-full border rounded-xl px-4 py-2.5 text-sm resize-none transition-colors ${
-                      isDark
-                        ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400'
-                        : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {lang === "ar" ? "Description (English)" : "Description (English)"}
-                  </label>
-                  <textarea
-                    value={promoteDraft.description_en || ""}
-                    onChange={(e) => setPromoteDraft(prev => prev ? { ...prev, description_en: e.target.value } : null)}
-                    rows="2"
-                    className={`w-full border rounded-xl px-4 py-2.5 text-sm resize-none transition-colors ${
-                      isDark
-                        ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400'
-                        : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
-                    }`}
-                  />
-                </div>
-              </div>
-              
-              {/* Price & Image */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {lang === "ar" ? "السعر *" : "Price *"}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={promoteDraft.price}
-                    onChange={(e) => setPromoteDraft(prev => prev ? { ...prev, price: e.target.value } : null)}
-                    required
-                    className={`w-full border rounded-xl px-4 py-2.5 text-sm transition-colors ${
-                      isDark
-                        ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30'
-                        : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <ImageUploader
-                    label={lang === "ar" ? "صورة المنتج" : "Product Image"}
-                    currentImage={promoteDraft.image}
-                    resourceType="products"
-                    resourceData={{
-                      brand_id: promoteDraft.brand_id,
-                      sku: promoteDraft.suggestedSku,
-                      name_en: promoteDraft.name_en,
-                      name_ar: promoteDraft.name_ar
-                    }}
-                    onImageSelect={(path) => setPromoteDraft(prev => prev ? { ...prev, image: path } : null)}
-                  />
-                </div>
-              </div>
-              
-              {/* Variant Attributes Preview */}
-              {Object.keys(promoteDraft.attributes || {}).length > 0 && (
-                <div className={`p-4 rounded-xl border ${isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-100'}`}>
-                  <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {lang === "ar" ? "خصائص المتغير الأصلية" : "Original Variant Attributes"}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(promoteDraft.attributes).map(([key, value]) => (
-                      <span key={key} className={`px-3 py-1 rounded-full text-[10px] font-bold ${
-                        isDark ? 'bg-pink-900/30 text-pink-400' : 'bg-pink-50 text-pink-700'
-                      }`}>
-                        {key}: {value}
-                      </span>
-                    ))}
+            <form onSubmit={(e) => handlePromoteSubmit(e, promoteDraft.variantId)} className="p-6 space-y-4">
+              {/* معاينة البيانات */}
+              <div className={`p-4 rounded-xl ${isDark ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                <p className={`text-xs font-bold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {lang === "ar" ? "معاينة المنتج الجديد:" : "Preview of new product:"}
+                </p>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className={`text-[10px] block ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>ID</span>
+                    <input 
+                      type="number"
+                      value={promoteDraft.suggestedId}
+                      onChange={(e) => setPromoteDraft(prev => prev ? {...prev, suggestedId: e.target.value} : null)}
+                      className={`w-full mt-1 px-3 py-2 rounded-lg text-xs border ${
+                        isDark ? 'bg-gray-600 border-gray-500 text-gray-100' : 'bg-white border-gray-200 text-gray-900'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <span className={`text-[10px] block ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>SKU</span>
+                    <input 
+                      type="text"
+                      value={promoteDraft.suggestedSku}
+                      onChange={(e) => setPromoteDraft(prev => prev ? {...prev, suggestedSku: e.target.value} : null)}
+                      className={`w-full mt-1 px-3 py-2 rounded-lg text-xs border uppercase ${
+                        isDark ? 'bg-gray-600 border-gray-500 text-gray-100' : 'bg-white border-gray-200 text-gray-900'
+                      }`}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <span className={`text-[10px] block ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{lang === "ar" ? "الاسم بالعربي" : "Arabic Name"}</span>
+                    <input 
+                      type="text"
+                      value={promoteDraft.name_ar}
+                      onChange={(e) => setPromoteDraft(prev => prev ? {...prev, name_ar: e.target.value} : null)}
+                      className={`w-full mt-1 px-3 py-2 rounded-lg text-xs border ${
+                        isDark ? 'bg-gray-600 border-gray-500 text-gray-100' : 'bg-white border-gray-200 text-gray-900'
+                      }`}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <span className={`text-[10px] block ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{lang === "ar" ? "الاسم بالإنجليزي" : "English Name"}</span>
+                    <input 
+                      type="text"
+                      value={promoteDraft.name_en}
+                      onChange={(e) => setPromoteDraft(prev => prev ? {...prev, name_en: e.target.value} : null)}
+                      className={`w-full mt-1 px-3 py-2 rounded-lg text-xs border ${
+                        isDark ? 'bg-gray-600 border-gray-500 text-gray-100' : 'bg-white border-gray-200 text-gray-900'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <span className={`text-[10px] block ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{t("price")}</span>
+                    <input 
+                      type="number" step="0.5"
+                      value={promoteDraft.price}
+                      onChange={(e) => setPromoteDraft(prev => prev ? {...prev, price: e.target.value} : null)}
+                      className={`w-full mt-1 px-3 py-2 rounded-lg text-xs border ${
+                        isDark ? 'bg-gray-600 border-gray-500 text-gray-100' : 'bg-white border-gray-200 text-gray-900'
+                      }`}
+                    />
                   </div>
                 </div>
-              )}
+                
+                {promoteDraft.variantAttributes && Object.keys(promoteDraft.variantAttributes).length > 0 && (
+                  <div className={`mt-4 p-3 rounded-lg ${isDark ? 'bg-gray-600' : 'bg-gray-100'}`}>
+                    <p className={`text-[10px] font-bold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                      {lang === "ar" ? "خصائص المتغير الأصلية:" : "Original variant attributes:"}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(promoteDraft.variantAttributes).map(([key, val]) => (
+                        <span key={key} className={`text-[10px] px-2 py-1 rounded ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-white text-gray-600'}`}>
+                          {key}: {val}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
               
-              {/* Action Buttons */}
+              {/* أزرار الحفظ والإلغاء */}
               <div className={`flex gap-3 pt-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
-                <button
-                  type="submit"
+                <button 
+                  type="submit" 
                   disabled={promoteLoading}
                   className="flex-1 bg-gray-900 dark:bg-gray-700 text-white py-3 rounded-xl font-bold hover:bg-pink-600 transition flex items-center justify-center gap-2 disabled:opacity-50"
                 >
@@ -1051,16 +1291,15 @@ const AdminProducts = () => {
                     </>
                   ) : (
                     <>
-                      <span>📦</span>
-                      {lang === "ar" ? "تحويل وحفظ" : "Convert & Save"}
+                      <span>🚀</span>
+                      {lang === "ar" ? "تأكيد التحويل" : "Confirm Promote"}
                     </>
                   )}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowPromoteModal(false); setPromoteDraft(null); }}
-                  disabled={promoteLoading}
-                  className={`flex-1 py-3 rounded-xl font-bold transition disabled:opacity-50 ${
+                <button 
+                  type="button" 
+                  onClick={() => { setShowPromoteModal(false); setPromoteDraft(null); }} 
+                  className={`flex-1 py-3 rounded-xl font-bold transition ${
                     isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
