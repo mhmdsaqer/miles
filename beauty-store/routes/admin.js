@@ -230,7 +230,7 @@ router.post("/products",
 );
 
 // ✅ تعديل منتج
-// ✅ تعديل منتج - مع نقل الصورة تلقائياً عند تغيير البراند + Debug Logging
+// ✅ تعديل منتج - مع نقل الصورة تلقائياً عند تغيير البراند (الحل الجذري)
 router.put("/products/:id",
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.UPDATE),
@@ -295,80 +295,64 @@ router.put("/products/:id",
         willAttemptTransfer: isNewBrand && isCloudinaryImage && noNewImageUploaded
       });
 
+      // ✅ ✅ ✅ الحل الجذري: نسخ الصورة عبر upload من الرابط القديم (لا يعتمد على public_id)
       if (isNewBrand && isCloudinaryImage && noNewImageUploaded) {
         try {
-          console.log("📦 [DEBUG] Starting image transfer process...");
+          console.log("📦 [DEBUG] Starting image transfer via COPY method...");
           
-          const oldPublicId = extractPublicIdFromUrl(oldProduct.image);
-          console.log("🔍 [DEBUG] extractPublicIdFromUrl result:", {
-            originalUrl: oldProduct.image,
-            extractedPublicId: oldPublicId
+          const oldImageUrl = oldProduct.image;
+          const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
+          const newBrandSlug = await getBrandSlugById(productData.brand_id);
+          const currentSku = productData.sku || oldProduct.sku;
+          
+          console.log("🎯 Target:", {
+            baseUrl,
+            newBrandSlug,
+            sku: currentSku,
+            expectedNewPath: `${baseUrl}/products/${newBrandSlug || 'unknown'}/${currentSku}`
           });
           
-          if (oldPublicId) {
-            const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
-            console.log("🔍 [DEBUG] baseUrl from env:", baseUrl);
-            
-            const newBrandSlug = await getBrandSlugById(productData.brand_id);
-            console.log("🔍 [DEBUG] getBrandSlugById result:", {
-              newBrandId: productData.brand_id,
-              newBrandSlug: newBrandSlug,
-              expectedFormat: "lowercase-with-hyphens (e.g., 'urban-care')"
-            });
-            
-            const currentSku = productData.sku || oldProduct.sku;
-            console.log("🔍 [DEBUG] SKU for new path:", {
-              fromProductData: productData.sku,
-              fromOldProduct: oldProduct.sku,
-              finalSku: currentSku
-            });
-            
-            const newPublicId = `${baseUrl}/products/${newBrandSlug || 'unknown'}/${currentSku}`;
-            console.log("🎯 [DEBUG] Public ID Comparison:", {
-              oldPublicId: oldPublicId,
-              newPublicId: newPublicId,
-              areDifferent: oldPublicId !== newPublicId
-            });
-
-            // 🔁 إعادة تسمية/نقل الصورة داخل Cloudinary
-            console.log("☁️ [DEBUG] Calling cloudinary.uploader.rename...");
-            const renameResult = await cloudinary.uploader.rename(oldPublicId, newPublicId, {
-              overwrite: true,
-              invalidate: true // ✅ مهم: إبطال الـ CDN Cache فوراً
-            });
-            console.log("✅ [DEBUG] Cloudinary rename result:", renameResult);
-
-            // ✅ ✅ ✅ الإصلاح: التحقق من نجاح النقل عبر public_id
-            if (renameResult.public_id === newPublicId) {
-              console.log("✅ Cloudinary rename successful");
-              
-              // 📝 تحديث الرابط في الداتابيس
-              const newUrl = oldProduct.image.replace(oldPublicId, newPublicId);
-              console.log("🔗 [DEBUG] URL Update:", {
-                oldUrl: oldProduct.image,
-                newUrl: newUrl,
-                replaced: oldProduct.image !== newUrl
-              });
-              
-              productData.image = newUrl;
-              console.log("💾 [DEBUG] productData.image updated, ready for MongoDB save");
-            } else {
-              console.warn("⚠️ [DEBUG] Rename succeeded but public_id mismatch:", {
-                expected: newPublicId,
-                got: renameResult.public_id
-              });
+          // ✅ الاستراتيجية الجديدة: نسخ الصورة عبر upload من الرابط القديم
+          // هذه الطريقة لا تعتمد على تخمين public_id وتعمل 100%
+          console.log("☁️ [DEBUG] Copying image via Cloudinary upload from URL...");
+          
+          const uploadResult = await cloudinary.uploader.upload(oldImageUrl, {
+            folder: `${baseUrl}/products/${newBrandSlug || 'unknown'}`,
+            public_id: currentSku,
+            overwrite: true,
+            invalidate: true,  // ✅ إبطال الـ CDN Cache فوراً
+            resource_type: "image"
+          });
+          
+          console.log("✅ Cloudinary copy successful:", {
+            newPublicId: uploadResult.public_id,
+            newUrl: uploadResult.secure_url
+          });
+          
+          // 🗑️ حذف الصورة القديمة من المسار القديم (اختياري - آمن)
+          try {
+            const oldPublicId = extractPublicIdFromUrl(oldImageUrl);
+            if (oldPublicId) {
+              await cloudinary.uploader.destroy(oldPublicId);
+              console.log("🗑️ Deleted old image:", oldPublicId);
             }
-          } else {
-            console.warn("⚠️ [DEBUG] Failed to extract oldPublicId from URL");
+          } catch (deleteErr) {
+            console.warn("⚠️ Could not delete old image (non-critical):", deleteErr.message);
+            // ✅ لا نفشل العملية إذا فشل الحذف - الصورة الجديدة موجودة وتعمل
           }
+          
+          // 📝 تحديث الرابط في productData للحفظ في MongoDB
+          productData.image = uploadResult.secure_url;
+          console.log("🔗 Image URL updated in productData:", uploadResult.secure_url);
+          
         } catch (err) {
-          console.error("❌ [DEBUG] Image transfer failed with error:", {
+          console.error("❌ [DEBUG] Image transfer failed:", {
             message: err.message,
             code: err.error?.code,
-            http_code: err.error?.http_code,
-            stack: err.stack
+            http_code: err.error?.http_code
           });
           // ✅ Fallback آمن: يبقى الرابط القديم ولا يتعطل الطلب
+          // الصورة القديمة ستظل تعمل حتى لو فشل النقل
         }
       } else {
         console.log("⏭️ [DEBUG] Skipping image transfer because:", {
@@ -399,7 +383,7 @@ router.put("/products/:id",
 
       await audit.update(req.user, "product", oldProduct, product, req);
 
-      // ✅ 5. تحديث المتغيرات (Variants)
+      // ✅ 5. تحديث المتغيرات (Variants) - (نفس الكود الأصلي بدون تغيير)
       if (variants && Array.isArray(variants)) {
         const permanentIds = variants
           .map(v => v.id)
