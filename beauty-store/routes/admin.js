@@ -438,7 +438,8 @@ router.put("/products/:id",
             sku: rawSku ? rawSku.toUpperCase() : `SKU-${productId}-${Date.now()}`,
             price: Number(v.price) || product.price,
             image: v.image || product.image,
-            attributes: v.attributes || {}
+            attributes: v.attributes || {},
+            isAvailable: v.isAvailable !== false
           };
 
           if (variantId) {
