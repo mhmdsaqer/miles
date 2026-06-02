@@ -979,128 +979,157 @@ const AdminProducts = () => {
                 />
               </div>
 
-              {/* قسم المتغيرات */}
-              <div className="space-y-4">
-                <button
-                  type="button"
-                  onClick={() => setShowVariantsSection(!showVariantsSection)}
-                  className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
-                    showVariantsSection 
-                      ? (isDark ? 'border-pink-500 bg-pink-900/20' : 'border-pink-500 bg-pink-50/50') 
-                      : (isDark ? 'border-gray-600 bg-gray-700 hover:border-gray-500' : 'border-gray-100 bg-gray-50 hover:border-gray-200')
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">🔀</span>
-                    <div className="text-right">
-                      <p className={`font-black text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{t("manageVariants")}</p>
-                      <p className={`text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
-                        {variants.length > 0 ? `${variants.length} ${lang === "ar" ? "متغير مُعد" : "variant(s) configured"}` : (lang === "ar" ? "اضغط لإضافة أحجام، ألوان، إلخ..." : "Click to add sizes, colors, etc...")}
-                      </p>
-                    </div>
+             {/* قسم المتغيرات */}
+            <div className="space-y-4">
+              <button
+                type="button"
+                onClick={() => setShowVariantsSection(!showVariantsSection)}
+                className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
+                  showVariantsSection 
+                    ? (isDark ? 'border-pink-500 bg-pink-900/20' : 'border-pink-500 bg-pink-50/50') 
+                    : (isDark ? 'border-gray-600 bg-gray-700 hover:border-gray-500' : 'border-gray-100 bg-gray-50 hover:border-gray-200')
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🔀</span>
+                  <div className="text-right">
+                    <p className={`font-black text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>{t("manageVariants")}</p>
+                    <p className={`text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
+                      {variants.length > 0 ? `${variants.length} ${lang === "ar" ? "متغير مُعد" : "variant(s) configured"}` : (lang === "ar" ? "اضغط لإضافة أحجام، ألوان، إلخ..." : "Click to add sizes, colors, etc...")}
+                    </p>
                   </div>
-                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-transform ${
-                    isDark ? 'bg-gray-600' : 'bg-gray-200'
-                  } ${showVariantsSection ? "rotate-180" : ""}`}>▼</span>
-                </button>
-                
-                {showVariantsSection && (
-                  <div className={`space-y-4 p-4 rounded-xl border transition-colors ${
-                    isDark ? 'bg-gray-750 border-gray-600' : 'bg-gray-50 border-gray-100'
+                </div>
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-transform ${
+                  isDark ? 'bg-gray-600' : 'bg-gray-200'
+                } ${showVariantsSection ? "rotate-180" : ""}`}>▼</span>
+              </button>
+              
+              {showVariantsSection && (
+                <div className={`space-y-4 p-4 rounded-xl border transition-colors ${
+                  isDark ? 'bg-gray-750 border-gray-600' : 'bg-gray-50 border-gray-100'
+                }`}>
+                  <button type="button" onClick={addVariant} className={`w-full py-3 rounded-xl border-2 border-dashed text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                    isDark 
+                      ? 'border-gray-600 text-gray-400 hover:border-pink-500 hover:text-pink-400 hover:bg-pink-900/20' 
+                      : 'border-gray-300 text-gray-500 hover:border-pink-500 hover:text-pink-600 hover:bg-pink-50/50'
                   }`}>
-                    <button type="button" onClick={addVariant} className={`w-full py-3 rounded-xl border-2 border-dashed text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                      isDark 
-                        ? 'border-gray-600 text-gray-400 hover:border-pink-500 hover:text-pink-400 hover:bg-pink-900/20' 
-                        : 'border-gray-300 text-gray-500 hover:border-pink-500 hover:text-pink-600 hover:bg-pink-50/50'
-                    }`}>
-                      <span>➕</span> {t("addVariant")}
-                    </button>
+                    <span>➕</span> {t("addVariant")}
+                  </button>
+                  
+                  {variants.map((variant, index) => {
+                    const isSavedVariant = !String(variant.id).startsWith('temp_');
                     
-                    {variants.map((variant, index) => (
+                    return (
                       <div key={variant.id} className={`relative rounded-xl p-4 border space-y-3 transition-colors ${
                         isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-100'
-                      } ${variant.isAvailable === false ? 'opacity-70 grayscale-[0.2]' : ''}`}> {/* ✅ NEW: تعتيم المتغير إذا لم يكن متاحاً */}
+                      } ${variant.isAvailable === false ? 'opacity-70 grayscale-[0.2]' : ''}`}>
                         
-                        {/* ✅ حاوية الأزرار (تحويل + حذف) - تظهر فقط للمتغيرات المحفوظة */}
-                        {!String(variant.id).startsWith('temp_') && (
-                          <div className={`absolute top-3 flex gap-2 ${lang === "ar" ? "left-3" : "right-3"}`}>
+                        {/* ✅ ✅ ✅ الإصلاح: سطر أول - العنوان + أزرار الإجراءات (للمتغيرات المحفوظة فقط) */}
+                        {isSavedVariant && (
+                          <div className={`flex items-center justify-between pb-3 border-b ${
+                            isDark ? 'border-gray-600' : 'border-gray-100'
+                          }`}>
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
+                              {t("variant")} #{index + 1}
+                            </span>
                             
-                            {/* زر التحويل لمنتج */}
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                if (!confirm(lang === "ar" 
-                                  ? "⚠️ هل تريد تحويل هذا المتغير إلى منتج مستقل جديد؟" 
-                                  : "⚠️ Promote this variant to a standalone product?")) return;
-                                
-                                try {
-                                  const res = await adminApi.post(`/variants/${variant.id}/promote`, {}, { 
-                                    params: { lang } 
-                                  });
+                            <div className="flex items-center gap-2">
+                              {/* زر التحويل لمنتج */}
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (!confirm(lang === "ar" 
+                                    ? "⚠️ هل تريد تحويل هذا المتغير إلى منتج مستقل جديد؟" 
+                                    : "⚠️ Promote this variant to a standalone product?")) return;
                                   
-                                  toast.success(
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xl">📦</span>
-                                      <div>
-                                        <p className="font-bold text-sm">{res.data.message}</p>
-                                        <p className="text-xs text-gray-400">SKU: {res.data.product.sku}</p>
-                                      </div>
-                                    </div>,
-                                    { duration: 5000 }
-                                  );
-                                  
-                                  closeModal();
-                                  fetchData();
-                                  
-                                } catch (err) {
-                                  console.error("Promote variant error:", err);
-                                  toast.error(err.response?.data?.message || (lang === "ar" ? "فشل تحويل المتغير" : "Failed to promote variant"));
-                                }
-                              }}
-                              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1.5 z-10 ${
-                                isDark 
-                                  ? "bg-indigo-900/40 text-indigo-300 hover:bg-indigo-800/50 border border-indigo-700" 
-                                  : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
-                              }`}
-                              title={lang === "ar" ? "تحويل هذا المتغير إلى منتج مستقل" : "Promote this variant to standalone product"}
-                            >
-                              <span>📦</span> {lang === "ar" ? "اجعله منتج" : "Make Product"}
-                            </button>
+                                  try {
+                                    const res = await adminApi.post(`/variants/${variant.id}/promote`, {}, { 
+                                      params: { lang } 
+                                    });
+                                    
+                                    toast.success(
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xl">📦</span>
+                                        <div>
+                                          <p className="font-bold text-sm">{res.data.message}</p>
+                                          <p className="text-xs text-gray-400">SKU: {res.data.product.sku}</p>
+                                        </div>
+                                      </div>,
+                                      { duration: 5000 }
+                                    );
+                                    
+                                    closeModal();
+                                    fetchData();
+                                    
+                                  } catch (err) {
+                                    console.error("Promote variant error:", err);
+                                    toast.error(err.response?.data?.message || (lang === "ar" ? "فشل تحويل المتغير" : "Failed to promote variant"));
+                                  }
+                                }}
+                                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1.5 ${
+                                  isDark 
+                                    ? "bg-indigo-900/40 text-indigo-300 hover:bg-indigo-800/50 border border-indigo-700" 
+                                    : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
+                                }`}
+                                title={lang === "ar" ? "تحويل هذا المتغير إلى منتج مستقل" : "Promote this variant to standalone product"}
+                              >
+                                <span>📦</span> {lang === "ar" ? "اجعله منتج" : "Make Product"}
+                              </button>
 
-                            {/* ✅ زر الحذف المباشر الجديد */}
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteVariant(variant.id)}
-                              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1.5 z-10 ${
-                                isDark 
-                                  ? "bg-red-900/40 text-red-300 hover:bg-red-800/50 border border-red-700" 
-                                  : "bg-red-50 text-red-700 hover:bg-red-100 border border-red-200"
-                              }`}
-                              title={lang === "ar" ? "حذف هذا المتغير نهائياً" : "Delete this variant permanently"}
-                            >
-                              <span>🗑️</span> {lang === "ar" ? "حذف" : "Delete"}
-                            </button>
-                            
+                              {/* زر الحذف المباشر */}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteVariant(variant.id)}
+                                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1.5 ${
+                                  isDark 
+                                    ? "bg-red-900/40 text-red-300 hover:bg-red-800/50 border border-red-700" 
+                                    : "bg-red-50 text-red-700 hover:bg-red-100 border border-red-200"
+                                }`}
+                                title={lang === "ar" ? "حذف هذا المتغير نهائياً" : "Delete this variant permanently"}
+                              >
+                                <span>🗑️</span> {lang === "ar" ? "حذف" : "Delete"}
+                              </button>
+                            </div>
                           </div>
                         )}
                         
+                        {/* ✅ ✅ ✅ السطر الثاني: عنوان المتغير (للمؤقتة) + Checkbox التوفر + زر الإزالة */}
                         <div className="flex items-center justify-between">
-                          <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{t("variant")} #{index + 1}</span>
+                          {/* إذا كان المتغير مؤقت (لم يُحفظ بعد)، نعرض العنوان هنا */}
+                          {!isSavedVariant && (
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
+                              {t("variant")} #{index + 1}
+                            </span>
+                          )}
+                          
+                          {/* إذا كان المتغير محفوظ، نترك المكان فارغاً (العنوان في الأعلى) */}
+                          {isSavedVariant && <div></div>}
                           
                           <div className="flex items-center gap-3">
-                            {/* ✅ NEW: Checkbox التوفر للمتغير */}
+                            {/* ✅ Checkbox التوفر للمتغير - الآن ظاهر بوضوح */}
                             <label 
-                              className="flex items-center gap-1.5 cursor-pointer" 
+                              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
+                                variant.isAvailable !== false 
+                                  ? (isDark ? 'bg-green-900/20 border-green-700 hover:bg-green-900/30' : 'bg-green-50 border-green-200 hover:bg-green-100')
+                                  : (isDark ? 'bg-red-900/20 border-red-700 hover:bg-red-900/30' : 'bg-red-50 border-red-200 hover:bg-red-100')
+                              }`}
                               onClick={(e) => e.stopPropagation()}
                             >
                               <input
                                 type="checkbox"
                                 checked={variant.isAvailable !== false}
                                 onChange={(e) => updateVariant(variant.id, "isAvailable", e.target.checked)}
-                                className="w-3.5 h-3.5 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+                                className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500 cursor-pointer"
+                                onClick={(e) => e.stopPropagation()}
                               />
-                              <span className={`text-[10px] font-bold ${variant.isAvailable !== false ? (isDark ? 'text-green-400' : 'text-green-600') : (isDark ? 'text-red-400' : 'text-red-600')}`}>
-                                {variant.isAvailable !== false ? (lang === "ar" ? "متاح" : "Available") : (lang === "ar" ? "غير متاح" : "Out of Stock")}
+                              <span className={`text-[10px] font-bold ${
+                                variant.isAvailable !== false 
+                                  ? (isDark ? 'text-green-400' : 'text-green-700') 
+                                  : (isDark ? 'text-red-400' : 'text-red-700')
+                              }`}>
+                                {variant.isAvailable !== false 
+                                  ? (lang === "ar" ? "✅ متاح" : "✅ Available") 
+                                  : (lang === "ar" ? "❌ غير متاح" : "❌ Out of Stock")}
                               </span>
                             </label>
 
@@ -1108,6 +1137,7 @@ const AdminProducts = () => {
                           </div>
                         </div>
                         
+                        {/* باقي الحقول (SKU, Price, Image) */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           <input 
                             type="text" 
@@ -1139,15 +1169,12 @@ const AdminProducts = () => {
                               resourceData={{ 
                                 brand_id: formData.brand_id,
                                 sku: (() => {
-                                  // 1️⃣ إذا كان المتغير له SKU، نستخدمه
                                   if (variant.sku?.trim()) {
                                     return variant.sku.trim().toUpperCase();
                                   }
-                                  // 2️⃣ إذا كان للمنتج SKU، نولد منه + رقم تسلسلي
                                   if (formData.sku?.trim()) {
                                     return `${formData.sku.trim().toUpperCase()}-${String(index + 1).padStart(3, '0')}`;
                                   }
-                                  // 3️⃣ Fallback: توليد قيمة فريدة
                                   return `VAR-${formData.id || Date.now()}-${String(index + 1).padStart(3, '0')}`;
                                 })(),
                                 name_en: formData.name_en,
@@ -1159,6 +1186,7 @@ const AdminProducts = () => {
                           </div>
                         </div>
                         
+                        {/* قسم الخصائص */}
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <span className={`text-[10px] font-bold uppercase ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{t("attributes")}</span>
@@ -1176,11 +1204,11 @@ const AdminProducts = () => {
                           ))}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              
+                    );
+                  })}
+                </div>
+              )}
+            </div>
               {/* ✅ منتجات مقترحة */}
               {editingId && products.find(p => p.id === editingId) && (
                 <div className={`pt-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
