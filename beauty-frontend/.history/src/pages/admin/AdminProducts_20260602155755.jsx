@@ -978,7 +978,8 @@ const AdminProducts = () => {
                   onImageSelect={(path) => setFormData(prev => ({ ...prev, image: path }))}
                 />
               </div>
-                  {/* قسم المتغيرات */}
+
+              {/* قسم المتغيرات */}
               <div className="space-y-4">
                 <button
                   type="button"
@@ -1015,210 +1016,171 @@ const AdminProducts = () => {
                       <span>➕</span> {t("addVariant")}
                     </button>
                     
-                    {variants.map((variant, index) => {
-                      const isSavedVariant = !String(variant.id).startsWith('temp_');
-                      
-                      return (
-                        <div key={variant.id} className={`relative rounded-xl p-4 border space-y-3 transition-colors ${
-                          isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-100'
-                        } ${variant.isAvailable === false ? 'opacity-70 grayscale-[0.2]' : ''}`}>
-                          
-                          {/* ✅ ✅ ✅ السطر الأول: العنوان + أزرار الإجراءات (للمتغيرات المحفوظة فقط) */}
-                          {isSavedVariant && (
-                            <div className={`flex items-center justify-between pb-3 border-b ${
-                              isDark ? 'border-gray-600' : 'border-gray-100'
-                            }`}>
-                              <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
-                                {t("variant")} #{index + 1}
-                              </span>
-                              
-                              <div className="flex items-center gap-2">
-                                {/* زر التحويل لمنتج */}
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    if (!confirm(lang === "ar" 
-                                      ? "⚠️ هل تريد تحويل هذا المتغير إلى منتج مستقل جديد؟" 
-                                      : "⚠️ Promote this variant to a standalone product?")) return;
-                                    
-                                    try {
-                                      const res = await adminApi.post(`/variants/${variant.id}/promote`, {}, { 
-                                        params: { lang } 
-                                      });
-                                      
-                                      toast.success(
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-xl">📦</span>
-                                          <div>
-                                            <p className="font-bold text-sm">{res.data.message}</p>
-                                            <p className="text-xs text-gray-400">SKU: {res.data.product.sku}</p>
-                                          </div>
-                                        </div>,
-                                        { duration: 5000 }
-                                      );
-                                      
-                                      closeModal();
-                                      fetchData();
-                                      
-                                    } catch (err) {
-                                      console.error("Promote variant error:", err);
-                                      toast.error(err.response?.data?.message || (lang === "ar" ? "فشل تحويل المتغير" : "Failed to promote variant"));
-                                    }
-                                  }}
-                                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1.5 ${
-                                    isDark 
-                                      ? "bg-indigo-900/40 text-indigo-300 hover:bg-indigo-800/50 border border-indigo-700" 
-                                      : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
-                                  }`}
-                                  title={lang === "ar" ? "تحويل هذا المتغير إلى منتج مستقل" : "Promote this variant to standalone product"}
-                                >
-                                  <span>📦</span> {lang === "ar" ? "اجعله منتج" : "Make Product"}
-                                </button>
-
-                                {/* ✅ زر الحذف النهائي - للمحفوظ فقط */}
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteVariant(variant.id)}
-                                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1.5 ${
-                                    isDark 
-                                      ? "bg-red-900/40 text-red-300 hover:bg-red-800/50 border border-red-700" 
-                                      : "bg-red-50 text-red-700 hover:bg-red-100 border border-red-200"
-                                  }`}
-                                  title={lang === "ar" ? "حذف هذا المتغير نهائياً من قاعدة البيانات" : "Delete this variant permanently from database"}
-                                >
-                                  <span>🗑️</span> {lang === "ar" ? "حذف نهائي" : "Delete"}
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* ✅ ✅ ✅ السطر الثاني: Checkbox التوفر + زر الإزالة (للمؤقت فقط) */}
-                          <div className="flex items-center justify-between">
-                            {/* عنوان المتغير - يظهر فقط للمؤقت */}
-                            {!isSavedVariant && (
-                              <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
-                                {t("variant")} #{index + 1}
-                              </span>
-                            )}
+                    {variants.map((variant, index) => (
+                      <div key={variant.id} className={`relative rounded-xl p-4 border space-y-3 transition-colors ${
+                        isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-100'
+                      } ${variant.isAvailable === false ? 'opacity-70 grayscale-[0.2]' : ''}`}> {/* ✅ NEW: تعتيم المتغير إذا لم يكن متاحاً */}
+                        
+                        {/* ✅ حاوية الأزرار (تحويل + حذف) - تظهر فقط للمتغيرات المحفوظة */}
+                        {!String(variant.id).startsWith('temp_') && (
+                          <div className={`absolute top-3 flex gap-2 ${lang === "ar" ? "left-3" : "right-3"}`}>
                             
-                            {/* مكان فارغ للمحفوظ (العنوان في الأعلى) */}
-                            {isSavedVariant && <div></div>}
-                            
-                            <div className="flex items-center gap-3">
-                              {/* ✅ Checkbox التوفر للمتغير */}
-                              <label 
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
-                                  variant.isAvailable !== false 
-                                    ? (isDark ? 'bg-green-900/20 border-green-700 hover:bg-green-900/30' : 'bg-green-50 border-green-200 hover:bg-green-100')
-                                    : (isDark ? 'bg-red-900/20 border-red-700 hover:bg-red-900/30' : 'bg-red-50 border-red-200 hover:bg-red-100')
-                                }`}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={variant.isAvailable !== false}
-                                  onChange={(e) => updateVariant(variant.id, "isAvailable", e.target.checked)}
-                                  className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500 cursor-pointer"
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                                <span className={`text-[10px] font-bold ${
-                                  variant.isAvailable !== false 
-                                    ? (isDark ? 'text-green-400' : 'text-green-700') 
-                                    : (isDark ? 'text-red-400' : 'text-red-700')
-                                }`}>
-                                  {variant.isAvailable !== false 
-                                    ? (lang === "ar" ? "✅ متاح" : "✅ Available") 
-                                    : (lang === "ar" ? "❌ غير متاح" : "❌ Out of Stock")}
-                                </span>
-                              </label>
+                            {/* زر التحويل لمنتج */}
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (!confirm(lang === "ar" 
+                                  ? "⚠️ هل تريد تحويل هذا المتغير إلى منتج مستقل جديد؟" 
+                                  : "⚠️ Promote this variant to a standalone product?")) return;
+                                
+                                try {
+                                  const res = await adminApi.post(`/variants/${variant.id}/promote`, {}, { 
+                                    params: { lang } 
+                                  });
+                                  
+                                  toast.success(
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xl">📦</span>
+                                      <div>
+                                        <p className="font-bold text-sm">{res.data.message}</p>
+                                        <p className="text-xs text-gray-400">SKU: {res.data.product.sku}</p>
+                                      </div>
+                                    </div>,
+                                    { duration: 5000 }
+                                  );
+                                  
+                                  closeModal();
+                                  fetchData();
+                                  
+                                } catch (err) {
+                                  console.error("Promote variant error:", err);
+                                  toast.error(err.response?.data?.message || (lang === "ar" ? "فشل تحويل المتغير" : "Failed to promote variant"));
+                                }
+                              }}
+                              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1.5 z-10 ${
+                                isDark 
+                                  ? "bg-indigo-900/40 text-indigo-300 hover:bg-indigo-800/50 border border-indigo-700" 
+                                  : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
+                              }`}
+                              title={lang === "ar" ? "تحويل هذا المتغير إلى منتج مستقل" : "Promote this variant to standalone product"}
+                            >
+                              <span>📦</span> {lang === "ar" ? "اجعله منتج" : "Make Product"}
+                            </button>
 
-                              {/* ✅ زر الإزالة - للمؤقت فقط (يزيل من القائمة قبل الحفظ) */}
-                              {!isSavedVariant && (
-                                <button 
-                                  type="button" 
-                                  onClick={() => removeVariant(variant.id)} 
-                                  className={`text-xs font-bold transition ${isDark ? 'text-red-400 hover:text-red-300' : 'text-red-400 hover:text-red-600'}`}
-                                  title={lang === "ar" ? "إزالة هذا المتغير من القائمة" : "Remove this variant from list"}
-                                >
-                                  {t("remove")}
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {/* باقي الحقول (SKU, Price, Image) */}
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <input 
-                              type="text" 
-                              value={variant.sku || ""} 
-                              onChange={(e) => updateVariant(variant.id, "sku", e.target.value)} 
-                              placeholder="SKU (اختياري)" 
-                              className={`border rounded-lg px-3 py-2 text-xs transition-colors ${
+                            {/* ✅ زر الحذف المباشر الجديد */}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteVariant(variant.id)}
+                              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1.5 z-10 ${
                                 isDark 
-                                  ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400' 
-                                  : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
-                              }`} 
-                            />
-                            <input 
-                              type="number" step="0.5" 
-                              value={variant.price || ""} 
-                              onChange={(e) => updateVariant(variant.id, "price", e.target.value)} 
-                              placeholder={t("price")} 
-                              className={`border rounded-lg px-3 py-2 text-xs transition-colors ${
-                                isDark 
-                                  ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400' 
-                                  : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
-                              }`} 
-                            />
-                            <div className="col-span-3">
-                              <ImageUploader 
-                                currentImage={variant.image} 
-                                onImageSelect={(p) => updateVariant(variant.id, "image", p)} 
-                                resourceType="products"
-                                resourceData={{ 
-                                  brand_id: formData.brand_id,
-                                  sku: (() => {
-                                    if (variant.sku?.trim()) {
-                                      return variant.sku.trim().toUpperCase();
-                                    }
-                                    if (formData.sku?.trim()) {
-                                      return `${formData.sku.trim().toUpperCase()}-${String(index + 1).padStart(3, '0')}`;
-                                    }
-                                    return `VAR-${formData.id || Date.now()}-${String(index + 1).padStart(3, '0')}`;
-                                  })(),
-                                  name_en: formData.name_en,
-                                  name_ar: formData.name_ar,
-                                  isVariant: true
-                                }}
-                                label={null} 
-                              />
-                            </div>
+                                  ? "bg-red-900/40 text-red-300 hover:bg-red-800/50 border border-red-700" 
+                                  : "bg-red-50 text-red-700 hover:bg-red-100 border border-red-200"
+                              }`}
+                              title={lang === "ar" ? "حذف هذا المتغير نهائياً" : "Delete this variant permanently"}
+                            >
+                              <span>🗑️</span> {lang === "ar" ? "حذف" : "Delete"}
+                            </button>
+                            
                           </div>
+                        )}
+                        
+                        <div className="flex items-center justify-between">
+                          <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{t("variant")} #{index + 1}</span>
                           
-                          {/* قسم الخصائص */}
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className={`text-[10px] font-bold uppercase ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{t("attributes")}</span>
-                              <button type="button" onClick={() => addVariantAttribute(variant.id)} className={`text-[10px] font-bold hover:underline ${isDark ? 'text-pink-400' : 'text-pink-600'}`}>+ {t("add")}</button>
-                            </div>
-                            {variant.attributes.map((attr) => (
-                              <VariantAttributeField 
-                                key={attr.tempId} 
-                                attribute={attr} 
-                                onUpdate={updateVariantAttribute} 
-                                onRemove={removeVariantAttribute} 
-                                lang={lang}
-                                isDark={isDark}
+                          <div className="flex items-center gap-3">
+                            {/* ✅ NEW: Checkbox التوفر للمتغير */}
+                            <label 
+                              className="flex items-center gap-1.5 cursor-pointer" 
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={variant.isAvailable !== false}
+                                onChange={(e) => updateVariant(variant.id, "isAvailable", e.target.checked)}
+                                className="w-3.5 h-3.5 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
                               />
-                            ))}
+                              <span className={`text-[10px] font-bold ${variant.isAvailable !== false ? (isDark ? 'text-green-400' : 'text-green-600') : (isDark ? 'text-red-400' : 'text-red-600')}`}>
+                                {variant.isAvailable !== false ? (lang === "ar" ? "متاح" : "Available") : (lang === "ar" ? "غير متاح" : "Out of Stock")}
+                              </span>
+                            </label>
+
+                            <button type="button" onClick={() => removeVariant(variant.id)} className={`text-xs font-bold transition ${isDark ? 'text-red-400 hover:text-red-300' : 'text-red-400 hover:text-red-600'}`}>{t("remove")}</button>
                           </div>
                         </div>
-                      );
-                    })}
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <input 
+                            type="text" 
+                            value={variant.sku || ""} 
+                            onChange={(e) => updateVariant(variant.id, "sku", e.target.value)} 
+                            placeholder="SKU (اختياري)" 
+                            className={`border rounded-lg px-3 py-2 text-xs transition-colors ${
+                              isDark 
+                                ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400' 
+                                : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+                            }`} 
+                          />
+                          <input 
+                            type="number" step="0.5" 
+                            value={variant.price || ""} 
+                            onChange={(e) => updateVariant(variant.id, "price", e.target.value)} 
+                            placeholder={t("price")} 
+                            className={`border rounded-lg px-3 py-2 text-xs transition-colors ${
+                              isDark 
+                                ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400' 
+                                : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+                            }`} 
+                          />
+                          <div className="col-span-3">
+                            <ImageUploader 
+                              currentImage={variant.image} 
+                              onImageSelect={(p) => updateVariant(variant.id, "image", p)} 
+                              resourceType="products"
+                              resourceData={{ 
+                                brand_id: formData.brand_id,
+                                sku: (() => {
+                                  // 1️⃣ إذا كان المتغير له SKU، نستخدمه
+                                  if (variant.sku?.trim()) {
+                                    return variant.sku.trim().toUpperCase();
+                                  }
+                                  // 2️⃣ إذا كان للمنتج SKU، نولد منه + رقم تسلسلي
+                                  if (formData.sku?.trim()) {
+                                    return `${formData.sku.trim().toUpperCase()}-${String(index + 1).padStart(3, '0')}`;
+                                  }
+                                  // 3️⃣ Fallback: توليد قيمة فريدة
+                                  return `VAR-${formData.id || Date.now()}-${String(index + 1).padStart(3, '0')}`;
+                                })(),
+                                name_en: formData.name_en,
+                                name_ar: formData.name_ar,
+                                isVariant: true
+                              }}
+                              label={null} 
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className={`text-[10px] font-bold uppercase ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{t("attributes")}</span>
+                            <button type="button" onClick={() => addVariantAttribute(variant.id)} className={`text-[10px] font-bold hover:underline ${isDark ? 'text-pink-400' : 'text-pink-600'}`}>+ {t("add")}</button>
+                          </div>
+                          {variant.attributes.map((attr) => (
+                            <VariantAttributeField 
+                              key={attr.tempId} 
+                              attribute={attr} 
+                              onUpdate={updateVariantAttribute} 
+                              onRemove={removeVariantAttribute} 
+                              lang={lang}
+                              isDark={isDark}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
-            
+              
               {/* ✅ منتجات مقترحة */}
               {editingId && products.find(p => p.id === editingId) && (
                 <div className={`pt-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
