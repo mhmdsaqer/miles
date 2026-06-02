@@ -21,7 +21,8 @@ const productSchema = new mongoose.Schema(
   description_en: { type: String, required: true },
   image: { type: String, required: true },
   price: { type: Number, required: true, index: true },
-  has_variants: { type: Boolean, default: false }
+  has_variants: { type: Boolean, default: false },
+  isAvailable: { type: Boolean, default: true, index: true } 
 },
 { timestamps: true }
 );

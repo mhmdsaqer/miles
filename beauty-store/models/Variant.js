@@ -15,7 +15,8 @@ const variantSchema = new mongoose.Schema(
   
   price: { type: Number, required: true },
   image: { type: String, required: true },
-  attributes: { type: mongoose.Schema.Types.Mixed, default: {} }
+  attributes: { type: mongoose.Schema.Types.Mixed, default: {} },
+  isAvailable: { type: Boolean, default: true, index: true }
 },
 { timestamps: true }
 );

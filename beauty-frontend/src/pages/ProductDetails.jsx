@@ -1,4 +1,4 @@
-// src/pages/ProductDetails.jsx - النسخة المُصححة نهائيًا
+// src/pages/ProductDetails.jsx - النسخة المُصححة مع دعم isAvailable ✅
 import SEO from "../components/SEO";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
@@ -26,6 +26,11 @@ const ProductDetails = () => {
   const [imageError, setImageError] = useState(false);
   const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
 
+  // ✅ NEW: التحقق من توفر المنتج الرئيسي والمتغير المختار
+  const isProductAvailable = product?.isAvailable !== false;
+  const isVariantAvailable = selectedVariant ? selectedVariant.isAvailable !== false : true;
+  const canAddToCart = isProductAvailable && isVariantAvailable;
+
   const productSeoData = useMemo(() => {
     if (!product) return null;
     return {
@@ -33,11 +38,10 @@ const ProductDetails = () => {
       description: product[lang === "ar" ? "description_ar" : "description_en"] || product.description_ar,
       brand: product.brand_name,
       price: selectedVariant?.price ?? product.price,
-      inStock: true, rating: 4.8, reviewCount: 127
+      inStock: canAddToCart, // ✅ NEW: استخدام canAddToCart لتحديد التوفر في SEO
+      rating: 4.8, reviewCount: 127
     };
-  }, [product, selectedVariant, lang]);
-
-
+  }, [product, selectedVariant, lang, canAddToCart]);
 
   const getProductName = (p) => p?.[lang === "ar" ? "name_ar" : "name_en"] || p?.name_ar || "";
   const getProductDescription = (p) => p?.[lang === "ar" ? "description_ar" : "description_en"] || p?.description_ar || "";
@@ -78,12 +82,16 @@ const ProductDetails = () => {
         const res = await axios.get(`${API_URL}/products/${id}`);
         const current = res.data;
         setProduct(current);
+        
         if (current.options?.length > 0) {
-          setSelectedVariant(current.options[0]);
-          setMainImage(getImageUrl(current.options[0].image));
+          // ✅ NEW: اختيار أول متغير متاح افتراضياً (إذا كان الأول غير متاح)
+          const firstAvailableVariant = current.options.find(opt => opt.isAvailable !== false) || current.options[0];
+          setSelectedVariant(firstAvailableVariant);
+          setMainImage(getImageUrl(firstAvailableVariant.image));
         } else {
           setMainImage(getImageUrl(current.image));
         }
+        
         setImageLoaded(false); 
         setImageError(false);
 
@@ -129,38 +137,44 @@ const ProductDetails = () => {
 
   const currentPrice = selectedVariant?.price ?? product?.price;
 
-  // ✅ دالة الإضافة للسلة - مُصححة لعرض الخصائص بشكل صحيح
+  // ✅ دالة الإضافة للسلة - مُصححة مع حماية التوفر
   const handleAddToCart = useCallback(() => {
-    if (product) {
-      addToCart(product, selectedVariant, quantity);
-      const prodName = getProductName(product);
-      
-      // ✅ استخدام الدالة الذكية لعرض خصائص المتغير
-      const variantText = selectedVariant
-        ? getVariantText(selectedVariant.attributes)
-        : (lang === "ar" ? "إصدار أساسي" : "Standard Version");
-      
-      toast.success(
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-lg bg-pink-50 flex items-center justify-center text-lg mt-0.5">✨</div>
-          <div>
-            <p className="font-bold text-gray-900">{t("addToBag")}</p>
-            <p className="text-sm text-gray-600 mt-1">{prodName}</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {variantText} • {t("quantity")}: {quantity} • ₪{(currentPrice * quantity).toFixed(2)}
-            </p>
-          </div>
-        </div>,
-        {
-          action: { 
-            label: <span className="font-bold text-pink-600">{t("viewCart")}</span>, 
-            onClick: () => navigate("/cart") 
-          },
-          duration: 5000
-        }
-      );
+    if (!product) return;
+
+    // ✅ NEW: حماية إضافية: منع الإضافة إذا لم يكن متاحاً
+    if (!canAddToCart) {
+      toast.error(t("outOfStock"));
+      return;
     }
-  }, [product, selectedVariant, quantity, addToCart, lang, currentPrice, t, navigate, getVariantText]);
+
+    addToCart(product, selectedVariant, quantity);
+    const prodName = getProductName(product);
+    
+    // ✅ استخدام الدالة الذكية لعرض خصائص المتغير
+    const variantText = selectedVariant
+      ? getVariantText(selectedVariant.attributes)
+      : (lang === "ar" ? "إصدار أساسي" : "Standard Version");
+    
+    toast.success(
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-lg bg-pink-50 flex items-center justify-center text-lg mt-0.5">✨</div>
+        <div>
+          <p className="font-bold text-gray-900">{t("addToBag")}</p>
+          <p className="text-sm text-gray-600 mt-1">{prodName}</p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {variantText} • {t("quantity")}: {quantity} • ₪{(currentPrice * quantity).toFixed(2)}
+          </p>
+        </div>
+      </div>,
+      {
+        action: { 
+          label: <span className="font-bold text-pink-600">{t("viewCart")}</span>, 
+          onClick: () => navigate("/cart") 
+        },
+        duration: 5000
+      }
+    );
+  }, [product, selectedVariant, quantity, addToCart, lang, currentPrice, t, navigate, getVariantText, canAddToCart]);
 
   if (!product) return ( 
     <div className="h-screen flex items-center justify-center bg-white">
@@ -233,16 +247,20 @@ const ProductDetails = () => {
               {product.options.map((opt) => {
                 const thumbUrl = getImageUrl(opt.image);
                 const isActive = selectedVariant?.id === opt.id;
+                const isOptAvailable = opt.isAvailable !== false; // ✅ NEW
                 return (
                   <button 
                     key={opt.id} 
-                    onClick={() => setSelectedVariant(opt)} 
+                    onClick={() => isOptAvailable && setSelectedVariant(opt)} // ✅ NEW: منع النقر إذا لم يكن متاحاً
+                    disabled={!isOptAvailable} // ✅ NEW
                     className={`relative w-14 h-14 rounded-2xl overflow-hidden border-2 transition-all flex-shrink-0 ${
-                      isActive ? "border-black shadow-lg scale-105" : "border-transparent hover:border-gray-200"
+                      isActive && isOptAvailable ? "border-black shadow-lg scale-105" : 
+                      !isOptAvailable ? "border-gray-200 opacity-40 cursor-not-allowed" : 
+                      "border-transparent hover:border-gray-200"
                     }`}
                   >
                     <img src={thumbUrl} alt="" className="w-full h-full object-contain p-2" loading="lazy" onError={(e) => e.target.style.display = 'none'} />
-                    {isActive && (
+                    {isActive && isOptAvailable && (
                       <div className="absolute inset-0 border-2 border-black rounded-2xl pointer-events-none"></div>
                     )}
                   </button>
@@ -264,7 +282,12 @@ const ProductDetails = () => {
               <div className="flex items-baseline gap-4 flex-wrap">
                 <span className="text-4xl font-black text-gray-900 tracking-tight">₪{currentPrice}</span>
                 <span className="text-xs font-bold text-gray-300 uppercase tracking-widest">{t("taxIncluded")}</span>
-                <span className="text-xs font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full">✅ {t("availableForShipping")}</span>
+                {/* ✅ NEW: تغيير الشارة بناءً على التوفر */}
+                {canAddToCart ? (
+                  <span className="text-xs font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full">✅ {t("availableForShipping")}</span>
+                ) : (
+                  <span className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded-full">❌ {t("outOfStock")}</span>
+                )}
               </div>
             </header>
             
@@ -280,17 +303,31 @@ const ProductDetails = () => {
                 <div className="flex flex-wrap gap-2">
                   {product.options?.map((opt) => {
                     const label = getVariantText(opt.attributes);
+                    // ✅ NEW: التحقق من توفر المتغير
+                    const isOptAvailable = opt.isAvailable !== false;
+                    const isSelected = selectedVariant?.id === opt.id;
+                    
                     return (
                       <button
                         key={opt.id}
-                        onClick={() => setSelectedVariant(opt)}
-                        className={`px-5 py-3 rounded-xl border-2 transition-all duration-300 text-[10px] font-black text-right max-w-full truncate ${
-                          selectedVariant?.id === opt.id
+                        onClick={() => isOptAvailable && setSelectedVariant(opt)}
+                        disabled={!isOptAvailable}
+                        className={`px-5 py-3 rounded-xl border-2 transition-all duration-300 text-[10px] font-black text-right max-w-full truncate relative ${
+                          isSelected && isOptAvailable
                             ? "border-black bg-black text-white shadow-lg"
+                            : !isOptAvailable
+                            ? "border-gray-100 bg-gray-100 text-gray-400 cursor-not-allowed line-through opacity-60"
                             : "border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-300"
                         }`}
                       >
                         {label || (lang === "ar" ? "بدون خصائص" : "No attributes")}
+                        
+                        {/* ✅ NEW: شارة صغيرة فوق المتغير غير المتوفر */}
+                        {!isOptAvailable && (
+                          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full font-bold shadow-sm whitespace-nowrap">
+                            {t('outOfStock')}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -308,16 +345,29 @@ const ProductDetails = () => {
                   <button onClick={() => setQuantity((q) => q + 1)} className="w-8 h-8 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-900 font-black hover:bg-pink-50 hover:border-pink-100 hover:text-pink-600 transition-all">+</button>
                 </div>
               </div>
+              
+              {/* ✅ NEW: زر الإضافة للسلة مع التحقق من التوفر */}
               <button 
-                onClick={handleAddToCart} 
-                className="group w-full bg-gray-900 text-white py-5 rounded-[2rem] font-black text-base transition-all hover:bg-pink-600 shadow-[0_20px_50px_rgba(0,0,0,0.15)] hover:shadow-[0_20px_50px_rgba(236,72,153,0.25)] flex items-center justify-center gap-4 active:scale-[0.98]"
+                onClick={handleAddToCart}
+                disabled={!canAddToCart}
+                className={`group w-full py-5 rounded-[2rem] font-black text-base transition-all flex items-center justify-center gap-4 active:scale-[0.98] ${
+                  !canAddToCart
+                    ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
+                    : "bg-gray-900 text-white hover:bg-pink-600 shadow-[0_20px_50px_rgba(0,0,0,0.15)] hover:shadow-[0_20px_50px_rgba(236,72,153,0.25)]"
+                }`}
               >
-                <span>{t("addToBag")} • ₪{itemTotal.toFixed(2)}</span>
-                <div className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center group-hover:rotate-12 transition-transform">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0" />
-                  </svg>
-                </div>
+                {!canAddToCart ? (
+                  <span>{t("outOfStock")}</span>
+                ) : (
+                  <>
+                    <span>{t("addToBag")} • ₪{itemTotal.toFixed(2)}</span>
+                    <div className="w-9 h-9 bg-white/10 rounded-full flex items-center justify-center group-hover:rotate-12 transition-transform">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0" />
+                      </svg>
+                    </div>
+                  </>
+                )}
               </button>
             </div>
             

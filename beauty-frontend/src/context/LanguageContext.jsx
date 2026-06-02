@@ -8,6 +8,8 @@ const TRANSLATIONS = {
 
 readOnly  : { ar: " ", en: " " },
 // في كائن TRANSLATIONS
+outOfStock: { ar: "نفذت الكمية", en: "Out of Stock" },
+unavailable: { ar: "غير متوفر", en: "Unavailable" },
 // === Admin Orders ===
 whatsappOrders: { ar: "طلبات الواتساب", en: "WhatsApp Orders" },
 allStatus: { ar: "كل الحالات", en: "All Status" },

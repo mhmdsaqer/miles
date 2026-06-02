@@ -34,6 +34,17 @@ export const CartProvider = ({ children }) => {
       return;
     }
     
+    // ✅ ✅ ✅ NEW: حماية إضافية - منع إضافة منتج أو متغير غير متاح
+    // (هذه طبقة أمان برمجية لمنع الإضافة حتى لو تم تجاوز الـ disabled في الواجهة)
+    if (product.isAvailable === false) {
+      console.warn("🚫 Blocked: Product is out of stock (isAvailable: false)");
+      return;
+    }
+    if (variant && variant.isAvailable === false) {
+      console.warn("🚫 Blocked: Variant is out of stock (isAvailable: false)");
+      return;
+    }
+
     setCartItems((prev) => {
       const isExist = prev.find(
         (item) => item.id === product.id && item.selectedVariant?.id === variant?.id

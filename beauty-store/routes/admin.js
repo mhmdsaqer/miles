@@ -180,7 +180,8 @@ router.post("/products",
         image,
         price,
         sku: finalSku,
-        has_variants: has_variants || (variants?.length > 0) || false
+        has_variants: has_variants || (variants?.length > 0) || false,
+        isAvailable: req.body.isAvailable !== undefined ? req.body.isAvailable : true 
       });
       await newProduct.save();
 
@@ -555,7 +556,8 @@ router.post("/products/:productId/variants",
         sku: sku ? sku.toUpperCase().trim() : `SKU-${productId}-${Date.now()}`,
         price,
         image,
-        attributes: attributes || {}
+        attributes: attributes || {},
+        isAvailable: req.body.isAvailable !== undefined ? req.body.isAvailable : true
       });
       await newVariant.save();
       
@@ -609,7 +611,8 @@ router.put("/variants/:id",
         ...(sku && { sku: sku.toUpperCase().trim() }),
         price,
         image,
-        attributes
+        attributes,
+        ...(req.body.isAvailable !== undefined && { isAvailable: req.body.isAvailable })
       };
 
       const oldVariant = await Variant.findOne({ id: variantId });
@@ -709,7 +712,8 @@ router.post("/variants/:id/promote",
         description_en: parentProduct.description_en,
         image: variant.image,
         price: variant.price,
-        has_variants: false
+        has_variants: false,
+        isAvailable: variant.isAvailable !== undefined ? variant.isAvailable : true
       });
       await newProduct.save();
 

@@ -109,6 +109,7 @@ const productSchema = Joi.object({
   
   price: Joi.number().min(0).max(10000).precision(2).required(),
   has_variants: Joi.boolean().default(false),
+  isAvailable: Joi.boolean().default(true), 
   
   variants: Joi.array()
     .items(
@@ -138,6 +139,8 @@ const productSchema = Joi.object({
         .allow(""),
         
         attributes: Joi.object().pattern(Joi.string(), Joi.any()),
+        isAvailable: Joi.boolean().default(true)
+        
       })
     )
     .optional(),

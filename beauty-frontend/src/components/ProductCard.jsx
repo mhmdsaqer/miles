@@ -9,8 +9,14 @@ const ProductCard = ({ product }) => {
   const { lang, t } = useLang();
   const variantsCount = product.options?.length || 0;
   const productName = lang === "ar" ? product.name_ar : product.name_en;
+  
+  // ✅ NEW: التحقق من التوفر (افتراضياً true إذا لم يكن الحقل موجوداً للتوافق مع البيانات القديمة)
+  const isAvailable = product.isAvailable !== false;
 
   const handleAddToCart = (e) => {
+    // ✅ حماية إضافية: منع الإضافة إذا لم يكن متاحاً
+    if (!isAvailable) return;
+    
     e.preventDefault();
     e.stopPropagation();
     addToCart(product);
@@ -28,15 +34,16 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <div className="group relative bg-white rounded-[2rem] p-3 sm:p-4 transition-all duration-500 hover:shadow-xl hover:-translate-y-1 overflow-hidden border border-gray-100/50 hover:border-pink-100">
+    <div className={`group relative bg-white rounded-[2rem] p-3 sm:p-4 transition-all duration-500 hover:shadow-xl hover:-translate-y-1 overflow-hidden border border-gray-100/50 hover:border-pink-100 ${!isAvailable ? 'opacity-75 grayscale-[0.3]' : ''}`}>
       
       {/* Brand & Stock Badge */}
       <div className="absolute top-3 left-3 right-3 z-10 flex justify-between items-start">
         <span className="bg-white/90 backdrop-blur-sm text-[9px] font-bold text-gray-700 px-2.5 py-1 rounded-lg uppercase tracking-wide shadow-sm border border-gray-100">
           {product.brand_name}
         </span>
-        <div className="bg-green-500/10 backdrop-blur-sm p-1 rounded-full border border-green-500/20">
-          <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+        {/* ✅ NEW: تغيير لون النقطة بناءً على التوفر */}
+        <div className={`backdrop-blur-sm p-1 rounded-full border ${isAvailable ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+          <div className={`w-1.5 h-1.5 rounded-full ${isAvailable ? 'bg-green-500' : 'bg-red-500'}`}></div>
         </div>
       </div>
 
@@ -46,7 +53,7 @@ const ProductCard = ({ product }) => {
         className="block relative"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="aspect-[4/5] rounded-[1.5rem] bg-[#F8F8F8] mb-4 overflow-hidden flex items-center justify-center p-5 sm:p-6 transition-colors duration-300 group-hover:bg-[#F3F3F3]">
+        <div className="aspect-[4/5] rounded-[1.5rem] bg-[#F8F8F8] mb-4 overflow-hidden flex items-center justify-center p-5 sm:p-6 transition-colors duration-300 group-hover:bg-[#F3F3F3] relative">
           <img
             src={getImageUrl(product.image)}
             className="w-full h-full object-contain transform transition-transform duration-500 group-hover:scale-105"
@@ -54,6 +61,15 @@ const ProductCard = ({ product }) => {
             loading="lazy"
             onError={(e) => { e.target.style.display = 'none'; }}
           />
+          
+          {/* ✅ NEW: شارة "نفذت الكمية" تغطي الصورة فقط إذا لم يكن متاحاً */}
+          {!isAvailable && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/60 backdrop-blur-[2px]">
+              <span className="bg-red-600 text-white text-xs font-black px-4 py-2 rounded-full uppercase tracking-wider shadow-lg transform -rotate-6">
+                {t('outOfStock')}
+              </span>
+            </div>
+          )}
         </div>
       </Link>
 
@@ -92,15 +108,24 @@ const ProductCard = ({ product }) => {
         {/* 🔹 Add to Cart Button - Separated & Optimized */}
         <button
           onClick={handleAddToCart}
-          className="w-full bg-gray-900 text-white py-3 rounded-xl text-[11px] font-bold shadow-sm hover:bg-pink-600 transition-all duration-300 uppercase tracking-wider flex items-center justify-center gap-2 mt-2
-                     /* Mobile: Always visible */ opacity-100 translate-y-0 
-                     /* Desktop: Hidden until hover */ md:opacity-0 md:translate-y-2 group-hover:md:opacity-100 group-hover:md:translate-y-0"
+          disabled={!isAvailable}
+          className={`w-full py-3 rounded-xl text-[11px] font-bold shadow-sm transition-all duration-300 uppercase tracking-wider flex items-center justify-center gap-2 mt-2
+            ${!isAvailable 
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+              : 'bg-gray-900 text-white hover:bg-pink-600 opacity-100 translate-y-0 md:opacity-0 md:translate-y-2 group-hover:md:opacity-100 group-hover:md:translate-y-0'
+            }`}
           aria-label={`${t('addToCart')} ${productName}`}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
-          {t('addToCart')}
+          {!isAvailable ? (
+            t('outOfStock')
+          ) : (
+            <>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              {t('addToCart')}
+            </>
+          )}
         </button>
       </div>
     </div>
