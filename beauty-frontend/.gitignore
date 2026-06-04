@@ -8,6 +8,8 @@ package-lock.json
 # 🔐 Environment Variables
 .env
 .env.local
+.env.local.example
+.env.production
 .env*.local
 *.env
 

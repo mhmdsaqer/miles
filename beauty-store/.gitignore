@@ -8,6 +8,7 @@ package-lock.json
 # 🔐 Environment Variables (NEVER commit real .env)
 .env
 .env.local
+.env.local.example
 .env*.local
 *.env
 
