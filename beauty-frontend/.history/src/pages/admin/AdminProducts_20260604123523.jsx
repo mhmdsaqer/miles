@@ -322,24 +322,17 @@ const AdminProducts = () => {
     setPromoteData(null);
   }, []);
 
-  // ✅ ✅ ✅ NEW: تأكيد التحويل مع البيانات المعدلة + تنظيف الأسماء
+  // ✅ ✅ ✅ NEW: تأكيد التحويل مع البيانات المعدلة
   const handleConfirmPromote = useCallback(async () => {
     if (!promoteData) return;
     
     setPromoteLoading(true);
     
     try {
-      // ✅ ✅ ✅ دالة مساعدة لتنظيف الأسماء من [object Object]
-      const cleanName = (name) => {
-        if (!name) return "";
-        // إزالة أي [object Object] من الاسم مع المسافات المحيطة
-        return String(name).replace(/\s*\[object Object\]\s*/g, "").trim();
-      };
-      
-      // تحضير الـ body مع القيم المعدلة + تنظيف الأسماء
+      // تحضير الـ body مع القيم المعدلة
       const payload = {
-        name_ar: cleanName(promoteData.name_ar)?.trim() || "",
-        name_en: cleanName(promoteData.name_en)?.trim() || "",
+        name_ar: promoteData.name_ar?.trim() || "",
+        name_en: promoteData.name_en?.trim() || "",
         description_ar: promoteData.description_ar?.trim() || "",
         description_en: promoteData.description_en?.trim() || "",
         sku: promoteData.sku?.trim() ? cleanSKU(promoteData.sku) : undefined,
@@ -397,7 +390,7 @@ const AdminProducts = () => {
       setPromoteLoading(false);
     }
   }, [promoteData, lang, isDark, fetchData, closeModal, closePromotePreview, showModal, cleanSKU]);
- 
+
   // ✅ دوال المتغيرات
   const addVariant = useCallback(() => {
     const newVariant = {
