@@ -686,42 +686,58 @@ router.post("/variants/:id/promote",
       const lang = req.query.lang || 'ar';
       const variant = await Variant.findOne({ id: Number(req.params.id) });
       if (!variant) return res.status(404).json({ message: "Variant not found" });
-
+      
       const parentProduct = await Product.findOne({ id: variant.product_id });
       if (!parentProduct) return res.status(400).json({ message: "Parent product not found" });
 
-      // ✅ 1. إنشاء المنتج الجديد (نفس المنطق السابق)
+      // ✅ 1️⃣ استقبال البيانات المعدّلة من الفرونت إند (مع Fallback للقيم التلقائية)
+      const { 
+        name_ar, name_en, description_ar, description_en, 
+        sku, price, image, category_id, brand_id, isAvailable 
+      } = req.body || {};
+
+      // ✅ 2️⃣ تحديد القيم النهائية (المعدّلة > التلقائية)
+      const finalSku = sku?.trim() ? sku.toUpperCase().trim() : (variant.sku?.trim() ? variant.sku.toUpperCase().trim() : `PROMO-${Date.now()}`);
+      const finalPrice = price !== undefined ? Number(price) : variant.price;
+      const finalImage = image || variant.image;
+      const finalBrandId = brand_id ? Number(brand_id) : parentProduct.brand_id;
+      const finalCategoryId = category_id ? Number(category_id) : parentProduct.category_id;
+      const finalIsAvailable = isAvailable !== undefined ? isAvailable : (variant.isAvailable !== false);
+
+      // ✅ 3️⃣ التحقق من عدم تكرار الـ SKU
+      if (finalSku) {
+        const existingSku = await Product.findOne({ sku: finalSku });
+        if (existingSku) {
+          return res.status(400).json({ message: `⚠️ SKU "${finalSku}" مستخدم مسبقاً لمنتج آخر (ID: ${existingSku.id})` });
+        }
+      }
+
+      // ✅ 4️⃣ توليد ID جديد للمنتج
       const lastProduct = await Product.findOne().sort({ id: -1 });
       const newProductId = lastProduct ? lastProduct.id + 1 : 10000;
-      
-      const attrs = variant.attributes || {};
-      const attrStr = Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(" - ");
-      const suffix = attrStr ? ` (${attrStr})` : "";
 
-      let finalSku = variant.sku ? variant.sku.toUpperCase().trim() : `PROMO-${newProductId}`;
-      const existingSku = await Product.findOne({ sku: finalSku });
-      if (existingSku) finalSku = `P-${finalSku}`;
-
+      // ✅ 5️⃣ إنشاء المنتج الجديد
       const newProduct = new Product({
         id: newProductId,
-        brand_id: parentProduct.brand_id,
-        category_id: parentProduct.category_id,
+        brand_id: finalBrandId,
+        category_id: finalCategoryId,
         sku: finalSku,
-        name_ar: `${parentProduct.name_ar}${suffix}`,
-        name_en: `${parentProduct.name_en}${suffix}`,
-        description_ar: parentProduct.description_ar,
-        description_en: parentProduct.description_en,
-        image: variant.image,
-        price: variant.price,
+        name_ar: name_ar || parentProduct.name_ar,
+        name_en: name_en || parentProduct.name_en,
+        description_ar: description_ar !== undefined ? description_ar : parentProduct.description_ar,
+        description_en: description_en !== undefined ? description_en : parentProduct.description_en,
+        image: finalImage,
+        price: finalPrice,
         has_variants: false,
-        isAvailable: variant.isAvailable !== undefined ? variant.isAvailable : true
+        isAvailable: finalIsAvailable
       });
+
       await newProduct.save();
 
-      // ✅ 2. حذف المتغير الأصلي من الداتابيس
+      // ✅ 6️⃣ حذف المتغير الأصلي من الداتابيس
       await Variant.deleteOne({ id: variant.id });
 
-      // ✅ 3. تحديث has_variants للمنتج الأب إذا لم يتبقى متغيرات
+      // ✅ 7️⃣ تحديث حالة المنتج الأب إذا لم يتبقى متغيرات
       const remainingVariants = await Variant.countDocuments({ product_id: parentProduct.id });
       if (remainingVariants === 0) {
         await Product.findOneAndUpdate(
@@ -730,15 +746,22 @@ router.post("/variants/:id/promote",
         );
       }
 
+      // ✅ 8️⃣ تسجيل العملية في الـ Audit Log
       await audit.create(req.user, "product", newProduct.toObject(), req, {
         promotedFromVariant: variant.id,
         parentProductId: parentProduct.id
       });
 
       res.status(201).json({
-        message: lang === "ar" ? "✅ تم تحويل المتغير إلى منتج مستقل وحذفه من الأصل" : "✅ Variant promoted and removed from parent",
-        product: { id: newProduct.id, sku: newProduct.sku }
+        message: lang === "ar" ? "✅ تم تحويل المتغير إلى منتج مستقل بنجاح" : "✅ Variant promoted to standalone product successfully",
+        product: { 
+          id: newProduct.id, 
+          sku: newProduct.sku, 
+          name_ar: newProduct.name_ar, 
+          name_en: newProduct.name_en 
+        }
       });
+
     } catch (err) {
       console.error("❌ Promote variant error:", err);
       res.status(500).json({ message: "Failed to promote variant", error: err.message });

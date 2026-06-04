@@ -1,10 +1,10 @@
-// src/pages/admin/AdminProducts.jsx - النسخة مع دعم isAvailable والوضع الليلي 🌙
+// src/pages/admin/AdminProducts.jsx - النسخة مع دعم isAvailable والوضع الليلي + ميزة معاينة التحويل 🌙
 import { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import { adminApi } from "../../utils/adminAuth";
 import { useLang } from "../../context/LanguageContext";
 import { useAuth } from "../../context/AuthContext";
-import { useTheme } from "../../context/ThemeContext"; // ✅ إضافة جديدة
+import { useTheme } from "../../context/ThemeContext";
 import { toast } from "sonner";
 import ImageUploader from "../../components/ImageUploader";
 
@@ -52,7 +52,7 @@ const VariantAttributeField = ({ attribute, onUpdate, onRemove, lang, isDark }) 
 const AdminProducts = () => {
   const { lang, t } = useLang();
   const { user, hasPermission } = useAuth();
-  const { isDark } = useTheme(); // ✅ إضافة جديدة
+  const { isDark } = useTheme();
   
   const [products, setProducts] = useState([]);
   const [brands, setBrands] = useState([]);
@@ -71,12 +71,17 @@ const AdminProducts = () => {
   const [editingId, setEditingId] = useState(null);
   const [showVariantsSection, setShowVariantsSection] = useState(false);
   
+  // ✅ ✅ ✅ NEW: حالة نافذة معاينة التحويل لمنتج
+  const [showPromoteModal, setShowPromoteModal] = useState(false);
+  const [promoteData, setPromoteData] = useState(null);
+  const [promoteLoading, setPromoteLoading] = useState(false);
+  
   // بيانات النموذج الرئيسي
   const [formData, setFormData] = useState({
     id: "", sku: "", brand_id: "", category_id: "",
     name_ar: "", name_en: "", description_ar: "", description_en: "",
     image: "", price: "", has_variants: false,
-    isAvailable: true // ✅ NEW: متاح افتراضياً
+    isAvailable: true
   });
 
   // بيانات المتغيرات (Variants)
@@ -88,7 +93,7 @@ const AdminProducts = () => {
   const canDelete = useMemo(() => hasPermission("products:delete"), [hasPermission]);
   const canRead = useMemo(() => hasPermission("products:read"), [hasPermission]);
   
-  // ✅ ✅ ✅ دالة تنظيف الـ SKU - نفس الدالة في الـ Backend
+  // ✅ ✅ ✅ دالة تنظيف الـ SKU
   const cleanSKU = (sku) => {
     if (!sku) return "";
     return sku
@@ -207,7 +212,7 @@ const AdminProducts = () => {
         sku: product.sku ? String(product.sku).toUpperCase() : "",
         description_ar: product.description_ar || "",
         description_en: product.description_en || "",
-        isAvailable: product.isAvailable !== false // ✅ NEW: افتراضياً true
+        isAvailable: product.isAvailable !== false
       });
       setShowVariantsSection(product.has_variants || false);
       
@@ -219,7 +224,7 @@ const AdminProducts = () => {
             ...v,
             attributes: attributesToArray(v.attributes),
             _originalSku: v.sku,
-            isAvailable: v.isAvailable !== false // ✅ NEW: افتراضياً true
+            isAvailable: v.isAvailable !== false
           }));
           setVariants(transformed);
         } catch (err) {
@@ -235,7 +240,7 @@ const AdminProducts = () => {
         id: "", brand_id: "", category_id: "",
         name_ar: "", name_en: "", description_ar: "", description_en: "",
         image: "", price: "", has_variants: false, sku: "",
-        isAvailable: true // ✅ NEW
+        isAvailable: true
       });
       setVariants([]);
       setShowVariantsSection(false);
@@ -247,12 +252,134 @@ const AdminProducts = () => {
     setShowModal(false);
   }, []);
 
+  // ✅ ✅ ✅ NEW: فتح نافذة معاينة التحويل لمنتج
+  const openPromotePreview = useCallback(async (variant) => {
+    try {
+      // جلب بيانات المنتج الأب
+      const parentRes = await adminApi.get(`/products/${variant.product_id}`);
+      const parentProduct = parentRes.data;
+      
+      // توليد اسم مقترح للمتغير كمنتج جديد
+      const attrs = variant.attributes || {};
+      const attrStr = Object.entries(attrs).map(([k, v]) => `${k}: ${v}`).join(" - ");
+      const suffix = attrStr ? ` (${attrStr})` : "";
+      
+      // ملء بيانات المعاينة بالقيم التلقائية
+      setPromoteData({
+        variantId: variant.id,
+        // البيانات من المتغير (أولوية)
+        sku: variant.sku ? String(variant.sku).toUpperCase() : "",
+        price: variant.price || parentProduct.price,
+        image: variant.image || parentProduct.image,
+        isAvailable: variant.isAvailable !== undefined ? variant.isAvailable : true,
+        // البيانات من المنتج الأب (Fallback)
+        name_ar: `${parentProduct.name_ar}${suffix}`,
+        name_en: `${parentProduct.name_en}${suffix}`,
+        description_ar: parentProduct.description_ar || "",
+        description_en: parentProduct.description_en || "",
+        brand_id: String(parentProduct.brand_id || ""),
+        category_id: String(parentProduct.category_id || ""),
+        // للعرض فقط
+        parentProductName: parentProduct[`name_${lang}`] || parentProduct.name_ar,
+        variantAttrs: attrStr
+      });
+      
+      setShowPromoteModal(true);
+    } catch (err) {
+      console.error("Failed to load variant data:", err);
+      toast.error(
+        <div className="flex items-center gap-3">
+          <span className="text-xl">❌</span>
+          <span className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            {lang === "ar" ? "فشل تحميل بيانات المتغير" : "Failed to load variant data"}
+          </span>
+        </div>,
+        { duration: 4000 }
+      );
+    }
+  }, [lang, isDark]);
+
+  // ✅ ✅ ✅ NEW: إغلاق نافذة المعاينة
+  const closePromotePreview = useCallback(() => {
+    setShowPromoteModal(false);
+    setPromoteData(null);
+  }, []);
+
+  // ✅ ✅ ✅ NEW: تأكيد التحويل مع البيانات المعدلة
+  const handleConfirmPromote = useCallback(async () => {
+    if (!promoteData) return;
+    
+    setPromoteLoading(true);
+    
+    try {
+      // تحضير الـ body مع القيم المعدلة
+      const payload = {
+        name_ar: promoteData.name_ar?.trim() || "",
+        name_en: promoteData.name_en?.trim() || "",
+        description_ar: promoteData.description_ar?.trim() || "",
+        description_en: promoteData.description_en?.trim() || "",
+        sku: promoteData.sku?.trim() ? cleanSKU(promoteData.sku) : undefined,
+        price: promoteData.price !== undefined ? Number(promoteData.price) : undefined,
+        image: promoteData.image || undefined,
+        brand_id: promoteData.brand_id ? Number(promoteData.brand_id) : undefined,
+        category_id: promoteData.category_id ? Number(promoteData.category_id) : undefined,
+        isAvailable: promoteData.isAvailable !== undefined ? promoteData.isAvailable : true
+      };
+      
+      // إرسال الطلب للـ Backend
+      const res = await adminApi.post(`/variants/${promoteData.variantId}/promote`, payload, {
+        params: { lang }
+      });
+      
+      toast.success(
+        <div className="flex items-center gap-2">
+          <span className="text-xl">🎉</span>
+          <div>
+            <p className={`font-bold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              {res.data.message}
+            </p>
+            <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              SKU: {res.data.product?.sku} • ID: {res.data.product?.id}
+            </p>
+          </div>
+        </div>,
+        { duration: 6000 }
+      );
+      
+      // إغلاق النافذة وتحديث البيانات
+      closePromotePreview();
+      fetchData();
+      
+      // إذا كنا في وضع التعديل، نغلقه أيضاً لضمان المزامنة
+      if (showModal) {
+        closeModal();
+      }
+      
+    } catch (err) {
+      console.error("Promote variant error:", err);
+      const errorMsg = err.response?.data?.message || err.message || (lang === "ar" ? "فشل تحويل المتغير" : "Failed to promote variant");
+      
+      toast.error(
+        <div className="flex items-center gap-3">
+          <span className="text-xl">❌</span>
+          <div>
+            <p className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{lang === "ar" ? "فشل في التحويل" : "Promote Failed"}</p>
+            <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} font-mono`}>{errorMsg}</p>
+          </div>
+        </div>,
+        { duration: 6000 }
+      );
+    } finally {
+      setPromoteLoading(false);
+    }
+  }, [promoteData, lang, isDark, fetchData, closeModal, closePromotePreview, showModal, cleanSKU]);
+
   // ✅ دوال المتغيرات
   const addVariant = useCallback(() => {
     const newVariant = {
       id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       sku: "", price: "", image: "", attributes: [],
-      isAvailable: true // ✅ NEW: متاح افتراضياً
+      isAvailable: true
     };
     setVariants(prev => [...prev, newVariant]);
     toast.success(
@@ -267,7 +394,7 @@ const AdminProducts = () => {
     );
   }, [lang, isDark]);
 
-  // ✅ دالة حذف المتغير نهائياً من الداتابيس (للمتغيرات المحفوظة فقط)
+  // ✅ دالة حذف المتغير نهائياً من الداتابيس
   const handleDeleteVariant = useCallback(async (variantId) => {
     if (!confirm(lang === "ar" 
       ? "⚠️ هل تريد حذف هذا المتغير نهائياً؟ لا يمكن التراجع!" 
@@ -286,7 +413,6 @@ const AdminProducts = () => {
         { duration: 3000 }
       );
       
-      // ✅ تحديث القائمة وإغلاق النافذة لضمان مزامنة البيانات
       closeModal();
       fetchData();
       
@@ -380,34 +506,28 @@ const AdminProducts = () => {
       
       if (cleanMainSku) {
           if (editingId) {
-          // عند التعديل: نتحقق فقط إذا تغير الـ SKU عن الأصلي
           const originalProduct = products.find(p => p.id === editingId);
           const originalSkuClean = originalProduct?.sku ? cleanSKU(originalProduct.sku) : null;
           
           if (originalSkuClean !== cleanMainSku) {
-            // الـ SKU تغير، نتحقق من التكرار
             if (skuSet.has(cleanMainSku)) {
               throw new Error(`⚠️ SKU "${cleanMainSku}" مكرر في نفس المنتج`);
             }
           }
-          // إذا لم يتغير، لا نضيفه للتحقق (موجود مسبقاً في الداتابيس)
         }
       
         skuSet.add(cleanMainSku);
       }
 
-      // ✅ في دالة handleSubmit - داخل variants.map
       const variantsPayload = variants.length > 0 
         ? variants.map((v, index) => {
             const isTemp = v.id?.startsWith?.('temp_');
             const isExisting = !isTemp && editingId;
             
-            // ✅ ✅ ✅ نفس المنطق بالضبط لتوليد الـ SKU
             let finalSku;
             if (v.sku?.trim()) {
               finalSku = cleanSKU(v.sku);
             } else if (isExisting && v._originalSku) {
-              // ✅ متغير موجود: نستخدم الـ SKU الأصلي المخزن (لم يتغير)
               finalSku = cleanSKU(v._originalSku);
             } else if (formData.sku?.trim()) {
               finalSku = cleanSKU(`${formData.sku.toUpperCase().trim()}-${String(index + 1).padStart(3, '0')}`);
@@ -415,12 +535,9 @@ const AdminProducts = () => {
               finalSku = cleanSKU(`VAR-${formData.id || Date.now()}-${String(index + 1).padStart(3, '0')}`);
             }
             
-            // ✅ التحقق من التكرار: فقط للقيم الجديدة أو المتغيرة
             if (isExisting && v._originalSku && cleanSKU(v._originalSku) === finalSku) {
-              // الـ SKU لم يتغير، لا نتحقق من التكرار (موجود مسبقاً في الداتابيس)
               skuSet.add(finalSku);
             } else {
-              // SKU جديدة أو متغيرة: نتحقق من التكرار
               if (skuSet.has(finalSku)) {
                 throw new Error(`⚠️ SKU "${finalSku}" مكرر في نفس المنتج`);
               }
@@ -432,7 +549,7 @@ const AdminProducts = () => {
               price: Number(v.price) || Number(formData.price),
               image: v.image || formData.image,
               attributes: attributesToObject(v.attributes),
-              isAvailable: v.isAvailable !== false // ✅ NEW: حفظ حالة التوفر للمتغير
+              isAvailable: v.isAvailable !== false
             };
           })
         : undefined;
@@ -450,7 +567,7 @@ const AdminProducts = () => {
         sku: cleanMainSku,
         has_variants: variants.length > 0,
         variants: variantsPayload,
-        isAvailable: formData.isAvailable !== false // ✅ NEW: حفظ حالة التوفر للمنتج
+        isAvailable: formData.isAvailable !== false
       };
 
       if (editingId) {
@@ -586,7 +703,7 @@ const AdminProducts = () => {
     ).slice(0, 4);
   }, [products]);
 
-  // ✅ حالة عدم وجود صلاحية القراءة - مع دعم الوضع الليلي
+  // ✅ حالة عدم وجود صلاحية القراءة
   if (!canRead) {
     return (
       <div className={`flex items-center justify-center min-h-[60vh] text-center ${isDark ? 'bg-gray-900' : 'bg-white'}`} dir={lang === "ar" ? "rtl" : "ltr"}>
@@ -732,7 +849,7 @@ const AdminProducts = () => {
               <table className="w-full text-sm">
                 <thead className={`border-b ${isDark ? 'bg-gray-750 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
                   <tr>
-                    {["ID", "name", "brand", "price", "status", "variants", "actions"].map(k => ( // ✅ NEW: status
+                    {["ID", "name", "brand", "price", "status", "variants", "actions"].map(k => (
                       <th key={k} className={`px-6 py-4 font-black uppercase tracking-widest text-[10px] ${lang === "ar" ? "text-right" : "text-left"} ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{t(k) || (k === 'status' ? (lang === "ar" ? "الحالة" : "Status") : k)}</th>
                     ))}
                   </tr>
@@ -786,7 +903,7 @@ const AdminProducts = () => {
           {filteredProducts.map(p => (
             <div key={p.id} className={`p-4 rounded-2xl border hover:shadow-md transition group ${
               isDark ? 'bg-gray-800 border-gray-700 hover:border-gray-600' : 'bg-white border-gray-100 hover:border-gray-200'
-            } ${p.isAvailable === false ? 'opacity-75 grayscale-[0.2]' : ''}`}> {/* ✅ NEW: تعتيم الكرت إذا لم يكن متاحاً */}
+            } ${p.isAvailable === false ? 'opacity-75 grayscale-[0.2]' : ''}`}>
               <div className={`aspect-square rounded-xl mb-3 overflow-hidden flex items-center justify-center ${isDark ? 'bg-gray-700' : 'bg-gray-50'}`}>
                 <img 
                   src={p.image ? `${API_URL}/${p.image.replace(/^assets\//i, "")}` : ""} 
@@ -864,7 +981,7 @@ const AdminProducts = () => {
                       checked={formData.isAvailable !== false}
                       onChange={(e) => setFormData(prev => ({ ...prev, isAvailable: e.target.checked }))}
                       className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
-                      onClick={(e) => e.stopPropagation()} // منع التريغر المزدوج
+                      onClick={(e) => e.stopPropagation()}
                     />
                     <label className={`text-sm font-bold cursor-pointer select-none ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
                       {formData.isAvailable !== false 
@@ -1033,46 +1150,18 @@ const AdminProducts = () => {
                               </span>
                               
                               <div className="flex items-center gap-2">
-                                {/* زر التحويل لمنتج */}
+                                {/* ✅ ✅ ✅ زر التحويل لمنتج - مُحدَّث لفتح المعاينة */}
                                 <button
                                   type="button"
-                                  onClick={async () => {
-                                    if (!confirm(lang === "ar" 
-                                      ? "⚠️ هل تريد تحويل هذا المتغير إلى منتج مستقل جديد؟" 
-                                      : "⚠️ Promote this variant to a standalone product?")) return;
-                                    
-                                    try {
-                                      const res = await adminApi.post(`/variants/${variant.id}/promote`, {}, { 
-                                        params: { lang } 
-                                      });
-                                      
-                                      toast.success(
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-xl">📦</span>
-                                          <div>
-                                            <p className="font-bold text-sm">{res.data.message}</p>
-                                            <p className="text-xs text-gray-400">SKU: {res.data.product.sku}</p>
-                                          </div>
-                                        </div>,
-                                        { duration: 5000 }
-                                      );
-                                      
-                                      closeModal();
-                                      fetchData();
-                                      
-                                    } catch (err) {
-                                      console.error("Promote variant error:", err);
-                                      toast.error(err.response?.data?.message || (lang === "ar" ? "فشل تحويل المتغير" : "Failed to promote variant"));
-                                    }
-                                  }}
+                                  onClick={() => openPromotePreview(variant)}
                                   className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1.5 ${
                                     isDark 
                                       ? "bg-indigo-900/40 text-indigo-300 hover:bg-indigo-800/50 border border-indigo-700" 
                                       : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
                                   }`}
-                                  title={lang === "ar" ? "تحويل هذا المتغير إلى منتج مستقل" : "Promote this variant to standalone product"}
+                                  title={lang === "ar" ? "معاينة وتحويل هذا المتغير إلى منتج مستقل" : "Preview and promote this variant to standalone product"}
                                 >
-                                  <span>📦</span> {lang === "ar" ? "اجعله منتج" : "Make Product"}
+                                  <span>👁️</span> {lang === "ar" ? "معاينة + تحويل" : "Preview + Promote"}
                                 </button>
 
                                 {/* ✅ زر الحذف النهائي - للمحفوظ فقط */}
@@ -1248,6 +1337,273 @@ const AdminProducts = () => {
                 }`}>{t("cancel")}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ ✅ ✅ NEW: نافذة معاينة التحويل لمنتج (Promote Preview Modal) */}
+      {showPromoteModal && promoteData && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+          <div className={`rounded-[2.5rem] w-full max-w-2xl max-h-[95vh] overflow-y-auto shadow-2xl border transition-colors duration-300 ${
+            isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
+          }`}>
+            {/* Modal Header */}
+            <div className={`p-6 border-b flex justify-between items-center sticky top-0 rounded-t-[2.5rem] z-10 transition-colors ${
+              isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
+                  isDark ? 'bg-indigo-900/30 text-indigo-400' : 'bg-indigo-50 text-indigo-600'
+                }`}>
+                  📦
+                </div>
+                <div>
+                  <h2 className={`text-xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {lang === "ar" ? "معاينة قبل التحويل" : "Preview Before Promoting"}
+                  </h2>
+                  <p className={`text-[10px] ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
+                    {lang === "ar" ? "راجع وعدّل البيانات قبل إنشاء المنتج الجديد" : "Review and edit data before creating the new product"}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={closePromotePreview}
+                disabled={promoteLoading}
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition ${
+                  isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'
+                } ${promoteLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                ✕
+              </button>
+            </div>
+            
+            {/* Modal Body - Form */}
+            <div className="p-6 space-y-5">
+              {/* معلومات المصدر */}
+              <div className={`p-4 rounded-xl ${isDark ? 'bg-gray-750' : 'bg-gray-50'}`}>
+                <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
+                  {lang === "ar" ? "المصدر" : "Source"}
+                </p>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {promoteData.parentProductName}
+                  </span>
+                  <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>→</span>
+                  <span className={`font-medium ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`}>
+                    {promoteData.variantAttrs || (lang === "ar" ? "بدون خصائص" : "No attributes")}
+                  </span>
+                </div>
+              </div>
+              
+              {/* الحقول القابلة للتعديل */}
+              <div className="space-y-4">
+                {/* الأسماء */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {lang === "ar" ? "الاسم بالعربي *" : "Arabic Name *"}
+                    </label>
+                    <input
+                      type="text"
+                      value={promoteData.name_ar || ""}
+                      onChange={(e) => setPromoteData(prev => prev ? { ...prev, name_ar: e.target.value } : null)}
+                      className={`w-full border rounded-xl px-4 py-2.5 text-sm transition-colors ${
+                        isDark 
+                          ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30' 
+                          : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
+                      }`}
+                      placeholder={lang === "ar" ? "اسم المنتج الجديد" : "New product name"}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {lang === "ar" ? "الاسم بالإنجليزي *" : "English Name *"}
+                    </label>
+                    <input
+                      type="text"
+                      value={promoteData.name_en || ""}
+                      onChange={(e) => setPromoteData(prev => prev ? { ...prev, name_en: e.target.value } : null)}
+                      className={`w-full border rounded-xl px-4 py-2.5 text-sm transition-colors ${
+                        isDark 
+                          ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30' 
+                          : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
+                      }`}
+                      placeholder="New product name"
+                    />
+                  </div>
+                </div>
+                
+                {/* SKU والسعر */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      SKU {lang === "ar" ? "(اختياري)" : "(Optional)"}
+                    </label>
+                    <input
+                      type="text"
+                      value={promoteData.sku || ""}
+                      onChange={(e) => setPromoteData(prev => prev ? { ...prev, sku: e.target.value.toUpperCase() } : null)}
+                      className={`w-full border rounded-xl px-4 py-2.5 text-sm uppercase transition-colors ${
+                        isDark 
+                          ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30' 
+                          : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
+                      }`}
+                      placeholder="PRODUCT-SKU"
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {t("price")} *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={promoteData.price || ""}
+                      onChange={(e) => setPromoteData(prev => prev ? { ...prev, price: e.target.value } : null)}
+                      className={`w-full border rounded-xl px-4 py-2.5 text-sm transition-colors ${
+                        isDark 
+                          ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30' 
+                          : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
+                      }`}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+                
+                {/* الوصف */}
+                <div>
+                  <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {lang === "ar" ? "الوصف بالعربي" : "Description (Arabic)"}
+                  </label>
+                  <textarea
+                    value={promoteData.description_ar || ""}
+                    onChange={(e) => setPromoteData(prev => prev ? { ...prev, description_ar: e.target.value } : null)}
+                    rows="2"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-sm resize-none transition-colors ${
+                      isDark 
+                        ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
+                        : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+                    }`}
+                    placeholder={lang === "ar" ? "وصف المنتج الجديد..." : "New product description..."}
+                  />
+                </div>
+                <div>
+                  <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {lang === "ar" ? "الوصف بالإنجليزي" : "Description (English)"}
+                  </label>
+                  <textarea
+                    value={promoteData.description_en || ""}
+                    onChange={(e) => setPromoteData(prev => prev ? { ...prev, description_en: e.target.value } : null)}
+                    rows="2"
+                    className={`w-full border rounded-xl px-4 py-2.5 text-sm resize-none transition-colors ${
+                      isDark 
+                        ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
+                        : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+                    }`}
+                    placeholder="New product description..."
+                  />
+                </div>
+                
+                {/* الصورة والبراند والتصنيف */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="col-span-2">
+                    <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {t("productImage")}
+                    </label>
+                    <ImageUploader
+                      currentImage={promoteData.image}
+                      onImageSelect={(path) => setPromoteData(prev => prev ? { ...prev, image: path } : null)}
+                      resourceType="products"
+                      resourceData={{ 
+                        brand_id: promoteData.brand_id,
+                        sku: promoteData.sku,
+                        name_en: promoteData.name_en,
+                        name_ar: promoteData.name_ar,
+                        isVariant: false
+                      }}
+                      label={null}
+                    />
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className={`block text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {lang === "ar" ? "التوفر" : "Availability"}
+                      </label>
+                      <div 
+                        className="flex items-center gap-3 p-3 rounded-xl border transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700" 
+                        onClick={() => setPromoteData(prev => prev ? { ...prev, isAvailable: !prev.isAvailable } : null)}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={promoteData.isAvailable !== false}
+                          onChange={(e) => setPromoteData(prev => prev ? { ...prev, isAvailable: e.target.checked } : null)}
+                          className="w-4 h-4 rounded border-gray-300 text-pink-600 focus:ring-pink-500"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <label className={`text-sm font-bold cursor-pointer select-none ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+                          {promoteData.isAvailable !== false 
+                            ? (lang === "ar" ? "✅ متاح للبيع" : "✅ Available") 
+                            : (lang === "ar" ? "❌ غير متاح" : "❌ Out of Stock")}
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* ملاحظة تحذيرية */}
+              <div className={`p-4 rounded-xl border ${
+                isDark ? 'bg-amber-900/20 border-amber-800 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-800'
+              }`}>
+                <div className="flex items-start gap-3">
+                  <span className="text-lg">⚠️</span>
+                  <p className="text-sm">
+                    {lang === "ar" 
+                      ? "بعد التأكيد، سيتم إنشاء منتج جديد بهذا المتغير، وسيتم حذف المتغير الأصلي من المنتج الأب." 
+                      : "After confirmation, a new product will be created with this variant, and the original variant will be removed from the parent product."}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Modal Footer - Action Buttons */}
+            <div className={`p-6 border-t flex gap-3 ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+              <button
+                type="button"
+                onClick={handleConfirmPromote}
+                disabled={promoteLoading || !promoteData?.name_ar?.trim() || !promoteData?.name_en?.trim() || !promoteData?.price}
+                className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+                  promoteLoading || !promoteData?.name_ar?.trim() || !promoteData?.name_en?.trim() || !promoteData?.price
+                    ? (isDark ? 'bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-gray-200 text-gray-400 cursor-not-allowed')
+                    : (isDark ? 'bg-indigo-600 text-white hover:bg-indigo-500' : 'bg-indigo-600 text-white hover:bg-indigo-700')
+                }`}
+              >
+                {promoteLoading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                    {lang === "ar" ? "جاري التحويل..." : "Promoting..."}
+                  </>
+                ) : (
+                  <>
+                    <span>🚀</span>
+                    {lang === "ar" ? "تأكيد التحويل" : "Confirm & Promote"}
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={closePromotePreview}
+                disabled={promoteLoading}
+                className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${
+                  isDark ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                } ${promoteLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {lang === "ar" ? "إلغاء" : "Cancel"}
+              </button>
+            </div>
           </div>
         </div>
       )}
