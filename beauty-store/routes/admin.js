@@ -232,7 +232,6 @@ router.post("/products",
 
 // ✅ تعديل منتج
 
-// ✅ تعديل منتج - مع تحديث رابط الصورة عند تغيير البراند (الحل العملي المضمون)
 router.put("/products/:id",
   authMiddleware,
   checkPermission(PERMISSIONS.PRODUCTS.UPDATE),
@@ -272,6 +271,63 @@ router.put("/products/:id",
       const oldProduct = await Product.findOne({ id: productId }).lean();
       if (!oldProduct) return res.status(404).json({ message: "Product not found" });
 
+      // ✅ ✅ ✅ 3. تحديد الصور القديمة التي يجب حذفها من Cloudinary
+      const imagesToDelete = [];
+      
+      // 3.1. صورة المنتج الرئيسية
+      if (req.uploadedPath && oldProduct.image && oldProduct.image !== req.uploadedPath && oldProduct.image.startsWith("https://res.cloudinary.com/")) {
+        imagesToDelete.push(oldProduct.image);
+      }
+
+      // 3.2. جلب المتغيرات القديمة للتحقق من الصور
+      const oldVariants = await Variant.find({ product_id: productId }).lean();
+      const oldVariantsMap = new Map(oldVariants.map(v => [v.id, v]));
+
+      // 3.3. التحقق من صور المتغيرات التي تم تحديثها أو حذفها
+      if (variants && Array.isArray(variants)) {
+        const newVariantIds = new Set(
+          variants
+            .map(v => v.id)
+            .filter(id => id && !String(id).startsWith('temp_'))
+            .map(id => Number(id))
+        );
+
+        // التحقق من المتغيرات التي تم تحديث صورتها
+        for (const v of variants) {
+          const variantId = v.id && !String(v.id).startsWith('temp_') ? Number(v.id) : null;
+          if (variantId && oldVariantsMap.has(variantId)) {
+            const oldVariant = oldVariantsMap.get(variantId);
+            const newVariantImage = v.image || productData.image;
+            
+            if (newVariantImage && oldVariant.image && oldVariant.image !== newVariantImage && oldVariant.image.startsWith("https://res.cloudinary.com/")) {
+              if (!imagesToDelete.includes(oldVariant.image)) {
+                imagesToDelete.push(oldVariant.image);
+              }
+            }
+          }
+        }
+
+        // 3.4. التحقق من المتغيرات المحذوفة
+        for (const oldVariant of oldVariants) {
+          if (!newVariantIds.has(oldVariant.id)) {
+            if (oldVariant.image && oldVariant.image.startsWith("https://res.cloudinary.com/")) {
+              if (!imagesToDelete.includes(oldVariant.image)) {
+                imagesToDelete.push(oldVariant.image);
+              }
+            }
+          }
+        }
+      } else if (variants && variants.length === 0) {
+        // إذا كانت قائمة المتغيرات فارغة، يتم حذف جميع المتغيرات
+        for (const oldVariant of oldVariants) {
+          if (oldVariant.image && oldVariant.image.startsWith("https://res.cloudinary.com/")) {
+            if (!imagesToDelete.includes(oldVariant.image)) {
+              imagesToDelete.push(oldVariant.image);
+            }
+          }
+        }
+      }
+
       // 🔍🔍🔍 DEBUG LOGGING START 🔍🔍🔍
       console.log("🔍 [DEBUG] Product Update - Initial State:", {
         productId,
@@ -279,124 +335,134 @@ router.put("/products/:id",
         newBrandId: productData.brand_id,
         oldImage: oldProduct.image,
         hasNewImage: !!req.uploadedPath,
-        brandIdType_old: typeof oldProduct.brand_id,
-        brandIdType_new: typeof productData.brand_id
+        imagesToDeleteCount: imagesToDelete.length
       });
 
-      // ✅ ✅ ✅ 3. 🚀 تحديث رابط الصورة إذا تغيّر البراند ولم يتم رفع صورة جديدة
+      // ✅ ✅ ✅ 4. 🚀 تحديث رابط الصورة إذا تغيّر البراند ولم يتم رفع صورة جديدة
       const isNewBrand = productData.brand_id !== undefined && 
                          String(productData.brand_id) !== String(oldProduct.brand_id);
       const isCloudinaryImage = oldProduct.image?.startsWith("https://res.cloudinary.com/");
       const noNewImageUploaded = req.isNewImageUploaded !== true;
 
-      console.log("🔍 [DEBUG] Brand Change Check:", {
-        isNewBrand,
-        isCloudinaryImage,
-        isNewImageUploaded: req.isNewImageUploaded,
-        noNewImageUploaded,
-        willAttemptTransfer: isNewBrand && isCloudinaryImage && noNewImageUploaded
-      });
+      // ✅ ✅ ✅ 4.5. 🚀 نقل صور المتغيرات أيضاً عند تغيير البراند
+      const variantImageUpdates = new Map(); // لتخزين تحديثات صور المتغيرات
+      
+      if (isNewBrand && noNewImageUploaded && oldVariants.length > 0) {
+        const newBrandSlug = await getBrandSlugById(productData.brand_id);
+        const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
+        
+        if (newBrandSlug) {
+          console.log(`📦 [DEBUG] Starting variant images transfer for brand change (${oldVariants.length} variants)...`);
+          
+          for (const oldVariant of oldVariants) {
+            if (oldVariant.image?.startsWith("https://res.cloudinary.com/")) {
+              try {
+                const oldVariantImageUrl = oldVariant.image;
+                const variantSku = oldVariant.sku || `VAR-${oldVariant.id}`;
+                
+                // بناء المسار الجديد
+                const oldPathPattern = /\/products\/[^/]+\/[^/]+(?:\.[^/.]+)?$/;
+                const newVariantPath = `/products/${newBrandSlug}/${variantSku}`;
+                const newVariantUrl = oldVariantImageUrl.replace(oldPathPattern, newVariantPath + '.png');
+                
+                // تخزين التحديث لاستخدامه لاحقاً
+                variantImageUpdates.set(oldVariant.id, newVariantUrl);
+                
+                // محاولة نقل الملف فعلياً في Cloudinary
+                const oldPublicId = extractPublicIdFromUrl(oldVariantImageUrl);
+                const newPublicId = `${baseUrl}/products/${newBrandSlug}/${variantSku}`;
+                
+                if (oldPublicId && oldPublicId !== newPublicId) {
+                  console.log(`☁️ [DEBUG] Attempting to rename variant image: ${variantSku}`);
+                  try {
+                    const renameResult = await cloudinary.uploader.rename(oldPublicId, newPublicId, {
+                      overwrite: true,
+                      invalidate: true
+                    });
+                    console.log(`✅ Variant image renamed successfully: ${variantSku}`);
+                    
+                    // إزالة من قائمة الحذف إذا كانت موجودة
+                    const deleteIndex = imagesToDelete.indexOf(oldVariantImageUrl);
+                    if (deleteIndex > -1) {
+                      imagesToDelete.splice(deleteIndex, 1);
+                    }
+                    
+                  } catch (renameErr) {
+                    console.warn(`⚠️ Failed to rename variant image ${variantSku} (non-critical):`, renameErr.message);
+                    // Fallback: الرابط الجديد سيُحفظ في الداتابيس حتى لو فشل النقل الفعلي
+                  }
+                }
+              } catch (err) {
+                console.error(`❌ Error processing variant image ${oldVariant.id}:`, err.message);
+              }
+            }
+          }
+        }
+      }
 
-      // ✅ ✅ ✅ الحل العملي: تحديث الرابط في الداتابيس فقط (بدون محاولة نقل الملف فعلياً)
       if (isNewBrand && isCloudinaryImage && noNewImageUploaded) {
         try {
-          console.log("📦 [DEBUG] Starting image URL update for brand change...");
+          console.log("📦 [DEBUG] Starting main product image URL update for brand change...");
           
           const oldImageUrl = oldProduct.image;
           const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
           const newBrandSlug = await getBrandSlugById(productData.brand_id);
           const currentSku = productData.sku || oldProduct.sku;
           
-          console.log("🎯 Target:", {
-            baseUrl,
-            newBrandSlug,
-            sku: currentSku,
-            expectedNewPath: `${baseUrl}/products/${newBrandSlug || 'unknown'}/${currentSku}`
-          });
-          
           if (!newBrandSlug) {
             console.warn("⚠️ Could not get brand slug, skipping URL update");
             throw new Error("Could not determine new brand slug");
           }
           
-          // ✅ ✅ ✅ الاستراتيجية العملية: تحديث الرابط في الداتابيس فقط
-          // (بدون محاولة نقل الملف فعلياً في Cloudinary - لتجنب أخطاء 404)
-          
-          // 1️⃣ استخراج الجزء القديم من المسار (المجلد + الاسم) واستبداله بالجديد
-          // نبحث عن نمط: /products/{old-brand-slug}/{sku} ونستبدله بـ /products/{new-brand-slug}/{sku}
           const oldPathPattern = /\/products\/[^/]+\/[^/]+(?:\.[^/.]+)?$/;
           const newPath = `/products/${newBrandSlug}/${currentSku}`;
-          
-          // 2️⃣ بناء الرابط الجديد عن طريق استبدال المسار القديم بالجديد
           const newUrl = oldImageUrl.replace(oldPathPattern, newPath + '.png');
           
-          console.log("🔗 URL Update:", {
-            oldUrl: oldImageUrl,
-            newUrl: newUrl,
-            changed: oldImageUrl !== newUrl
-          });
-          
-          // 3️⃣ تحديث الرابط في productData للحفظ في MongoDB
           productData.image = newUrl;
-          console.log("✅ Image URL updated in productData (database only)");
+          console.log("✅ Main product image URL updated in productData (database only)");
           
-          // 4️⃣ ✅ محاولة نقل الملف فعلياً في Cloudinary (كـ optional - لا توقف العملية إذا فشل)
+          // ✅ إزالة الصورة القديمة من قائمة الحذف لأنها تم نقلها
+          const index = imagesToDelete.indexOf(oldImageUrl);
+          if (index > -1) {
+            imagesToDelete.splice(index, 1);
+          }
+          
+          // محاولة نقل الملف فعلياً في Cloudinary (optional)
           try {
             const oldPublicId = extractPublicIdFromUrl(oldImageUrl);
             const newPublicId = `${baseUrl}/products/${newBrandSlug}/${currentSku}`;
             
             if (oldPublicId && oldPublicId !== newPublicId) {
-              console.log("☁️ [DEBUG] Attempting Cloudinary rename (optional)...");
+              console.log("☁️ [DEBUG] Attempting Cloudinary rename for main product (optional)...");
               const renameResult = await cloudinary.uploader.rename(oldPublicId, newPublicId, {
                 overwrite: true,
                 invalidate: true
               });
-              console.log("✅ Cloudinary rename (optional):", renameResult.result);
+              console.log("✅ Cloudinary rename for main product (optional):", renameResult.result);
             }
           } catch (renameErr) {
-            // ✅ لا نفشل العملية إذا فشل النقل في Cloudinary
-            console.warn("⚠️ Cloudinary rename failed (non-critical):", renameErr.message);
-            console.log("💡 Image will still work via old path; admin can manually fix if needed");
+            console.warn("⚠️ Cloudinary rename for main product failed (non-critical):", renameErr.message);
           }
           
         } catch (err) {
-          console.error("❌ [DEBUG] Image URL update failed:", {
+          console.error("❌ [DEBUG] Main product image URL update failed:", {
             message: err.message,
             code: err.code,
             stack: err.stack
           });
-          // ✅ Fallback آمن: يبقى الرابط القديم ولا يتعطل الطلب
         }
-      } else {
-        console.log("⏭️ [DEBUG] Skipping image transfer because:", {
-          isNewBrand,
-          isCloudinaryImage,
-          noNewImageUploaded,
-          reason: !isNewBrand ? "Brand not changed" : 
-                  !isCloudinaryImage ? "Image not from Cloudinary" :
-                  !noNewImageUploaded ? "New image uploaded" : "Unknown"
-        });
       }
-      // 🔍🔍🔍 DEBUG LOGGING END 🔍🔍🔍
 
-      // ✅ 4. حفظ المنتج في MongoDB
-      console.log("💾 [DEBUG] Saving to MongoDB with productData:", {
-        imageWillBe: productData.image,
-        brand_id: productData.brand_id,
-        sku: productData.sku
-      });
-      
+      // ✅ 5. حفظ المنتج في MongoDB
       const product = await Product.findOneAndUpdate(
         { id: productId },
         { $set: productData },
         { returnDocument: 'after', runValidators: true }
       ).lean();
 
-      console.log("✅ [DEBUG] MongoDB save result - returned product image:", product?.image);
-
       await audit.update(req.user, "product", oldProduct, product, req);
 
-      // ✅ 5. تحديث المتغيرات (Variants) - (نفس الكود الأصلي بدون تغيير)
+      // ✅ 6. تحديث المتغيرات (Variants)
       if (variants && Array.isArray(variants)) {
         const permanentIds = variants
           .map(v => v.id)
@@ -434,10 +500,17 @@ router.put("/products/:id",
             if (existingInDb) throw new Error(`⚠️ SKU "${variantSku}" مستخدم لمتغير آخر في هذا المنتج`);
           }
 
+          // ✅ ✅ ✅ استخدام الصورة المحدّثة من نقل البراند إذا كانت موجودة
+          let finalImage = v.image || product.image;
+          if (variantId && variantImageUpdates.has(variantId)) {
+            finalImage = variantImageUpdates.get(variantId);
+            console.log(`✅ Using updated image URL for variant ${variantId}: ${finalImage}`);
+          }
+
           const updatePayload = {
             sku: rawSku ? rawSku.toUpperCase() : `SKU-${productId}-${Date.now()}`,
             price: Number(v.price) || product.price,
-            image: v.image || product.image,
+            image: finalImage, // ✅ استخدام الصورة المحدّثة
             attributes: v.attributes || {},
             isAvailable: v.isAvailable !== false
           };
@@ -464,10 +537,29 @@ router.put("/products/:id",
         );
       }
 
+      // ✅ ✅ ✅ 7. حذف الصور القديمة من Cloudinary (في الخلفية بدون تعطيل الاستجابة)
+      if (imagesToDelete.length > 0) {
+        console.log(`🗑️ [Background] Deleting ${imagesToDelete.length} old image(s) from Cloudinary...`);
+        
+        imagesToDelete.forEach(imageUrl => {
+          deleteFromCloudinary(imageUrl).then((success) => {
+            if (success) {
+              console.log(`✅ Deleted old product/variant image from Cloudinary: ${imageUrl}`);
+            } else {
+              console.warn(`⚠️ Failed to delete old image: ${imageUrl}`);
+            }
+          }).catch(err => {
+            console.error("❌ Error deleting old image from Cloudinary:", err);
+          });
+        });
+      }
+
       res.json({
         message: "✅ تم تحديث المنتج ومتغيراته بنجاح",
         product,
-        variantsCount: variants?.length || 0
+        variantsCount: variants?.length || 0,
+        brandChanged: isNewBrand,
+        variantImagesUpdated: variantImageUpdates.size
       });
     } catch (err) {
       console.error("❌ Error updating product:", err);
@@ -535,12 +627,24 @@ router.post("/products/:productId/variants",
   checkPermission(PERMISSIONS.PRODUCTS.CREATE),
   async (req, res) => {
     try {
-      const { id, sku, price, image, attributes } = req.body;
+      const { id, sku, price, image, attributes, isAvailable } = req.body;
       const productId = Number(req.params.productId);
       
-      const exists = await Variant.findOne({ id });
-      if (exists) return res.status(400).json({ message: "⚠️ Variant بهذا المعرف موجود مسبقاً" });
+      // ✅ 1. التأكد من أن المنتج الأصلي موجود قبل إضافة متغير له
+      const parentProduct = await Product.findOne({ id: productId });
+      if (!parentProduct) {
+        return res.status(404).json({ message: "⚠️ المنتج الأصلي غير موجود" });
+      }
+
+      // ✅ 2. التحقق من الـ ID (إذا تم إرساله)
+      if (id) {
+        const exists = await Variant.findOne({ id: Number(id) });
+        if (exists) {
+          return res.status(400).json({ message: "⚠️ Variant بهذا المعرف موجود مسبقاً" });
+        }
+      }
       
+      // ✅ 3. التحقق من تكرار الـ SKU لنفس المنتج فقط
       if (sku) {
         const normalizedSku = sku.toUpperCase().trim();
         const skuExists = await Variant.findOne({ sku: normalizedSku, product_id: productId });
@@ -551,22 +655,26 @@ router.post("/products/:productId/variants",
         }
       }
 
+      // ✅ 4. إنشاء المتغير الجديد (مع ضمان أنواع البيانات الصحيحة)
       const newVariant = new Variant({
-        id: id || Date.now(),
+        id: id ? Number(id) : Date.now(), // ضمان أنه رقم
         product_id: productId,
         sku: sku ? sku.toUpperCase().trim() : `SKU-${productId}-${Date.now()}`,
-        price,
-        image,
+        price: Number(price) || parentProduct.price, // استخدام سعر المنتج الأب كـ fallback
+        image: image || parentProduct.image, // استخدام صورة المنتج الأب كـ fallback
         attributes: attributes || {},
-        isAvailable: req.body.isAvailable !== undefined ? req.body.isAvailable : true
+        isAvailable: isAvailable !== undefined ? Boolean(isAvailable) : true
       });
+      
       await newVariant.save();
       
+      // ✅ 5. تحديث المنتج الأب ليعكس أنه يحتوي على متغيرات
       await Product.findOneAndUpdate(
         { id: productId },
         { $set: { has_variants: true } }
       );
 
+      // ✅ 6. تسجيل العملية في الـ Audit Log
       await audit.create(req.user, "variant", newVariant.toObject(), req);
 
       res.status(201).json({ 
@@ -591,23 +699,28 @@ router.put("/variants/:id",
       const variantId = Number(req.params.id);
       const { sku, price, image, attributes } = req.body;
 
+      // ✅ 1️⃣ جلب المتغير القديم أولاً (للتحقق من وجوده ولحفظ صورته القديمة)
+      const oldVariant = await Variant.findOne({ id: variantId });
+      if (!oldVariant) {
+        return res.status(404).json({ message: "Variant not found" });
+      }
+
+      // ✅ 2️⃣ التحقق من تكرار الـ SKU (باستخدام oldVariant.product_id بدلاً من جلبه مرة أخرى)
       if (sku) {
         const normalizedSku = sku.toUpperCase().trim();
-        const variant = await Variant.findOne({ id: variantId });
-        if (variant) {
-          const existing = await Variant.findOne({
-            sku: normalizedSku,
-            product_id: variant.product_id,
-            id: { $ne: variantId }
+        const existing = await Variant.findOne({
+          sku: normalizedSku,
+          product_id: oldVariant.product_id,
+          id: { $ne: variantId }
+        });
+        if (existing) {
+          return res.status(400).json({ 
+            message: `⚠️ SKU "${normalizedSku}" مستخدم لمتغير آخر` 
           });
-          if (existing) {
-            return res.status(400).json({ 
-              message: `⚠️ SKU "${normalizedSku}" مستخدم لمتغير آخر` 
-            });
-          }
         }
       }
 
+      // ✅ 3️⃣ بناء payload التحديث
       const updatePayload = {
         ...(sku && { sku: sku.toUpperCase().trim() }),
         price,
@@ -616,21 +729,33 @@ router.put("/variants/:id",
         ...(req.body.isAvailable !== undefined && { isAvailable: req.body.isAvailable })
       };
 
-      const oldVariant = await Variant.findOne({ id: variantId });
+      // ✅ 4️⃣ تحديث المتغير في MongoDB
       const updatedVariant = await Variant.findOneAndUpdate(
         { id: variantId },
         { $set: updatePayload },
         { returnDocument: 'after', runValidators: true }
       );
 
-      if (!updatedVariant) {
-        return res.status(404).json({ message: "Variant not found" });
+      // ✅ ✅ ✅ 5️⃣ حذف الصورة القديمة من Cloudinary (في الخلفية بدون تعطيل الاستجابة)
+      // نتحقق: هل تم إرسال صورة جديدة؟ وهل هي مختلفة عن القديمة؟ وهل القديمة من Cloudinary؟
+      if (image && oldVariant.image && oldVariant.image !== image && oldVariant.image.startsWith("https://res.cloudinary.com/")) {
+        
+        deleteFromCloudinary(oldVariant.image).then((success) => {
+          if (success) {
+            console.log(`✅ Deleted old variant image from Cloudinary: ${oldVariant.image}`);
+          } else {
+            console.warn(`⚠️ Failed to delete old variant image: ${oldVariant.image}`);
+          }
+        }).catch(err => {
+          console.error("❌ Error deleting old variant image from Cloudinary:", err);
+        });
       }
 
+      // ✅ 6️⃣ تسجيل العملية في الـ Audit Log
       await audit.update(
         req.user, 
         "variant", 
-        oldVariant?.toObject() || {},
+        oldVariant.toObject(), // ✅ الآن نستخدمها بدون Optional Chaining لأننا تأكدنا من وجودها
         updatedVariant.toObject(),
         req
       );
@@ -657,6 +782,15 @@ router.delete("/variants/:id",
       const variant = await Variant.findOneAndDelete({ id: Number(req.params.id) });
       if (!variant) return res.status(404).json({ message: "Variant not found" });
       
+      // ✅ ✅ ✅ حذف صورة المتغير من Cloudinary
+      if (variant.image?.startsWith("https://res.cloudinary.com/")) {
+        const publicId = extractPublicIdFromUrl(variant.image);
+        if (publicId) {
+          await deleteFromCloudinary(publicId);
+          console.log(`🗑️ Deleted variant image from Cloudinary: ${publicId}`);
+        }
+      }
+
       const remaining = await Variant.countDocuments({ product_id: variant.product_id });
       if (remaining === 0) {
         await Product.findOneAndUpdate(
@@ -667,7 +801,10 @@ router.delete("/variants/:id",
       
       await audit.delete(req.user, "variant", variant.toObject(), req);
       
-      res.json({ message: "✅ تم حذف المتغير بنجاح" });
+      res.json({ 
+        message: "✅ تم حذف المتغير وصورته بنجاح",
+        deletedVariantId: variant.id
+      });
     } catch (err) {
       console.error("Error deleting variant:", err);
       res.status(500).json({ 
@@ -736,6 +873,22 @@ router.post("/variants/:id/promote",
 
       // ✅ 6️⃣ حذف المتغير الأصلي من الداتابيس
       await Variant.deleteOne({ id: variant.id });
+
+      // ✅ ✅ ✅ 6.5️⃣ حذف صورة المتغير القديمة من Cloudinary إذا تم تغييرها أثناء التحويل
+      // نتحقق: هل تم إرسال صورة جديدة؟ وهل هي مختلفة عن القديمة؟ وهل القديمة من Cloudinary؟
+      if (image && variant.image && image !== variant.image && variant.image.startsWith("https://res.cloudinary.com/")) {
+        
+        // حذف في الخلفية (non-blocking) حتى لا نبطئ استجابة الـ API
+        deleteFromCloudinary(variant.image).then((success) => {
+          if (success) {
+            console.log(`✅ Deleted old variant image from Cloudinary during promotion: ${variant.image}`);
+          } else {
+            console.warn(`⚠️ Failed to delete old variant image during promotion: ${variant.image}`);
+          }
+        }).catch(err => {
+          console.error("❌ Error deleting old variant image during promotion:", err);
+        });
+      }
 
       // ✅ 7️⃣ تحديث حالة المنتج الأب إذا لم يتبقى متغيرات
       const remainingVariants = await Variant.countDocuments({ product_id: parentProduct.id });
@@ -1040,28 +1193,44 @@ router.post("/brands",
 router.put("/brands/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.BRANDS.UPDATE),
-  
   uploadCompressed("image"),
-  
   validate(schemas.brand.fork(["id"], field => field.optional()), "body"),
-  
   async (req, res) => {
     try {
       const { image, ...updateData } = req.body;
       
+      // 1️⃣ جلب بيانات البراند القديمة أولاً لمعرفة رابط الصورة القديمة
+      const oldBrand = await Brand.findOne({ id: Number(req.params.id) });
+      if (!oldBrand) return res.status(404).json({ message: "Brand not found" });
+
+      // 2️⃣ إذا تم رفع صورة جديدة، نجهّز رابطها للحفظ
       if (req.uploadedPath) {
         updateData.image = req.uploadedPath;
       }
       
-      const oldBrand = await Brand.findOne({ id: Number(req.params.id) });
+      // 3️⃣ تحديث البيانات في MongoDB
       const brand = await Brand.findOneAndUpdate(
         { id: Number(req.params.id) },
         { $set: updateData },
         { returnDocument: 'after' }
       );
       
-      if (!brand) return res.status(404).json({ message: "Brand not found" });
+      // 4️⃣ ✅ حذف الصورة القديمة من Cloudinary (في الخلفية بدون تعطيل الاستجابة)
+      if (req.uploadedPath && oldBrand.image && oldBrand.image !== req.uploadedPath && oldBrand.image.startsWith("https://res.cloudinary.com/")) {
+        
+        // نحذفها بشكل غير متزامن (non-blocking) حتى لا نبطئ استجابة الـ API للمستخدم
+        deleteFromCloudinary(oldBrand.image).then((success) => {
+          if (success) {
+            console.log(`✅ Deleted old brand image from Cloudinary: ${oldBrand.image}`);
+          } else {
+            console.warn(`⚠️ Failed to delete old brand image: ${oldBrand.image}`);
+          }
+        }).catch(err => {
+          console.error("❌ Error deleting old image from Cloudinary:", err);
+        });
+      }
       
+      // 5️⃣ تسجيل العملية في الـ Audit Log
       await audit.update(
         req.user, 
         "brand", 
@@ -1076,11 +1245,10 @@ router.put("/brands/:id",
       });
     } catch (err) {
       console.error("Error updating brand:", err);
-      res.status(500).json({ message: "Error updating brand" });
+      res.status(500).json({ message: "Error updating brand", error: err.message });
     }
   }
 );
-
 router.delete("/brands/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.BRANDS.DELETE),
@@ -1221,26 +1389,43 @@ router.post("/categories",
 router.put("/categories/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.CATEGORIES.UPDATE),
-  
   uploadCompressed("image"),
-  
   async (req, res) => {
     try {
       const { image, ...updateData } = req.body;
       
+      // 1️⃣ جلب بيانات التصنيف القديمة أولاً لمعرفة رابط الصورة القديمة
+      const oldCat = await Category.findOne({ id: Number(req.params.id) });
+      if (!oldCat) return res.status(404).json({ message: "Category not found" });
+
+      // 2️⃣ إذا تم رفع صورة جديدة، نجهّز رابطها للحفظ
       if (req.uploadedPath) {
         updateData.image = req.uploadedPath;
       }
       
-      const oldCat = await Category.findOne({ id: Number(req.params.id) });
+      // 3️⃣ تحديث البيانات في MongoDB
       const cat = await Category.findOneAndUpdate(
         { id: Number(req.params.id) },
         { $set: updateData },
         { returnDocument: 'after' }
       );
       
-      if (!cat) return res.status(404).json({ message: "Category not found" });
+      // 4️⃣ ✅ حذف الصورة القديمة من Cloudinary (في الخلفية بدون تعطيل الاستجابة)
+      if (req.uploadedPath && oldCat.image && oldCat.image !== req.uploadedPath && oldCat.image.startsWith("https://res.cloudinary.com/")) {
+        
+        // نحذفها بشكل غير متزامن (non-blocking) حتى لا نبطئ استجابة الـ API
+        deleteFromCloudinary(oldCat.image).then((success) => {
+          if (success) {
+            console.log(`✅ Deleted old category image from Cloudinary: ${oldCat.image}`);
+          } else {
+            console.warn(`⚠️ Failed to delete old category image: ${oldCat.image}`);
+          }
+        }).catch(err => {
+          console.error("❌ Error deleting old category image from Cloudinary:", err);
+        });
+      }
       
+      // 5️⃣ تسجيل العملية في الـ Audit Log
       await audit.update(
         req.user, 
         "category", 
@@ -1255,11 +1440,10 @@ router.put("/categories/:id",
       });
     } catch (err) {
       console.error("Error updating category:", err);
-      res.status(500).json({ message: "Error updating category" });
+      res.status(500).json({ message: "Error updating category", error: err.message });
     }
   }
 );
-
 // دالة مساعدة للحصول على جميع الأبناء شجرياً
 async function getCategoryAndDescendantsIds(catId, categories = null) {
   let ids = [catId];
