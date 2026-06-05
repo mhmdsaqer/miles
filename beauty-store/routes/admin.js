@@ -274,10 +274,18 @@ router.put("/products/:id",
       // ✅ ✅ ✅ 3. تحديد الصور القديمة التي يجب حذفها من Cloudinary
       const imagesToDelete = [];
       
-      // 3.1. صورة المنتج الرئيسية
-      if (req.uploadedPath && oldProduct.image && oldProduct.image !== req.uploadedPath && oldProduct.image.startsWith("https://res.cloudinary.com/")) {
-        imagesToDelete.push(oldProduct.image);
-      }
+      // في الخطوة 3.1 عند إضافة صورة المنتج الرئيسية إلى imagesToDelete
+if (req.uploadedPath && oldProduct.image && oldProduct.image !== req.uploadedPath && oldProduct.image.startsWith("https://res.cloudinary.com/")) {
+  const oldPublicId = extractPublicIdFromUrl(oldProduct.image);
+  const newPublicId = extractPublicIdFromUrl(req.uploadedPath);
+  
+  // ✅ فقط إذا كان الـ public_id مختلفاً، نضيفها لقائمة الحذف
+  if (oldPublicId && newPublicId && oldPublicId !== newPublicId) {
+    imagesToDelete.push(oldProduct.image);
+  } else {
+    console.log(`⏭️ Skipping main product image deletion: Same public_id (${oldPublicId})`);
+  }
+}
 
       // 3.2. جلب المتغيرات القديمة للتحقق من الصور
       const oldVariants = await Variant.find({ product_id: productId }).lean();
@@ -736,19 +744,24 @@ router.put("/variants/:id",
         { returnDocument: 'after', runValidators: true }
       );
 
-      // ✅ ✅ ✅ 5️⃣ حذف الصورة القديمة من Cloudinary (في الخلفية بدون تعطيل الاستجابة)
-      // نتحقق: هل تم إرسال صورة جديدة؟ وهل هي مختلفة عن القديمة؟ وهل القديمة من Cloudinary؟
+      // ✅ ✅ ✅ الإصلاح: التحقق من تطابق الـ public_id قبل الحذف
       if (image && oldVariant.image && oldVariant.image !== image && oldVariant.image.startsWith("https://res.cloudinary.com/")) {
+        const oldPublicId = extractPublicIdFromUrl(oldVariant.image);
+        const newPublicId = extractPublicIdFromUrl(image);
         
-        deleteFromCloudinary(oldVariant.image).then((success) => {
-          if (success) {
-            console.log(`✅ Deleted old variant image from Cloudinary: ${oldVariant.image}`);
-          } else {
-            console.warn(`⚠️ Failed to delete old variant image: ${oldVariant.image}`);
-          }
-        }).catch(err => {
-          console.error("❌ Error deleting old variant image from Cloudinary:", err);
-        });
+        if (oldPublicId && newPublicId && oldPublicId !== newPublicId) {
+          deleteFromCloudinary(oldVariant.image).then((success) => {
+            if (success) {
+              console.log(`✅ Deleted old variant image from Cloudinary: ${oldVariant.image}`);
+            } else {
+              console.warn(`⚠️ Failed to delete old variant image: ${oldVariant.image}`);
+            }
+          }).catch(err => {
+            console.error("❌ Error deleting old variant image from Cloudinary:", err);
+          });
+        } else {
+          console.log(`⏭️ Skipping deletion: Same public_id (${oldPublicId}) - image was overwritten`);
+        }
       }
 
       // ✅ 6️⃣ تسجيل العملية في الـ Audit Log
@@ -874,21 +887,25 @@ router.post("/variants/:id/promote",
       // ✅ 6️⃣ حذف المتغير الأصلي من الداتابيس
       await Variant.deleteOne({ id: variant.id });
 
-      // ✅ ✅ ✅ 6.5️⃣ حذف صورة المتغير القديمة من Cloudinary إذا تم تغييرها أثناء التحويل
-      // نتحقق: هل تم إرسال صورة جديدة؟ وهل هي مختلفة عن القديمة؟ وهل القديمة من Cloudinary؟
-      if (image && variant.image && image !== variant.image && variant.image.startsWith("https://res.cloudinary.com/")) {
-        
-        // حذف في الخلفية (non-blocking) حتى لا نبطئ استجابة الـ API
-        deleteFromCloudinary(variant.image).then((success) => {
-          if (success) {
-            console.log(`✅ Deleted old variant image from Cloudinary during promotion: ${variant.image}`);
-          } else {
-            console.warn(`⚠️ Failed to delete old variant image during promotion: ${variant.image}`);
-          }
-        }).catch(err => {
-          console.error("❌ Error deleting old variant image during promotion:", err);
-        });
+// في الخطوة 6.5 من promote
+if (image && variant.image && image !== variant.image && variant.image.startsWith("https://res.cloudinary.com/")) {
+  const oldPublicId = extractPublicIdFromUrl(variant.image);
+  const newPublicId = extractPublicIdFromUrl(image);
+  
+  if (oldPublicId && newPublicId && oldPublicId !== newPublicId) {
+    deleteFromCloudinary(variant.image).then((success) => {
+      if (success) {
+        console.log(`✅ Deleted old variant image from Cloudinary during promotion: ${variant.image}`);
+      } else {
+        console.warn(`⚠️ Failed to delete old variant image during promotion: ${variant.image}`);
       }
+    }).catch(err => {
+      console.error("❌ Error deleting old variant image during promotion:", err);
+    });
+  } else {
+    console.log(`⏭️ Skipping deletion: Same public_id (${oldPublicId}) - image was overwritten`);
+  }
+}
 
       // ✅ 7️⃣ تحديث حالة المنتج الأب إذا لم يتبقى متغيرات
       const remainingVariants = await Variant.countDocuments({ product_id: parentProduct.id });
@@ -1214,20 +1231,27 @@ router.put("/brands/:id",
         { $set: updateData },
         { returnDocument: 'after' }
       );
-      
-      // 4️⃣ ✅ حذف الصورة القديمة من Cloudinary (في الخلفية بدون تعطيل الاستجابة)
-      if (req.uploadedPath && oldBrand.image && oldBrand.image !== req.uploadedPath && oldBrand.image.startsWith("https://res.cloudinary.com/")) {
         
-        // نحذفها بشكل غير متزامن (non-blocking) حتى لا نبطئ استجابة الـ API للمستخدم
-        deleteFromCloudinary(oldBrand.image).then((success) => {
-          if (success) {
-            console.log(`✅ Deleted old brand image from Cloudinary: ${oldBrand.image}`);
-          } else {
-            console.warn(`⚠️ Failed to delete old brand image: ${oldBrand.image}`);
-          }
-        }).catch(err => {
-          console.error("❌ Error deleting old image from Cloudinary:", err);
-        });
+      
+         // ✅ ✅ ✅ الإصلاح: التحقق من تطابق الـ public_id قبل الحذف
+      if (req.uploadedPath && oldBrand.image && oldBrand.image !== req.uploadedPath && oldBrand.image.startsWith("https://res.cloudinary.com/")) {
+        const oldPublicId = extractPublicIdFromUrl(oldBrand.image);
+        const newPublicId = extractPublicIdFromUrl(req.uploadedPath);
+        
+        // ✅ فقط إذا كان الـ public_id مختلفاً، نحذف الصورة القديمة
+        if (oldPublicId && newPublicId && oldPublicId !== newPublicId) {
+          deleteFromCloudinary(oldBrand.image).then((success) => {
+            if (success) {
+              console.log(`✅ Deleted old brand image from Cloudinary: ${oldBrand.image}`);
+            } else {
+              console.warn(`⚠️ Failed to delete old brand image: ${oldBrand.image}`);
+            }
+          }).catch(err => {
+            console.error("❌ Error deleting old image from Cloudinary:", err);
+          });
+        } else {
+          console.log(`⏭️ Skipping deletion: Same public_id (${oldPublicId}) - image was overwritten`);
+        }
       }
       
       // 5️⃣ تسجيل العملية في الـ Audit Log
@@ -1410,19 +1434,25 @@ router.put("/categories/:id",
         { returnDocument: 'after' }
       );
       
-      // 4️⃣ ✅ حذف الصورة القديمة من Cloudinary (في الخلفية بدون تعطيل الاستجابة)
+      
+      // ✅ ✅ ✅ الإصلاح: التحقق من تطابق الـ public_id قبل الحذف
       if (req.uploadedPath && oldCat.image && oldCat.image !== req.uploadedPath && oldCat.image.startsWith("https://res.cloudinary.com/")) {
+        const oldPublicId = extractPublicIdFromUrl(oldCat.image);
+        const newPublicId = extractPublicIdFromUrl(req.uploadedPath);
         
-        // نحذفها بشكل غير متزامن (non-blocking) حتى لا نبطئ استجابة الـ API
-        deleteFromCloudinary(oldCat.image).then((success) => {
-          if (success) {
-            console.log(`✅ Deleted old category image from Cloudinary: ${oldCat.image}`);
-          } else {
-            console.warn(`⚠️ Failed to delete old category image: ${oldCat.image}`);
-          }
-        }).catch(err => {
-          console.error("❌ Error deleting old category image from Cloudinary:", err);
-        });
+        if (oldPublicId && newPublicId && oldPublicId !== newPublicId) {
+          deleteFromCloudinary(oldCat.image).then((success) => {
+            if (success) {
+              console.log(`✅ Deleted old category image from Cloudinary: ${oldCat.image}`);
+            } else {
+              console.warn(`⚠️ Failed to delete old category image: ${oldCat.image}`);
+            }
+          }).catch(err => {
+            console.error("❌ Error deleting old category image from Cloudinary:", err);
+          });
+        } else {
+          console.log(`⏭️ Skipping deletion: Same public_id (${oldPublicId}) - image was overwritten`);
+        }
       }
       
       // 5️⃣ تسجيل العملية في الـ Audit Log
