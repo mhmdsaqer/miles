@@ -11,6 +11,7 @@ const HERO_IMAGES = {
   ar: "https://res.cloudinary.com/dvd2u8csu/image/upload/v1780642535/hero-main-ar_wfhsaa.png",
   en: "https://res.cloudinary.com/dvd2u8csu/image/upload/v1780642540/hero-main-en_l68qfa.png"
 };
+const ABOUT_US = ""
 
 const Home = () => {
   const { lang, t } = useLang();

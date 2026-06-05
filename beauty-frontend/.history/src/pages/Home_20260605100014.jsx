@@ -178,7 +178,7 @@ const Home = () => {
             <div className="relative">
               <div className="aspect-[4/5] rounded-[3rem] overflow-hidden bg-gray-100">
                 <img 
-                  src="https://res.cloudinary.com/dvd2u8csu/image/upload/v1780642560/about-us_an41np.png" 
+                  src="/assets/about/about-us.jpg" 
                   alt="About MILES" 
                   className="w-full h-full object-cover"
                   onError={(e) => {

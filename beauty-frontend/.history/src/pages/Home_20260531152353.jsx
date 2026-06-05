@@ -7,10 +7,6 @@ import { useLang } from "../context/LanguageContext";
 import { getImageUrl } from "../utils/imageUtils";
 
 const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
-const HERO_IMAGES = {
-  ar: "https://res.cloudinary.com/dvd2u8csu/image/upload/v1780642535/hero-main-ar_wfhsaa.png",
-  en: "https://res.cloudinary.com/dvd2u8csu/image/upload/v1780642540/hero-main-en_l68qfa.png"
-};
 
 const Home = () => {
   const { lang, t } = useLang();
@@ -133,12 +129,9 @@ const Home = () => {
         <div className="absolute inset-0 z-0">
           <img 
             key={`hero-image-${lang}`} 
-            src={HERO_IMAGES[lang]}
+            src={`/assets/hero/hero-main-${lang}.jpg`} 
             alt="MILES Beauty" 
             className="w-full h-full object-cover"
-            loading="eager" // ✅ مهم جداً: يخبر المتصفح أن هذه الصورة أولوية قصوى
-            fetchPriority="high" // ✅ ميزة حديثة تسرع تحميل الصورة الرئيسية
-            decoding="async"
             onError={(e) => {
               console.warn("Failed to load hero image");
               e.target.style.display = 'none';
@@ -178,7 +171,7 @@ const Home = () => {
             <div className="relative">
               <div className="aspect-[4/5] rounded-[3rem] overflow-hidden bg-gray-100">
                 <img 
-                  src="https://res.cloudinary.com/dvd2u8csu/image/upload/v1780642560/about-us_an41np.png" 
+                  src="/assets/about/about-us.jpg" 
                   alt="About MILES" 
                   className="w-full h-full object-cover"
                   onError={(e) => {
