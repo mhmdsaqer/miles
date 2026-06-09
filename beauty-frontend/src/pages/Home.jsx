@@ -1,4 +1,4 @@
-// src/pages/Home.jsx - النسخة المُحصّنة ضد الـ Crashes والأداء العالي
+// src/pages/Home.jsx - النسخة المُحسّنة للأداء العالي (أرقام ثابتة)
 import SEO from "../components/SEO";
 import { Link } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
@@ -12,78 +12,48 @@ const HERO_IMAGES = {
   en: "https://res.cloudinary.com/dvd2u8csu/image/upload/v1780642540/hero-main-en_l68qfa.png"
 };
 
+// ✅ ✅ ✅ الخيار الثاني: أرقام تقريبية ثابتة (تسويقية)
+// لا حاجة لجلبها من الـ Backend - سرعة فائقة!
+const FIXED_STATS = {
+  brands: 10,
+  products: "200+",
+  categories: "90+",
+  variants: "800+"
+};
+
 const Home = () => {
   const { lang, t } = useLang();
   
+  // ✅ نحتاج فقط لجلب البراندات لعرضها في قسم "Top Brands"
   const [brands, setBrands] = useState([]);
-  const [productCount, setProductCount] = useState(0);
-  const [categoryCount, setCategoryCount] = useState(0);
-  const [variantCount, setVariantCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchBrands = async () => {
       setLoading(true);
-      
-      // ✅ استخدام Promise.allSettled لضمان عدم فشل الصفحة إذا فشل endpoint واحد
-      const results = await Promise.allSettled([
-        axios.get(`${API_URL}/brands`),
-        axios.get(`${API_URL}/products?limit=1`), // ✅ نحتاج فقط للعدد من pagination.total
-        axios.get(`${API_URL}/categories`),
-        axios.get(`${API_URL}/variants?limit=100`).catch(() => null) // Fallback للـ variants
-      ]);
-
-      const [brandsRes, productsRes, categoriesRes, variantsRes] = results;
-
-      // 1. Brands
-      if (brandsRes.status === "fulfilled" && Array.isArray(brandsRes.value.data)) {
-        setBrands(brandsRes.value.data);
-      }
-
-      // 2. Products Count (الاعتماد على Pagination من الـ Backend)
-      if (productsRes.status === "fulfilled") {
-        const pData = productsRes.value.data;
-        if (pData?.pagination?.total) {
-          setProductCount(pData.pagination.total); // ✅ الأسرع والأفضل
-        } else if (Array.isArray(pData?.products)) {
-          setProductCount(pData.products.length);
-        } else if (Array.isArray(pData)) {
-          setProductCount(pData.length);
+      try {
+        // ✅ جلب البراندات فقط (خفيف جداً - ~10 عناصر)
+        const brandsRes = await axios.get(`${API_URL}/brands`);
+        if (Array.isArray(brandsRes.data)) {
+          setBrands(brandsRes.data);
         }
+      } catch (err) {
+        console.warn("⚠️ Failed to fetch brands:", err.message);
+        // ✅ لا نوقف الصفحة - البراندات ستظهر فارغة فقط
+      } finally {
+        setLoading(false);
       }
-
-      // 3. Categories Count
-      if (categoriesRes.status === "fulfilled" && Array.isArray(categoriesRes.value.data)) {
-        setCategoryCount(categoriesRes.value.data.filter(c => !c.parent_id).length);
-      }
-
-      // 4. Variants Count
-      if (variantsRes?.status === "fulfilled" && variantsRes.value) {
-        const vData = variantsRes.value.data;
-        if (Array.isArray(vData)) {
-          setVariantCount(vData.length);
-        } else if (vData?.pagination?.total) {
-          setVariantCount(vData.pagination.total);
-        }
-      }
-
-      setLoading(false);
     };
 
-    fetchStats();
+    fetchBrands();
   }, []);
 
-  // ✅ حساب الإحصائيات بشكل آمن
-  const stats = useMemo(() => ({
-    brands: brands.length,
-    products: productCount,
-    categories: categoryCount,
-    variants: variantCount
-  }), [brands.length, productCount, categoryCount, variantCount]);
+  // ✅ استخدام الأرقام الثابتة مباشرة
+  const stats = FIXED_STATS;
 
   const topBrands = useMemo(() => brands.slice(0, 10), [brands]);
 
-  // ===== Loading State =====
+  // ===== Loading State (فقط لجلب البراندات) =====
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
@@ -202,9 +172,9 @@ const Home = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {[
               { number: `${stats.brands}`, label: t('globalBrands') },
-              { number: `${stats.products}+`, label: t('diverseProducts') },
-              { number: `${stats.categories}+`, label: t('productCategories') },
-              { number: `${stats.variants}+`, label: t('availableOptions') }
+              { number: `${stats.products}`, label: t('diverseProducts') },
+              { number: `${stats.categories}`, label: t('productCategories') },
+              { number: `${stats.variants}`, label: t('availableOptions') }
             ].map((stat, index) => (
               <div key={index} className="text-center space-y-3 p-8 rounded-[2rem] bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-500">
                 <p className="text-5xl md:text-6xl font-black text-white tracking-tighter font-latin tabular-nums">{stat.number}</p>
