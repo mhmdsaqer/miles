@@ -102,14 +102,24 @@ app.get("/", (req, res) => res.send("Miles Beauty API 🚀"));
 
 app.get("/brands", async (req, res) => {
   try {
-    const brands = await getCached("brands", () => Brand.find().sort({ id: 1 }));
-    res.json(brands);
+    const brands = await Brand.find().sort({ id: 1 });
+    
+    // ✅ إضافة productCount لكل براند باستخدام aggregation
+    const brandsWithCount = await Promise.all(
+      brands.map(async (brand) => {
+        const productCount = await Product.countDocuments({ brand_id: brand.id });
+        return {
+          ...brand.toObject(),
+          productCount
+        };
+      })
+    );
+    
+    res.json(brandsWithCount);
   } catch (err) {
-    console.error("Error fetching brands:", err);
-    res.status(500).json({ message: "Error fetching brands", error: err.message });
+    res.status(500).json({ message: "Error", error: err.message });
   }
 });
-
 app.get("/categories", async (req, res) => {
   try {
     const categories = await getCached("categories", () =>

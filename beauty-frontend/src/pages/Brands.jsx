@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+// src/pages/Brands.jsx - النسخة المُحسّنة للأداء العالي ⚡
+import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { useLang } from "../context/LanguageContext";
@@ -10,38 +11,49 @@ const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
 const Brands = () => {
   const { lang, t } = useLang();
   const [brands, setBrands] = useState([]);
-  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeIndex, setActiveIndex] = useState(null);
 
+  // ✅ ✅ ✅ جلب البراندات فقط (بدون products!)
   useEffect(() => {
-    const fetchAll = async () => {
+    const fetchBrands = async () => {
       try {
         setError(null);
-        const [brandsRes, productsRes] = await Promise.all([
-          axios.get(`${API_URL}/brands`),
-          axios.get(`${API_URL}/products?limit=1000`),
-        ]);
-        const productsData = Array.isArray(productsRes.data) ? productsRes.data : productsRes.data?.products || [];
-        setBrands(brandsRes.data);
-        setProducts(productsData);
+        const brandsRes = await axios.get(`${API_URL}/brands`);
+        
+        // ✅ تأمين المصفوفة
+        if (Array.isArray(brandsRes.data)) {
+          setBrands(brandsRes.data);
+        } else {
+          console.warn("⚠️ Unexpected brands response:", brandsRes.data);
+          setBrands([]);
+        }
       } catch (err) {
+        console.error("❌ Fetch brands error:", err);
         setError(err.message || "فشل تحميل البيانات");
       } finally {
         setLoading(false);
       }
     };
-    fetchAll();
+    fetchBrands();
   }, []);
 
+  // ✅ ✅ ✅ استخدام productCount من الـ Backend مباشرة
   const enrichedBrands = useMemo(() => {
     return brands.map((brand) => ({
       ...brand,
-      productCount: products.filter((p) => p.brand_id === brand.id).length,
+      // ✅ إذا كان productCount موجوداً من الـ Backend، نستخدمه
+      // وإلا نستخدم 0 كـ fallback
+      productCount: brand.productCount ?? 0,
       displayName: brand[`name_${lang}`] || brand.name
     }));
-  }, [brands, products, lang]);
+  }, [brands, lang]);
+
+  // ✅ حساب العدد الإجمالي للمنتجات من جميع البراندات
+  const totalProducts = useMemo(() => {
+    return enrichedBrands.reduce((sum, brand) => sum + (brand.productCount || 0), 0);
+  }, [enrichedBrands]);
 
   const brandsSeoData = useMemo(() => ({
     title: lang === "ar" ? "الماركات العالمية" : "Global Brands",
@@ -114,8 +126,9 @@ const Brands = () => {
             {t('globalBrands')}
           </h1>
           
+          {/* ✅ استخدام totalProducts المحسوب من enrichedBrands */}
           <p className="text-gray-400 text-sm sm:text-base font-medium max-w-2xl mx-auto">
-            {enrichedBrands.length} {t('brands')} · {products.length} {t('products')}
+            {enrichedBrands.length} {t('brands')} · {totalProducts} {t('products')}
           </p>
           
           <Link to="/shop" className={`inline-flex items-center gap-3 text-[11px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all mx-auto ${lang === "ar" ? "flex-row-reverse" : ""}`}>
@@ -294,4 +307,5 @@ const Brands = () => {
     </div>
   );
 };
+
 export default Brands;
