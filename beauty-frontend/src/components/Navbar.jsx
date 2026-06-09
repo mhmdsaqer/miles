@@ -1,9 +1,9 @@
-// src/components/Navbar.jsx - مع شعار الشركة الفاخر والأنيميشن ✨
+// src/components/Navbar.jsx - النسخة المُحسّنة للألوان والاحترافية ✨
 import { Link, useLocation } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useLang } from "../context/LanguageContext";
 import { useState, useEffect, useMemo, useCallback } from "react";
-const colorrrr = "rgba(123, 17, 39)";
+
 const LOGO_URL = "https://res.cloudinary.com/dvd2u8csu/image/upload/v1780130628/logo_pykvwk.png";
 
 const Navbar = () => {
@@ -61,8 +61,8 @@ const Navbar = () => {
       >
         <div className={`max-w-[1400px] mx-auto transition-all duration-500 rounded-[2rem] pointer-events-auto ${
           isScrolled 
-            ? "bg-white/80 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-white/20 py-3" 
-            : "bg-transparent py-5"
+            ? "bg-white/95 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.08)] border border-gray-100/50 py-3" 
+            : "bg-white/60 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.05)] border border-white/30 py-5"
         }`}>
           <div className="px-6 md:px-10 flex justify-between items-center">
             
@@ -78,15 +78,15 @@ const Navbar = () => {
               >
                 <div className="absolute inset-0 bg-pink-50 rounded-full scale-0 group-hover:scale-100 transition-transform duration-500"></div>
                 <div className="relative z-10 w-6 h-5 flex flex-col justify-center gap-1.5">
-                  <span className={`w-full h-0.5 bg-gray-900 rounded-full transition-all duration-300 ${isMobileMenuOpen ? "rotate-45 translate-y-2" : ""}`}></span>
-                  <span className={`w-full h-0.5 bg-gray-900 rounded-full transition-all duration-300 ${isMobileMenuOpen ? "opacity-0 scale-0" : ""}`}></span>
-                  <span className={`w-full h-0.5 bg-gray-900 rounded-full transition-all duration-300 ${isMobileMenuOpen ? "-rotate-45 -translate-y-2" : ""}`}></span>
+                  <span className={`w-full h-0.5 bg-gray-800 rounded-full transition-all duration-300 ${isMobileMenuOpen ? "rotate-45 translate-y-2" : ""}`}></span>
+                  <span className={`w-full h-0.5 bg-gray-800 rounded-full transition-all duration-300 ${isMobileMenuOpen ? "opacity-0 scale-0" : ""}`}></span>
+                  <span className={`w-full h-0.5 bg-gray-800 rounded-full transition-all duration-300 ${isMobileMenuOpen ? "-rotate-45 -translate-y-2" : ""}`}></span>
                 </div>
               </button>
 
               {/* إجمالي السلة */}
-              <div className="flex items-center gap-2 bg-gray-50/80 backdrop-blur-sm px-4 py-2.5 rounded-2xl border border-gray-100">
-                <span className="text-pink-500 font-black text-lg">₪</span>
+              <div className="flex items-center gap-2 bg-gradient-to-br from-gray-50 to-gray-100/50 backdrop-blur-sm px-4 py-2.5 rounded-2xl border border-gray-200/60 shadow-sm">
+                <span className="text-pink-600 font-black text-lg">₪</span>
                 <span className="text-gray-900 font-black text-sm tabular-nums min-w-[45px] text-right">
                   {cartTotal.toFixed(2)}
                 </span>
@@ -95,11 +95,11 @@ const Navbar = () => {
               {/* أيقونة السلة */}
               <Link to="/cart" className="relative group p-2.5" aria-label={`${t('cart')} - ${cartCount} ${t('items')}`}>
                 <div className="absolute inset-0 bg-pink-50 rounded-full scale-0 group-hover:scale-100 transition-transform duration-500"></div>
-                <svg className="h-6 w-6 text-gray-900 relative z-10 transition-colors group-hover:text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-6 w-6 text-gray-800 relative z-10 transition-colors group-hover:text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
                 {cartCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 bg-black text-white text-[9px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-white animate-pulse">
+                  <span className="absolute -top-0.5 -right-0.5 bg-pink-600 text-white text-[9px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-white shadow-sm">
                     {cartCount > 9 ? "9+" : cartCount}
                   </span>
                 )}
@@ -108,14 +108,14 @@ const Navbar = () => {
               {/* زر تبديل اللغة - ديسكتوب */}
               <button
                 onClick={toggleLang}
-                className="hidden md:flex items-center gap-2 bg-gray-50/80 backdrop-blur-sm px-4 py-2.5 rounded-2xl border border-gray-100 hover:border-pink-200 transition-all group"
+                className="hidden md:flex items-center gap-2 bg-gradient-to-br from-gray-50 to-gray-100/50 backdrop-blur-sm px-4 py-2.5 rounded-2xl border border-gray-200/60 hover:border-pink-300 transition-all group shadow-sm"
                 aria-label={`Switch language to ${lang === "ar" ? "English" : "Arabic"}`}
               >
-                <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 group-hover:text-pink-600">
+                <span className="text-[10px] font-black uppercase tracking-wider text-gray-600 group-hover:text-pink-600 transition-colors">
                   {lang === "ar" ? "EN" : "ع"}
                 </span>
-                <span className="w-px h-4 bg-gray-200"></span>
-                <span className="text-[10px] font-bold text-gray-700">
+                <span className="w-px h-4 bg-gray-300"></span>
+                <span className="text-[10px] font-bold text-gray-700 group-hover:text-gray-900 transition-colors">
                   {lang === "ar" ? "English" : "العربية"}
                 </span>
               </button>
@@ -128,7 +128,9 @@ const Navbar = () => {
                   key={link.path}
                   to={link.path}
                   className={`relative text-[11px] font-bold uppercase tracking-[0.2em] transition-all duration-300 hover:text-pink-600 ${
-                    location.pathname === link.path ? "text-pink-600" : "text-gray-400"
+                    location.pathname === link.path 
+                      ? "text-pink-600" 
+                      : "text-gray-700 hover:text-pink-600"
                   }`}
                   aria-current={location.pathname === link.path ? "page" : undefined}
                 >
@@ -223,7 +225,7 @@ const Navbar = () => {
         aria-label="Mobile menu"
       >
         {/* Header - مع الشعار */}
-        <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
           <Link to="/" onClick={closeMobileMenu} className="flex items-center gap-3">
             <img
               src={LOGO_URL}
@@ -253,8 +255,8 @@ const Navbar = () => {
               onClick={closeMobileMenu}
               className={`block w-full text-right px-5 py-4 rounded-2xl text-lg font-bold transition-all duration-300 ${
                 location.pathname === link.path 
-                  ? "bg-gray-900 text-white" 
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  ? "bg-gradient-to-r from-pink-600 to-pink-500 text-white shadow-lg" 
+                  : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
               }`}
               style={{ transitionDelay: `${index * 50}ms` }}
             >
@@ -264,24 +266,24 @@ const Navbar = () => {
         </nav>
 
         {/* Language Toggle in Mobile */}
-        <div className="px-6 py-4 border-t border-gray-50">
+        <div className="px-6 py-4 border-t border-gray-100">
           <button
             onClick={() => { toggleLang(); closeMobileMenu(); }}
-            className="w-full flex items-center justify-between px-5 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+            className="w-full flex items-center justify-between px-5 py-3 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100/50 hover:from-pink-50 hover:to-pink-100/50 border border-gray-200/60 transition-all group"
           >
-            <span className="text-sm font-bold text-gray-700">
+            <span className="text-sm font-bold text-gray-700 group-hover:text-gray-900">
               {lang === "ar" ? "English" : "العربية"}
             </span>
-            <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">
+            <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 group-hover:text-pink-600">
               {lang === "ar" ? "EN" : "ع"}
             </span>
           </button>
         </div>
 
         {/* Cart Summary in Mobile */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-50 bg-gray-50/50">
+        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-100 bg-gradient-to-br from-gray-50 to-white">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm font-bold text-gray-500">{t('cartTotal')}</span>
+            <span className="text-sm font-bold text-gray-600">{t('cartTotal')}</span>
             <span className="text-2xl font-black text-gray-900 tabular-nums">
               ₪{cartTotal.toFixed(2)}
             </span>
@@ -289,7 +291,7 @@ const Navbar = () => {
           <Link
             to="/cart"
             onClick={closeMobileMenu}
-            className="w-full bg-gray-900 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-pink-600 transition-all flex items-center justify-center gap-3"
+            className="w-full bg-gradient-to-r from-gray-900 to-gray-800 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:from-pink-600 hover:to-pink-500 transition-all flex items-center justify-center gap-3 shadow-lg"
           >
             {t('viewCart')} ({cartCount})
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
