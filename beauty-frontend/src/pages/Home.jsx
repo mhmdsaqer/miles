@@ -1,7 +1,7 @@
-// src/pages/Home.jsx - النسخة النهائية المتوافقة مع MongoDB
+// src/pages/Home.jsx - النسخة المُحصّنة ضد الـ Crashes والأداء العالي
 import SEO from "../components/SEO";
 import { Link } from "react-router-dom";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import { useLang } from "../context/LanguageContext";
 import { getImageUrl } from "../utils/imageUtils";
@@ -16,68 +16,70 @@ const Home = () => {
   const { lang, t } = useLang();
   
   const [brands, setBrands] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [variants, setVariants] = useState([]);
+  const [productCount, setProductCount] = useState(0);
+  const [categoryCount, setCategoryCount] = useState(0);
+  const [variantCount, setVariantCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-
-
-  // ✅ جلب البيانات - مع معالجة أخطاء منفصلة
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setError(null);
-        
-        // نجلب البيانات بشكل منفصل لتجنب فشل الكل إذا فشل واحد
-        const brandsRes = await axios.get(`${API_URL}/brands`);
-        const productsRes = await axios.get(`${API_URL}/products?limit=100`);
-        const categoriesRes = await axios.get(`${API_URL}/categories`);
-        
-        // ⚠️ نجلب variants بشكل منفصل مع try/catch لأنه قد لا يكون موجوداً
-        let variantsData = [];
-        try {
-          const variantsRes = await axios.get(`${API_URL}/variants`);
-          variantsData = variantsRes.data;
-        } catch (err) {
-          console.warn("⚠️ /variants endpoint not found - skipping variants stats");
-          variantsData = [];
-        }
-        
-        // ✅ دعم هيكلية الاستجابة الجديدة للمنتجات (مع Pagination)
-        const productsData = Array.isArray(productsRes.data) 
-          ? productsRes.data 
-          : productsRes.data?.products || [];
-        
-        setBrands(brandsRes.data);
-        setProducts(productsData);
-        setCategories(categoriesRes.data);
-        setVariants(variantsData);
-        
-      } catch (err) {
-        console.error("❌ Fetch Error:", {
-          message: err.message,
-          status: err.response?.status,
-          url: err.config?.url
-        });
-        setError(err.response?.status === 404 
-          ? "Endpoint غير موجود - تأكد من تشغيل السيرفر" 
-          : "فشل الاتصال بالخادم");
-      } finally {
-        setLoading(false);
+    const fetchStats = async () => {
+      setLoading(true);
+      
+      // ✅ استخدام Promise.allSettled لضمان عدم فشل الصفحة إذا فشل endpoint واحد
+      const results = await Promise.allSettled([
+        axios.get(`${API_URL}/brands`),
+        axios.get(`${API_URL}/products?limit=1`), // ✅ نحتاج فقط للعدد من pagination.total
+        axios.get(`${API_URL}/categories`),
+        axios.get(`${API_URL}/variants?limit=100`).catch(() => null) // Fallback للـ variants
+      ]);
+
+      const [brandsRes, productsRes, categoriesRes, variantsRes] = results;
+
+      // 1. Brands
+      if (brandsRes.status === "fulfilled" && Array.isArray(brandsRes.value.data)) {
+        setBrands(brandsRes.value.data);
       }
+
+      // 2. Products Count (الاعتماد على Pagination من الـ Backend)
+      if (productsRes.status === "fulfilled") {
+        const pData = productsRes.value.data;
+        if (pData?.pagination?.total) {
+          setProductCount(pData.pagination.total); // ✅ الأسرع والأفضل
+        } else if (Array.isArray(pData?.products)) {
+          setProductCount(pData.products.length);
+        } else if (Array.isArray(pData)) {
+          setProductCount(pData.length);
+        }
+      }
+
+      // 3. Categories Count
+      if (categoriesRes.status === "fulfilled" && Array.isArray(categoriesRes.value.data)) {
+        setCategoryCount(categoriesRes.value.data.filter(c => !c.parent_id).length);
+      }
+
+      // 4. Variants Count
+      if (variantsRes?.status === "fulfilled" && variantsRes.value) {
+        const vData = variantsRes.value.data;
+        if (Array.isArray(vData)) {
+          setVariantCount(vData.length);
+        } else if (vData?.pagination?.total) {
+          setVariantCount(vData.pagination.total);
+        }
+      }
+
+      setLoading(false);
     };
-    fetchData();
+
+    fetchStats();
   }, []);
 
-  // ✅ حساب الإحصائيات (حتى لو variants فارغة)
+  // ✅ حساب الإحصائيات بشكل آمن
   const stats = useMemo(() => ({
     brands: brands.length,
-    products: products.length,
-    categories: categories.filter(c => c.parent_id === null).length,
-    variants: variants.length
-  }), [brands, products, categories, variants]);
+    products: productCount,
+    categories: categoryCount,
+    variants: variantCount
+  }), [brands.length, productCount, categoryCount, variantCount]);
 
   const topBrands = useMemo(() => brands.slice(0, 10), [brands]);
 
@@ -93,32 +95,8 @@ const Home = () => {
     );
   }
 
-  // ===== Error State =====
-  if (error) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
-        <div className="text-center space-y-6 max-w-md px-6">
-          <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto">
-            <svg className="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-black text-gray-900">{lang === "ar" ? "فشل تحميل البيانات" : "Failed to Load Data"}</h1>
-          <p className="text-gray-500 text-sm font-mono bg-gray-50 p-3 rounded-lg">{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="bg-gray-900 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-pink-600 transition-all"
-          >
-            {lang === "ar" ? "إعادة المحاولة" : "Retry"}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className={`min-h-screen bg-white ${lang === "ar" ? "font-arabic" : "font-latin"}`} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
-      {/* ✅ أضف مكون الـ SEO هنا */}
       <SEO
         title={lang === "ar" ? "الرئيسية" : "Home"}
         description={lang === "ar" 
@@ -128,6 +106,7 @@ const Home = () => {
         url="/"
         type="website"
       />
+      
       {/* ===== 1. HERO SECTION ===== */}
       <section className="relative h-screen flex items-center overflow-hidden">
         <div className="absolute inset-0 z-0">
@@ -136,11 +115,10 @@ const Home = () => {
             src={HERO_IMAGES[lang]}
             alt="MILES Beauty" 
             className="w-full h-full object-cover"
-            loading="eager" // ✅ مهم جداً: يخبر المتصفح أن هذه الصورة أولوية قصوى
-            fetchPriority="high" // ✅ ميزة حديثة تسرع تحميل الصورة الرئيسية
+            loading="eager" 
+            fetchPriority="high" 
             decoding="async"
             onError={(e) => {
-              console.warn("Failed to load hero image");
               e.target.style.display = 'none';
               e.target.parentElement.style.backgroundColor = '#1a1a1a';
             }}
@@ -182,7 +160,6 @@ const Home = () => {
                   alt="About MILES" 
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    console.warn("Failed to load about image");
                     e.target.style.display = 'none';
                     e.target.parentElement.style.backgroundColor = '#f3f4f6';
                   }}
@@ -248,15 +225,14 @@ const Home = () => {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
             {topBrands.map((brand, index) => (
-              <Link key={brand.id} to={`/brands/${brand.id}`} className="group relative bg-[#F8F8F8] rounded-[2.5rem] p-8 aspect-square flex flex-col items-center justify-center hover:bg-gray-50 transition-all duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.08)] hover:-translate-y-2" style={{ animationDelay: `${index * 50}ms` }}>
+              <Link key={brand.id || index} to={`/brands/${brand.id}`} className="group relative bg-[#F8F8F8] rounded-[2.5rem] p-8 aspect-square flex flex-col items-center justify-center hover:bg-gray-50 transition-all duration-500 hover:shadow-[0_30px_80px_rgba(0,0,0,0.08)] hover:-translate-y-2" style={{ animationDelay: `${index * 50}ms` }}>
                 <div className="w-24 h-24 mb-6 rounded-full bg-white shadow-lg flex items-center justify-center overflow-hidden group-hover:scale-110 transition-transform duration-500">
                   <img 
                     src={getImageUrl(brand.image)} 
-                    alt={brand.name}
+                    alt={brand.name || 'Brand'}
                     className="w-full h-full object-contain p-4"
                     loading="lazy"
                     onError={(e) => {
-                      console.warn(`Failed to load brand image: ${brand.name}`);
                       e.target.style.display = 'none';
                       e.target.parentElement.innerHTML = `<svg class="w-12 h-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>`;
                     }}
