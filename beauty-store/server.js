@@ -134,7 +134,7 @@ app.get("/categories", async (req, res) => {
 
 app.get("/products", async (req, res) => {
   try {
-    const { brand, category, min, max, search, page = 1, limit = 20 } = req.query;
+    const { brand, category, min, max, search, page = 1, limit = 20, sort = "default" } = req.query;
     let query = {};
 
 	if (search) {
@@ -189,11 +189,18 @@ app.get("/products", async (req, res) => {
     const totalPages = Math.ceil(totalProducts / limit);
     const skip = (Number(page) - 1) * limit;
 
-    const products = await Product.find(query)
-      .sort({ id: -1 })
-      .skip(skip)
-      .limit(Number(limit))
-      .select('-__v');
+	// ✅ تحديد الترتيب حسب المعيار المختار
+	let sortOption = { id: -1 }; // الافتراضي: الأحدث أولاً
+	if (sort === "price_asc") sortOption = { price: 1 };
+	else if (sort === "price_desc") sortOption = { price: -1 };
+	else if (sort === "name_asc") sortOption = { name_ar: 1 };
+	else if (sort === "name_desc") sortOption = { name_ar: -1 };
+
+	const products = await Product.find(query)
+	  .sort(sortOption)  // ✅ استخدام sortOption بدلاً من { id: -1 }
+	  .skip(skip)
+	  .limit(Number(limit))
+	  .select('-__v');
 
     const [allBrands, allCategories] = await Promise.all([
       getCached("brands", () => Brand.find()),
