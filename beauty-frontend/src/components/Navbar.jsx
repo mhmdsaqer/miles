@@ -52,7 +52,7 @@ const Navbar = () => {
   return (
     <>
       <nav 
-        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 px-4 md:px-8 py-4 pointer-events-none ${
+        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 px-3 md:px-6 py-2 pointer-events-none ${
           isScrolled ? "translate-y-2" : "translate-y-0"
         }`} 
         dir={lang === "ar" ? "rtl" : "ltr"}
@@ -61,10 +61,10 @@ const Navbar = () => {
       >
         <div className={`max-w-[1400px] mx-auto transition-all duration-500 rounded-[2rem] pointer-events-auto ${
           isScrolled 
-            ? "bg-white/95 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.08)] border border-gray-100/50 py-3" 
-            : "bg-white/60 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.05)] border border-white/30 py-5"
+            ? "bg-white/95 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.08)] border border-gray-100/50 py-2" 
+            : "bg-white/60 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.05)] border border-white/30 py-3"
         }`}>
-          <div className="px-6 md:px-10 flex justify-between items-center">
+          <div className="px-4 md:px-8 flex justify-between items-center">
             
             {/* ===== الجانب الأيمن: أيقونات التحكم ===== */}
             <div className="flex items-center gap-3">
