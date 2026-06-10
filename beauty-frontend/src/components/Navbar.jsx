@@ -1,4 +1,4 @@
-// src/components/Navbar.jsx - النسخة المُحسّنة للألوان والاحترافية ✨
+// src/components/Navbar.jsx - النسخة المُحسّنة مع تكبير الخط واللوجو ✨
 import { Link, useLocation } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useLang } from "../context/LanguageContext";
@@ -121,23 +121,44 @@ const Navbar = () => {
               </button>
             </div>
 
-            {/* ===== المنتصف: الروابط (ديسكتوب) ===== */}
-            <div className="hidden md:flex items-center gap-10">
+            {/* ===== المنتصف: الروابط (ديسكتوب) - مع تكبير الخط والإبداعية ===== */}
+            <div className="hidden md:flex items-center gap-8 lg:gap-12">
               {navLinks.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`relative text-[11px] font-bold uppercase tracking-[0.2em] transition-all duration-300 hover:text-pink-600 ${
+                  className={`group relative text-base lg:text-lg font-black uppercase tracking-wider transition-all duration-500 hover:scale-110 ${
                     location.pathname === link.path 
                       ? "text-pink-600" 
                       : "text-gray-700 hover:text-pink-600"
                   }`}
                   aria-current={location.pathname === link.path ? "page" : undefined}
                 >
-                  {link.name}
-                  {location.pathname === link.path && (
-                    <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 bg-pink-600 rounded-full"></span>
-                  )}
+                  {/* ✅ النص مع تأثير gradient عند الـ hover */}
+                  <span className={`relative z-10 transition-all duration-500 ${
+                    location.pathname === link.path 
+                      ? "bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent" 
+                      : "group-hover:bg-gradient-to-r group-hover:from-pink-600 group-hover:to-purple-600 group-hover:bg-clip-text group-hover:text-transparent"
+                  }`}>
+                    {link.name}
+                  </span>
+                  
+                  {/* ✅ خط سفلي متحرك إبداعي */}
+                  <span className={`absolute -bottom-2 left-0 h-[3px] bg-gradient-to-r from-pink-600 via-purple-500 to-pink-600 rounded-full transition-all duration-500 ${
+                    location.pathname === link.path 
+                      ? "w-full opacity-100" 
+                      : "w-0 opacity-0 group-hover:w-full group-hover:opacity-100"
+                  }`}></span>
+                  
+                  {/* ✅ نقطة مضيئة متحركة عند الـ hover */}
+                  <span className={`absolute -bottom-3 left-1/2 -translate-x-1/2 w-2 h-2 bg-pink-500 rounded-full shadow-lg shadow-pink-500/50 transition-all duration-500 ${
+                    location.pathname === link.path 
+                      ? "opacity-100 scale-100 animate-pulse" 
+                      : "opacity-0 scale-0 group-hover:opacity-100 group-hover:scale-100"
+                  }`}></span>
+                  
+                  {/* ✅ هالة خلفية ناعمة عند الـ hover */}
+                  <span className="absolute inset-0 -mx-4 -my-2 bg-gradient-to-r from-pink-500/0 via-pink-500/5 to-pink-500/0 rounded-2xl scale-0 group-hover:scale-100 transition-transform duration-500 -z-0"></span>
                 </Link>
               ))}
             </div>
@@ -158,12 +179,14 @@ const Navbar = () => {
                   {/* ✅ إطار ذهبي ناعم يظهر عند التحويم */}
                   <div className="absolute -inset-2 rounded-full border-2 border-transparent group-hover:border-pink-300/50 transition-all duration-700 opacity-0 group-hover:opacity-100 pointer-events-none"></div>
                   
-                  {/* ✅ الشعار - حجم أكبر وفخم */}
+                  {/* ✅✅✅ الشعار - حجم أكبر بكثير (التعديل الثاني) */}
                   <img
                     src={LOGO_URL}
                     alt="Company Logo"
                     className={`
-                      relative z-10 h-16 md:h-20 lg:h-24 xl:h-28 w-auto object-contain
+                      relative z-10 
+                      h-24 md:h-28 lg:h-32 xl:h-36 
+                      w-auto object-contain
                       drop-shadow-[0_10px_30px_rgba(0,0,0,0.15)]
                       transition-all duration-700 ease-out
                       ${logoLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
@@ -182,7 +205,7 @@ const Navbar = () => {
                   {!logoLoaded && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="relative">
-                        <div className="w-12 h-12 md:w-14 md:h-14 border-2 border-gray-200 border-t-pink-500 rounded-full animate-spin"></div>
+                        <div className="w-16 h-16 md:w-20 md:h-20 border-2 border-gray-200 border-t-pink-500 rounded-full animate-spin"></div>
                         <div className="absolute inset-0 border-2 border-pink-200 rounded-full animate-ping opacity-30"></div>
                       </div>
                     </div>
