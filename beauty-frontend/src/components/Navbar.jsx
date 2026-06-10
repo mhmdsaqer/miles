@@ -1,4 +1,4 @@
-// src/components/Navbar.jsx - النسخة المُحسّنة مع تكبير الخط واللوجو ✨
+// src/components/Navbar.jsx - النسخة المُحسّنة مع padding أنيق ✨
 import { Link, useLocation } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useLang } from "../context/LanguageContext";
@@ -52,7 +52,7 @@ const Navbar = () => {
   return (
     <>
       <nav 
-        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 px-3 md:px-6 py-2 pointer-events-none ${
+        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 px-3 md:px-5 py-2 pointer-events-none ${
           isScrolled ? "translate-y-2" : "translate-y-0"
         }`} 
         dir={lang === "ar" ? "rtl" : "ltr"}
@@ -62,9 +62,9 @@ const Navbar = () => {
         <div className={`max-w-[1400px] mx-auto transition-all duration-500 rounded-[2rem] pointer-events-auto ${
           isScrolled 
             ? "bg-white/95 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.08)] border border-gray-100/50 py-2" 
-            : "bg-white/60 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.05)] border border-white/30 py-3"
+            : "bg-white/60 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.05)] border border-white/30 py-2.5"
         }`}>
-          <div className="px-4 md:px-8 flex justify-between items-center">
+          <div className="px-4 md:px-6 flex justify-between items-center">
             
             {/* ===== الجانب الأيمن: أيقونات التحكم ===== */}
             <div className="flex items-center gap-3">
@@ -121,7 +121,7 @@ const Navbar = () => {
               </button>
             </div>
 
-            {/* ===== المنتصف: الروابط (ديسكتوب) - مع تكبير الخط والإبداعية ===== */}
+            {/* ===== المنتصف: الروابط (ديسكتوب) ===== */}
             <div className="hidden md:flex items-center gap-8 lg:gap-12">
               {navLinks.map((link) => (
                 <Link
@@ -163,7 +163,7 @@ const Navbar = () => {
               ))}
             </div>
 
-            {/* ===== الجانب الأيسر: شعار الشركة الفاخر مع أنيميشن خرافي ✨ ===== */}
+            {/* ===== الجانب الأيسر: شعار الشركة الفاخر ===== */}
             <div className="flex-shrink-0">
               <Link 
                 to="/" 
@@ -179,7 +179,7 @@ const Navbar = () => {
                   {/* ✅ إطار ذهبي ناعم يظهر عند التحويم */}
                   <div className="absolute -inset-2 rounded-full border-2 border-transparent group-hover:border-pink-300/50 transition-all duration-700 opacity-0 group-hover:opacity-100 pointer-events-none"></div>
                   
-                  {/* ✅✅✅ الشعار - حجم أكبر بكثير (التعديل الثاني) */}
+                  {/* ✅ الشعار - حجم كبير */}
                   <img
                     src={LOGO_URL}
                     alt="Company Logo"
