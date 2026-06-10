@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // ✅ إضافة useNavigate
 import { useCart } from "../context/CartContext";
 import { useLang } from "../context/LanguageContext";
 import { toast } from "sonner";
@@ -7,18 +7,30 @@ import { getImageUrl } from "../utils/imageUtils";
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
   const { lang, t } = useLang();
+  const navigate = useNavigate(); // ✅ إضافة navigate للتوجيه
+  
   const variantsCount = product.options?.length || 0;
+  const hasVariants = product.has_variants && variantsCount > 0; // ✅ تحديد إذا كان المنتج له متغيرات
   const productName = lang === "ar" ? product.name_ar : product.name_en;
   
-  // ✅ NEW: التحقق من التوفر (افتراضياً true إذا لم يكن الحقل موجوداً للتوافق مع البيانات القديمة)
+  // ✅ التحقق من التوفر (افتراضياً true إذا لم يكن الحقل موجوداً للتوافق مع البيانات القديمة)
   const isAvailable = product.isAvailable !== false;
 
-  const handleAddToCart = (e) => {
-    // ✅ حماية إضافية: منع الإضافة إذا لم يكن متاحاً
-    if (!isAvailable) return;
-    
+  // ✅ الدالة الذكية للتعامل مع الضغط على الزر
+  const handleAction = (e) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // ✅ 1️⃣ إذا كان المنتج له متغيرات، نوجه المستخدم لصفحة التفاصيل لاختيار المتغير
+    if (hasVariants) {
+      navigate(`/product/${product.id}`);
+      return;
+    }
+
+    // ✅ 2️⃣ إذا لم يكن متاحاً (وليس له متغيرات)، نمنع الإضافة
+    if (!isAvailable) return;
+    
+    // ✅ 3️⃣ إذا لم يكن له متغيرات وهو متاح، نضيفه للسلة مباشرة
     addToCart(product);
     const price = product.price;
     toast.success(
@@ -41,7 +53,7 @@ const ProductCard = ({ product }) => {
         <span className="bg-white/90 backdrop-blur-sm text-[9px] font-bold text-gray-700 px-2.5 py-1 rounded-lg uppercase tracking-wide shadow-sm border border-gray-100">
           {product.brand_name}
         </span>
-        {/* ✅ NEW: تغيير لون النقطة بناءً على التوفر */}
+        {/* ✅ تغيير لون النقطة بناءً على التوفر */}
         <div className={`backdrop-blur-sm p-1 rounded-full border ${isAvailable ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
           <div className={`w-1.5 h-1.5 rounded-full ${isAvailable ? 'bg-green-500' : 'bg-red-500'}`}></div>
         </div>
@@ -55,14 +67,14 @@ const ProductCard = ({ product }) => {
       >
         <div className="aspect-[4/5] rounded-[1.5rem] bg-[#F8F8F8] mb-4 overflow-hidden flex items-center justify-center p-5 sm:p-6 transition-colors duration-300 group-hover:bg-[#F3F3F3] relative">
           <img
-            src={getImageUrl(product.image)}
+            src={getImageUrl(product.image)} // ✅ تعرض الصورة العامة (Hero Image) للمنتج
             className="w-full h-full object-contain transform transition-transform duration-500 group-hover:scale-105"
             alt={productName}
             loading="lazy"
             onError={(e) => { e.target.style.display = 'none'; }}
           />
           
-          {/* ✅ NEW: شارة "نفذت الكمية" تغطي الصورة فقط إذا لم يكن متاحاً */}
+          {/* ✅ شارة "نفذت الكمية" تغطي الصورة فقط إذا لم يكن متاحاً */}
           {!isAvailable && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/60 backdrop-blur-[2px]">
               <span className="bg-red-600 text-white text-xs font-black px-4 py-2 rounded-full uppercase tracking-wider shadow-lg transform -rotate-6">
@@ -89,7 +101,7 @@ const ProductCard = ({ product }) => {
             </span>
           </div>
           
-          {product.has_variants && variantsCount > 0 ? (
+          {hasVariants ? (
             <div className="flex items-center gap-1.5">
               <div className="w-5 h-5 rounded-md bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden">
                 <img src={getImageUrl(product.options[0].image)} alt="" className="w-full h-full object-contain p-0.5" onError={(e) => e.target.style.display = 'none'} />
@@ -105,19 +117,26 @@ const ProductCard = ({ product }) => {
           )}
         </div>
 
-        {/* 🔹 Add to Cart Button - Separated & Optimized */}
+        {/* 🔹 Add to Cart / Choose Options Button - Separated & Optimized */}
         <button
-          onClick={handleAddToCart}
-          disabled={!isAvailable}
+          onClick={handleAction}
+          disabled={!isAvailable && !hasVariants} // ✅ تعطيل الزر فقط إذا لم يكن متاحاً وليس له متغيرات
           className={`w-full py-3 rounded-xl text-[11px] font-bold shadow-sm transition-all duration-300 uppercase tracking-wider flex items-center justify-center gap-2 mt-2
-            ${!isAvailable 
+            ${!isAvailable && !hasVariants
               ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
               : 'bg-gray-900 text-white hover:bg-pink-600 opacity-100 translate-y-0 md:opacity-0 md:translate-y-2 group-hover:md:opacity-100 group-hover:md:translate-y-0'
             }`}
-          aria-label={`${t('addToCart')} ${productName}`}
+          aria-label={hasVariants ? (lang === "ar" ? `اختر خيارات ${productName}` : `Choose options for ${productName}`) : `${t('addToCart')} ${productName}`}
         >
-          {!isAvailable ? (
+          {!isAvailable && !hasVariants ? (
             t('outOfStock')
+          ) : hasVariants ? (
+            <>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M12 5v14M5 12h14"/> {/* أيقونة Plus للتحديد */}
+              </svg>
+              {lang === "ar" ? "اختر الخيارات" : "Choose Options"}
+            </>
           ) : (
             <>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
