@@ -1,8 +1,9 @@
-// src/pages/Brands.jsx - النسخة المُحسّنة: كروت متوسطة + Perfect Balance ✨
+// src/pages/Brands.jsx - النسخة المُحدّثة: الماركات والأقسام الرئيسية ✨
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { useLang } from "../context/LanguageContext";
+import { useTheme } from "../context/ThemeContext"; // ✅ إضافة جديدة لدعم الوضع الليلي
 import SEO from "../components/SEO";
 import { getImageUrl } from "../utils/imageUtils";
 
@@ -10,31 +11,39 @@ const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
 
 const Brands = () => {
   const { lang, t } = useLang();
+  const { isDark } = useTheme(); // ✅ إضافة جديدة
   const [brands, setBrands] = useState([]);
+  const [categories, setCategories] = useState([]); // ✅ إضافة جديدة
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hoveredId, setHoveredId] = useState(null);
 
-  // ✅ جلب البراندات
+  // ✅ جلب البراندات والأقسام معاً (Parallel Fetching)
   useEffect(() => {
-    const fetchBrands = async () => {
+    const fetchData = async () => {
       try {
         setError(null);
-        const brandsRes = await axios.get(`${API_URL}/brands`);
-        if (Array.isArray(brandsRes.data)) {
-          setBrands(brandsRes.data);
-        } else {
-          setBrands([]);
-        }
+        const [brandsRes, categoriesRes] = await Promise.all([
+          axios.get(`${API_URL}/brands`),
+          axios.get(`${API_URL}/categories`)
+        ]);
+        
+        if (Array.isArray(brandsRes.data)) setBrands(brandsRes.data);
+        if (Array.isArray(categoriesRes.data)) setCategories(categoriesRes.data);
       } catch (err) {
-        console.error("❌ Fetch brands error:", err);
+        console.error("❌ Fetch data error:", err);
         setError(err.message || "فشل تحميل البيانات");
       } finally {
         setLoading(false);
       }
     };
-    fetchBrands();
+    fetchData();
   }, []);
+
+  // ✅ فلترة الأقسام الرئيسية فقط (التي ليس لها أب - parent_id === null)
+  const mainCategories = useMemo(() => {
+    return categories.filter((c) => c.parent_id === null);
+  }, [categories]);
 
   const enrichedBrands = useMemo(() => {
     return brands.map((brand) => ({
@@ -49,10 +58,10 @@ const Brands = () => {
   }, [enrichedBrands]);
 
   const brandsSeoData = useMemo(() => ({
-    title: lang === "ar" ? "الماركات العالمية" : "Global Brands",
+    title: lang === "ar" ? "الماركات والأقسام الرئيسية" : "Brands & Main Categories",
     description: lang === "ar"
-      ? "اكتشفي مجموعتنا الحصرية من الماركات العالمية في العناية والجمال. منتجات أصلية 100%، شحن آمن، ودفع عند الاستلام."
-      : "Discover our exclusive collection of global beauty and care brands. 100% authentic products, secure shipping, and cash on delivery.",
+      ? "اكتشفي مجموعتنا الحصرية من الماركات العالمية والأقسام الرئيسية للعناية والجمال. منتجات أصلية 100%، شحن آمن، ودفع عند الاستلام."
+      : "Discover our exclusive collection of global brands and main beauty categories. 100% authentic products, secure shipping, and cash on delivery.",
     image: "/assets/hero/og-brands.jpg",
     url: "/brands",
     type: "collection"
@@ -120,12 +129,12 @@ const Brands = () => {
   // ✅ Loading State
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-white via-stone-50/30 to-white pt-32 px-4 sm:px-6 lg:px-12" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
-        <div className="max-w-[1400px] mx-auto">
-          <div className="h-16 w-64 bg-gray-100 rounded-3xl animate-pulse mb-16 mx-auto" />
+      <div className={`min-h-screen pt-32 px-4 sm:px-6 lg:px-12 ${isDark ? 'bg-gray-900' : 'bg-gradient-to-b from-white via-stone-50/30 to-white'}`} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
+        <div className="max-w-[1400px] mx-auto space-y-16">
+          <div className={`h-16 w-64 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-3xl animate-pulse mx-auto`} />
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 lg:gap-6">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="aspect-[4/5] bg-gray-100 rounded-[2rem] animate-pulse" />
+              <div key={i} className={`aspect-[4/5] ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-[2rem] animate-pulse`} />
             ))}
           </div>
         </div>
@@ -136,184 +145,258 @@ const Brands = () => {
   // ✅ Error State
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-white'}`} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
         <div className="text-center space-y-6 max-w-md px-6">
           <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto">
             <svg className="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
           </div>
-          <h1 className="text-2xl font-black text-gray-900">{lang === "ar" ? "فشل تحميل البيانات" : "Failed to Load Data"}</h1>
-          <p className="text-gray-500 text-sm font-mono bg-gray-50 p-3 rounded-lg">{error}</p>
-          <button onClick={() => window.location.reload()} className="bg-gray-900 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-pink-600 transition-all">{lang === "ar" ? "إعادة المحاولة" : "Retry"}</button>
+          <h1 className={`text-2xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{lang === "ar" ? "فشل تحميل البيانات" : "Failed to Load Data"}</h1>
+          <p className={`text-sm font-mono p-3 rounded-lg ${isDark ? 'text-gray-400 bg-gray-800' : 'text-gray-500 bg-gray-50'}`}>{error}</p>
+          <button onClick={() => window.location.reload()} className={`px-6 py-3 rounded-xl font-bold text-sm transition-all ${isDark ? 'bg-gray-700 text-white hover:bg-pink-600' : 'bg-gray-900 text-white hover:bg-pink-600'}`}>
+            {lang === "ar" ? "إعادة المحاولة" : "Retry"}
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`min-h-screen bg-gradient-to-b from-white via-stone-50/30 to-white pt-28 sm:pt-32 pb-20 sm:pb-24 ${lang === "ar" ? "font-arabic" : "font-latin"}`} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
+    <div className={`min-h-screen pb-20 sm:pb-24 ${isDark ? 'bg-gray-900' : 'bg-gradient-to-b from-white via-stone-50/30 to-white'}`} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
       <SEO title={brandsSeoData.title} description={brandsSeoData.description} image={brandsSeoData.image} url={brandsSeoData.url} type={brandsSeoData.type} />
       
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 space-y-20 sm:space-y-24 pt-28 sm:pt-32">
+        
         {/* ===== Header ===== */}
-        <div className="mb-12 sm:mb-16 text-center space-y-5">
+        <div className="text-center space-y-5">
           <nav className={`inline-flex items-center gap-2 text-[10px] font-bold text-pink-500 uppercase tracking-[0.3em] ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
-            <Link to="/shop" className="hover:text-black transition-colors">{t('shop')}</Link>
-            <span className="text-gray-200">/</span>
-            <span className="text-gray-900">{t('brands')}</span>
+            <Link to="/shop" className={`hover:text-pink-600 transition-colors ${isDark ? 'hover:text-pink-400' : ''}`}>{t('shop')}</Link>
+            <span className={isDark ? 'text-gray-600' : 'text-gray-200'}>/</span>
+            <span className={isDark ? 'text-gray-300' : 'text-gray-900'}>{lang === "ar" ? "الماركات والأقسام" : "Brands & Categories"}</span>
           </nav>
           
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-gray-900 tracking-tighter leading-none">
-            {t('globalBrands')}
+          <h1 className={`text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter leading-none ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            {lang === "ar" ? "الماركات والأقسام الرئيسية" : "Brands & Main Categories"}
           </h1>
           
           <div className="flex items-center justify-center gap-6 flex-wrap">
             <div className="flex items-center gap-2">
-              <span className="text-2xl md:text-3xl font-black text-pink-600 tabular-nums">{enrichedBrands.length}</span>
-              <span className="text-gray-400 text-xs font-medium">{t('brands')}</span>
+              <span className={`text-2xl md:text-3xl font-black tabular-nums ${isDark ? 'text-pink-400' : 'text-pink-600'}`}>{enrichedBrands.length}</span>
+              <span className={`text-xs font-medium ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{t('brands')}</span>
             </div>
-            <div className="w-px h-5 bg-gray-200" />
+            <div className={`w-px h-5 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`} />
             <div className="flex items-center gap-2">
-              <span className="text-2xl md:text-3xl font-black text-gray-900 tabular-nums">{totalProducts}+</span>
-              <span className="text-gray-400 text-xs font-medium">{t('products')}</span>
+              <span className={`text-2xl md:text-3xl font-black tabular-nums ${isDark ? 'text-white' : 'text-gray-900'}`}>{mainCategories.length}</span>
+              <span className={`text-xs font-medium ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{lang === "ar" ? "قسم رئيسي" : "Main Categories"}</span>
+            </div>
+            <div className={`w-px h-5 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`} />
+            <div className="flex items-center gap-2">
+              <span className={`text-2xl md:text-3xl font-black tabular-nums ${isDark ? 'text-white' : 'text-gray-900'}`}>{totalProducts}+</span>
+              <span className={`text-xs font-medium ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>{t('products')}</span>
             </div>
           </div>
-          
-          <Link to="/shop" className={`inline-flex items-center gap-3 text-[11px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all mx-auto group ${lang === "ar" ? "flex-row-reverse" : ""}`}>
-            <span className={`w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center group-hover:bg-black group-hover:text-white transition-all ${lang === "ar" ? "" : "rotate-180"}`}>←</span>
-            {t('allProducts')}
-          </Link>
         </div>
 
-        {/* ===== Brands Grid - كروت متوسطة الحجم ===== */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 lg:gap-6">
-          {enrichedBrands.map((brand, index) => {
-            const isHovered = hoveredId === brand.id;
-            const brandImageUrl = getImageUrl(brand.image);
-            const palette = luxuryPalettes[index % luxuryPalettes.length];
-            
-            return (
-              <Link
-                key={brand.id}
-                to={`/brands/${brand.id}`}
-                onMouseEnter={() => setHoveredId(brand.id)}
-                onMouseLeave={() => setHoveredId(null)}
-                className="group relative block"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                {/* ✅ الكرت المتوسطة الحجم */}
-                <div className={`
-                  relative overflow-hidden rounded-[2rem] 
-                  bg-gradient-to-br ${palette.bg}
-                  border ${palette.border} ${palette.hoverBorder} ${palette.shadow}
-                  transition-all duration-700 ease-out
-                  hover:-translate-y-2
-                  aspect-[4/5]
-                  flex flex-col
-                `}>
-                  
-                  {/* ✅ رقم البراند - الزاوية العلوية */}
-                  <div className={`absolute top-4 ${lang === "ar" ? "right-5" : "left-5"} z-20`}>
-                    <span className="text-[10px] font-black text-gray-400/60 uppercase tracking-widest tabular-nums">
-                      #{String(index + 1).padStart(2, '0')}
-                    </span>
-                  </div>
-
-                  {/* ✅ منطقة اللوجو - في الأعلى */}
-                  <div className="relative flex-[1.3] flex items-center justify-center p-6 md:p-8 overflow-hidden">
-                    {/* تأثير ضوئي ناعم */}
-                    <div className={`
-                      absolute inset-0 opacity-0 group-hover:opacity-100
-                      transition-opacity duration-1000
-                      bg-gradient-to-br from-white/60 via-transparent to-transparent
-                    `} />
+        {/* ===== Section 1: Brands Grid ===== */}
+        <section>
+          <div className="flex items-center gap-3 mb-8">
+            <span className="text-2xl">🏷️</span>
+            <h2 className={`text-2xl font-black tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>{t('globalBrands')}</h2>
+            <div className={`flex-1 h-px ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}></div>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 lg:gap-6">
+            {enrichedBrands.map((brand, index) => {
+              const isHovered = hoveredId === brand.id;
+              const brandImageUrl = getImageUrl(brand.image);
+              const palette = luxuryPalettes[index % luxuryPalettes.length];
+              
+              return (
+                <Link
+                  key={brand.id}
+                  to={`/brands/${brand.id}`}
+                  onMouseEnter={() => setHoveredId(brand.id)}
+                  onMouseLeave={() => setHoveredId(null)}
+                  className="group relative block"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <div className={`
+                    relative overflow-hidden rounded-[2rem] 
+                    bg-gradient-to-br ${isDark ? 'from-gray-800 via-gray-800 to-gray-900' : palette.bg}
+                    border ${isDark ? 'border-gray-700 hover:border-gray-600' : `${palette.border} ${palette.hoverBorder}`} 
+                    ${palette.shadow}
+                    transition-all duration-700 ease-out
+                    hover:-translate-y-2
+                    aspect-[4/5]
+                    flex flex-col
+                  `}>
                     
-                    {/* ✅ حاوية اللوجو مع تأثير التكبير */}
-                    <div className={`
-                      relative w-full h-full flex items-center justify-center
-                      transition-all duration-700 ease-out
-                      group-hover:scale-110
-                    `}>
-                      {brand.image ? (
-                        <img 
-                          src={brandImageUrl} 
-                          alt={brand.displayName} 
-                          className="max-w-full max-h-full object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.08)] transition-all duration-700 group-hover:drop-shadow-[0_20px_40px_rgba(0,0,0,0.12)]"
-                          loading="lazy"
-                          onError={(e) => { 
-                            e.target.style.display = 'none'; 
-                            if (e.target.parentElement) {
-                              e.target.parentElement.innerHTML = `<span class="text-5xl text-gray-300">🏷️</span>`;
-                            }
-                          }} 
-                        />
-                      ) : (
-                        <span className="text-5xl text-gray-300">🏷️</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* ✅ فاصل أنيق */}
-                  <div className="mx-6 h-px bg-gradient-to-r from-transparent via-gray-300/50 to-transparent" />
-
-                  {/* ✅ معلومات البراند - في الأسفل */}
-                  <div className="px-5 py-4 text-center space-y-2.5 flex-shrink-0">
-                    {/* اسم البراند */}
-                    <h2 className={`
-                      font-black text-gray-900 
-                      text-base md:text-lg
-                      tracking-tight leading-tight
-                      ${palette.hoverText}
-                      transition-colors duration-500
-                      ${lang === "en" ? "font-latin" : ""}
-                      line-clamp-1
-                    `}>
-                      {brand.displayName}
-                    </h2>
-                    
-                    {/* ✅ عدد المنتجات - بشكل أنيق */}
-                    <div className={`flex items-center justify-center gap-2 ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
-                      <span className={`w-2 h-2 rounded-full ${palette.dot} ${isHovered ? 'animate-ping' : ''}`} />
-                      <span className={`text-xs font-black ${palette.accentText} tabular-nums`}>
-                        {brand.productCount}
-                      </span>
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                        {t('products')}
+                    <div className={`absolute top-4 ${lang === "ar" ? "right-5" : "left-5"} z-20`}>
+                      <span className={`text-[10px] font-black uppercase tracking-widest tabular-nums ${isDark ? 'text-gray-500' : 'text-gray-400/60'}`}>
+                        #{String(index + 1).padStart(2, '0')}
                       </span>
                     </div>
 
-                    {/* زر استكشف - يظهر عند الـ hover */}
-                    <div className={`
-                      inline-flex items-center gap-2 
-                      text-[10px] font-black uppercase tracking-wider
-                      ${palette.accentText}
-                      transition-all duration-500 ease-out
-                      ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}
-                      ${lang === "ar" ? "flex-row-reverse" : ""}
-                    `}>
-                      <span>{lang === "ar" ? "استكشف المجموعة" : "Explore Collection"}</span>
+                    <div className="relative flex-[1.3] flex items-center justify-center p-6 md:p-8 overflow-hidden">
+                      <div className={`
+                        absolute inset-0 opacity-0 group-hover:opacity-100
+                        transition-opacity duration-1000
+                        bg-gradient-to-br from-white/60 via-transparent to-transparent
+                      `} />
+                      
+                      <div className={`
+                        relative w-full h-full flex items-center justify-center
+                        transition-all duration-700 ease-out
+                        group-hover:scale-110
+                      `}>
+                        {brand.image ? (
+                          <img 
+                            src={brandImageUrl} 
+                            alt={brand.displayName} 
+                            className="max-w-full max-h-full object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.08)] transition-all duration-700 group-hover:drop-shadow-[0_20px_40px_rgba(0,0,0,0.12)]"
+                            loading="lazy"
+                            onError={(e) => { 
+                              e.target.style.display = 'none'; 
+                              if (e.target.parentElement) {
+                                e.target.parentElement.innerHTML = `<span class="text-5xl ${isDark ? 'text-gray-600' : 'text-gray-300'}">🏷️</span>`;
+                              }
+                            }} 
+                          />
+                        ) : (
+                          <span className={`text-5xl ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>🏷️</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className={`mx-6 h-px bg-gradient-to-r from-transparent ${isDark ? 'via-gray-600' : 'via-gray-300/50'} to-transparent`} />
+
+                    <div className="px-5 py-4 text-center space-y-2.5 flex-shrink-0">
+                      <h2 className={`
+                        font-black 
+                        text-base md:text-lg
+                        tracking-tight leading-tight
+                        ${isDark ? 'text-gray-200 group-hover:text-pink-400' : `text-gray-900 ${palette.hoverText}`}
+                        transition-colors duration-500
+                        ${lang === "en" ? "font-latin" : ""}
+                        line-clamp-1
+                      `}>
+                        {brand.displayName}
+                      </h2>
+                      
+                      <div className={`flex items-center justify-center gap-2 ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
+                        <span className={`w-2 h-2 rounded-full ${isDark ? 'bg-pink-500' : palette.dot} ${isHovered ? 'animate-ping' : ''}`} />
+                        <span className={`text-xs font-black tabular-nums ${isDark ? 'text-pink-400' : palette.accentText}`}>
+                          {brand.productCount}
+                        </span>
+                        <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                          {t('products')}
+                        </span>
+                      </div>
+
+                      <div className={`
+                        inline-flex items-center gap-2 
+                        text-[10px] font-black uppercase tracking-wider
+                        ${isDark ? 'text-pink-400' : palette.accentText}
+                        transition-all duration-500 ease-out
+                        ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}
+                        ${lang === "ar" ? "flex-row-reverse" : ""}
+                      `}>
+                        <span>{lang === "ar" ? "استكشف المجموعة" : "Explore Collection"}</span>
+                        <svg 
+                          width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+                          className={`transition-transform duration-300 ${lang === "en" ? "rotate-180 group-hover:-translate-x-1" : "group-hover:translate-x-1"}`}
+                        >
+                          <path d="M5 12h14M12 5l7 7-7 7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ===== Section 2: Main Categories Grid ===== */}
+        {mainCategories.length > 0 && (
+          <section>
+            <div className="flex items-center gap-3 mb-8">
+              <span className="text-2xl">🗂️</span>
+              <h2 className={`text-2xl font-black tracking-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {lang === "ar" ? "الأقسام الرئيسية" : "Main Categories"}
+              </h2>
+              <div className={`flex-1 h-px ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}></div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+              {mainCategories.map((cat, index) => {
+                const catImageUrl = getImageUrl(cat.image);
+                const catName = lang === "ar" ? cat.name_ar : cat.name_en;
+                
+                return (
+                  <Link 
+                    key={cat.id} 
+                    to={`/shop?parent=${cat.id}`} // ✅ التوجيه لصفحة المتجر مع فلتر الأب
+                    className={`group relative block rounded-[2rem] border p-5 sm:p-6 transition-all duration-500 hover:-translate-y-1 hover:shadow-lg overflow-hidden ${
+                      isDark 
+                        ? 'bg-gray-800 border-gray-700 hover:border-pink-500/50 hover:bg-gray-750' 
+                        : 'bg-white border-gray-100 hover:border-pink-200 hover:bg-pink-50/30'
+                    }`}
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    {/* خلفية متدرجة خفيفة عند الـ hover */}
+                    <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${
+                      isDark ? 'bg-gradient-to-br from-pink-900/10 to-transparent' : 'bg-gradient-to-br from-pink-50 to-transparent'
+                    }`} />
+
+                    <div className="relative flex items-start justify-between mb-4">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 ${
+                        isDark ? 'bg-gray-700 group-hover:bg-pink-900/30' : 'bg-pink-50 group-hover:bg-pink-100'
+                      }`}>
+                        {cat.image ? (
+                          <img 
+                            src={catImageUrl} 
+                            alt="" 
+                            className="w-8 h-8 object-contain" 
+                            onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.textContent = '📁'; }} 
+                          />
+                        ) : '📁'}
+                      </div>
                       <svg 
-                        width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" 
-                        className={`transition-transform duration-300 ${lang === "en" ? "rotate-180 group-hover:-translate-x-1" : "group-hover:translate-x-1"}`}
+                        className={`w-5 h-5 transition-transform duration-500 group-hover:translate-x-1 ${
+                          lang === "ar" ? 'rotate-180 group-hover:-translate-x-1' : ''
+                        } ${isDark ? 'text-gray-500 group-hover:text-pink-400' : 'text-gray-300 group-hover:text-pink-500'}`} 
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
                       >
-                        <path d="M5 12h14M12 5l7 7-7 7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                       </svg>
                     </div>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+
+                    <div className="relative space-y-1">
+                      <h3 className={`font-black text-base tracking-tight ${isDark ? 'text-white group-hover:text-pink-400' : 'text-gray-900 group-hover:text-pink-600'} transition-colors`}>
+                        {catName}
+                      </h3>
+                      <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        {lang === "ar" ? "تصفح المنتجات" : "Explore Products"}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
         
         {/* ===== CTA Section ===== */}
-        <div className="mt-16 sm:mt-20 text-center">
-          <div className="inline-flex flex-col items-center gap-5 p-8 sm:p-10 rounded-[2.5rem] bg-gradient-to-br from-gray-900 to-gray-800 text-white max-w-2xl w-full">
+        <div className="text-center">
+          <div className={`inline-flex flex-col items-center gap-5 p-8 sm:p-10 rounded-[2.5rem] max-w-2xl w-full ${
+            isDark ? 'bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700' : 'bg-gradient-to-br from-gray-900 to-gray-800'
+          } text-white`}>
             <div className="text-3xl sm:text-4xl">✨</div>
             <div className="space-y-2">
               <h3 className="text-lg sm:text-xl font-black tracking-tight">
                 {lang === "ar" ? "جاهزة لاكتشاف المزيد ؟" : "Ready to discover more?"}
               </h3>
-              <p className="text-gray-400 text-xs sm:text-sm max-w-md">
+              <p className={`text-xs sm:text-sm max-w-md ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
                 {lang === "ar" 
                   ? "تصفحي مجموعتنا الكاملة من المنتجات الفاخرة من جميع الماركات" 
                   : "Browse our complete collection of luxury products from all brands"}

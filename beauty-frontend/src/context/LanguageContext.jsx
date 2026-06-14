@@ -10,6 +10,10 @@ readOnly  : { ar: " ", en: " " },
 // في كائن TRANSLATIONS
 outOfStock: { ar: "نفذت الكمية", en: "Out of Stock" },
 unavailable: { ar: "غير متوفر", en: "Unavailable" },
+// داخل كائن TRANSLATIONS في src/context/LanguageContext.jsx
+mainCategories: { ar: "الأقسام الرئيسية", en: "Main Categories" },
+exploreCategory: { ar: "تصفح المنتجات", en: "Explore Products" },
+allCategories: { ar: "جميع الأقسام", en: "All Categories" },
 // === Admin Orders ===
 whatsappOrders: { ar: "طلبات الواتساب", en: "WhatsApp Orders" },
 allStatus: { ar: "كل الحالات", en: "All Status" },
