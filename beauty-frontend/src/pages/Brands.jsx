@@ -1,4 +1,4 @@
-// src/pages/Brands.jsx - النسخة النهائية: تصميم موحّد للبراندات والأقسام ✨
+// src/pages/Brands.jsx - النسخة النهائية: تصميم فخم للبراندات + تصميم مميز للأقسام ✨
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
@@ -65,67 +65,107 @@ const Brands = () => {
     type: "collection"
   }), [lang]);
 
-  // ✅ 5 ألوان فخمة - تُستخدم كخلفية للوجوهات + للأقسام بدون صور
+  // ✅ 5 ألوان فخمة - للجزء العلوي من كرت البراند
   const luxuryPalettes = useMemo(() => [
     {
       name: "champagne",
-      bg: "from-amber-100/80 via-stone-50 to-rose-50",
-      bgDark: "from-amber-900/40 via-stone-900 to-gray-900",
-      hoverText: "group-hover:text-amber-300",
-      accentBg: "bg-amber-100/80",
+      bg: "from-amber-50 via-stone-50 to-rose-50/50",
+      bgDark: "from-amber-950/40 via-stone-900/60 to-rose-950/30",
+      hoverText: "group-hover:text-amber-700",
+      hoverTextDark: "group-hover:text-amber-400",
+      accentBg: "bg-amber-100",
+      accentBgDark: "bg-amber-900/30",
       accentText: "text-amber-700",
-      border: "border-amber-200/50",
-      hoverBorder: "hover:border-amber-300/70",
+      accentTextDark: "text-amber-400",
+      border: "border-amber-100",
+      borderDark: "border-amber-900/30",
+      hoverBorder: "hover:border-amber-300",
+      hoverBorderDark: "hover:border-amber-700",
       dot: "bg-amber-500",
-      shadow: "group-hover:shadow-[0_30px_80px_-25px_rgba(217,119,6,0.35)]",
+      line: "from-transparent via-amber-300/60 to-transparent",
+      lineDark: "from-transparent via-amber-700/40 to-transparent",
+      shadow: "group-hover:shadow-[0_30px_80px_-25px_rgba(217,119,6,0.3)]",
+      glow: "group-hover:shadow-[0_0_40px_rgba(217,119,6,0.2)]",
     },
     {
       name: "rose",
-      bg: "from-rose-100/80 via-pink-50 to-fuchsia-50",
-      bgDark: "from-rose-900/40 via-pink-900/30 to-gray-900",
-      hoverText: "group-hover:text-rose-300",
-      accentBg: "bg-rose-100/80",
+      bg: "from-rose-50 via-pink-50/70 to-fuchsia-50/50",
+      bgDark: "from-rose-950/40 via-pink-950/40 to-fuchsia-950/30",
+      hoverText: "group-hover:text-rose-700",
+      hoverTextDark: "group-hover:text-rose-400",
+      accentBg: "bg-rose-100",
+      accentBgDark: "bg-rose-900/30",
       accentText: "text-rose-700",
-      border: "border-rose-200/50",
-      hoverBorder: "hover:border-rose-300/70",
+      accentTextDark: "text-rose-400",
+      border: "border-rose-100",
+      borderDark: "border-rose-900/30",
+      hoverBorder: "hover:border-rose-300",
+      hoverBorderDark: "hover:border-rose-700",
       dot: "bg-rose-500",
-      shadow: "group-hover:shadow-[0_30px_80px_-25px_rgba(225,29,72,0.35)]",
+      line: "from-transparent via-rose-300/60 to-transparent",
+      lineDark: "from-transparent via-rose-700/40 to-transparent",
+      shadow: "group-hover:shadow-[0_30px_80px_-25px_rgba(225,29,72,0.3)]",
+      glow: "group-hover:shadow-[0_0_40px_rgba(225,29,72,0.2)]",
     },
     {
       name: "pearl",
-      bg: "from-stone-100/80 via-gray-50 to-slate-50",
-      bgDark: "from-stone-800/60 via-gray-900 to-slate-900",
-      hoverText: "group-hover:text-stone-300",
-      accentBg: "bg-stone-100/80",
+      bg: "from-stone-50 via-gray-50 to-slate-50/50",
+      bgDark: "from-stone-900/60 via-gray-900/60 to-slate-900/40",
+      hoverText: "group-hover:text-stone-800",
+      hoverTextDark: "group-hover:text-stone-300",
+      accentBg: "bg-stone-100",
+      accentBgDark: "bg-stone-800",
       accentText: "text-stone-700",
-      border: "border-stone-200/50",
-      hoverBorder: "hover:border-stone-400/70",
+      accentTextDark: "text-stone-400",
+      border: "border-stone-100",
+      borderDark: "border-stone-800",
+      hoverBorder: "hover:border-stone-400",
+      hoverBorderDark: "hover:border-stone-600",
       dot: "bg-stone-600",
-      shadow: "group-hover:shadow-[0_30px_80px_-25px_rgba(87,83,78,0.35)]",
+      line: "from-transparent via-stone-300/60 to-transparent",
+      lineDark: "from-transparent via-stone-700/40 to-transparent",
+      shadow: "group-hover:shadow-[0_30px_80px_-25px_rgba(87,83,78,0.3)]",
+      glow: "group-hover:shadow-[0_0_40px_rgba(87,83,78,0.2)]",
     },
     {
       name: "midnight",
-      bg: "from-slate-100/80 via-blue-50 to-indigo-50",
-      bgDark: "from-slate-800/60 via-blue-900/30 to-gray-900",
-      hoverText: "group-hover:text-slate-300",
-      accentBg: "bg-slate-100/80",
+      bg: "from-slate-50 via-blue-50/70 to-indigo-50/50",
+      bgDark: "from-slate-900/60 via-blue-950/40 to-indigo-950/30",
+      hoverText: "group-hover:text-slate-800",
+      hoverTextDark: "group-hover:text-slate-300",
+      accentBg: "bg-slate-100",
+      accentBgDark: "bg-slate-800",
       accentText: "text-slate-700",
-      border: "border-slate-200/50",
-      hoverBorder: "hover:border-slate-400/70",
+      accentTextDark: "text-slate-400",
+      border: "border-slate-100",
+      borderDark: "border-slate-800",
+      hoverBorder: "hover:border-slate-400",
+      hoverBorderDark: "hover:border-slate-600",
       dot: "bg-slate-600",
-      shadow: "group-hover:shadow-[0_30px_80px_-25px_rgba(71,85,105,0.35)]",
+      line: "from-transparent via-slate-300/60 to-transparent",
+      lineDark: "from-transparent via-slate-700/40 to-transparent",
+      shadow: "group-hover:shadow-[0_30px_80px_-25px_rgba(71,85,105,0.3)]",
+      glow: "group-hover:shadow-[0_0_40px_rgba(71,85,105,0.2)]",
     },
     {
       name: "mauve",
-      bg: "from-purple-100/80 via-fuchsia-50 to-pink-50",
-      bgDark: "from-purple-900/40 via-fuchsia-900/30 to-gray-900",
-      hoverText: "group-hover:text-purple-300",
-      accentBg: "bg-purple-100/80",
+      bg: "from-purple-50 via-fuchsia-50/70 to-pink-50/50",
+      bgDark: "from-purple-950/40 via-fuchsia-950/40 to-pink-950/30",
+      hoverText: "group-hover:text-purple-700",
+      hoverTextDark: "group-hover:text-purple-400",
+      accentBg: "bg-purple-100",
+      accentBgDark: "bg-purple-900/30",
       accentText: "text-purple-700",
-      border: "border-purple-200/50",
-      hoverBorder: "hover:border-purple-300/70",
+      accentTextDark: "text-purple-400",
+      border: "border-purple-100",
+      borderDark: "border-purple-900/30",
+      hoverBorder: "hover:border-purple-300",
+      hoverBorderDark: "hover:border-purple-700",
       dot: "bg-purple-500",
-      shadow: "group-hover:shadow-[0_30px_80px_-25px_rgba(147,51,234,0.35)]",
+      line: "from-transparent via-purple-300/60 to-transparent",
+      lineDark: "from-transparent via-purple-700/40 to-transparent",
+      shadow: "group-hover:shadow-[0_30px_80px_-25px_rgba(147,51,234,0.3)]",
+      glow: "group-hover:shadow-[0_0_40px_rgba(147,51,234,0.2)]",
     },
   ], []);
 
@@ -197,7 +237,7 @@ const Brands = () => {
           </div>
         </div>
 
-        {/* ===== Section 1: Brands Grid (تصميم موحّد: صورة + Overlay) ===== */}
+        {/* ===== Section 1: Brands Grid - تصميم فخم مقسّم لجزئين ===== */}
         <section>
           <div className="flex items-center gap-3 mb-8">
             <span className="text-2xl">🏷️</span>
@@ -221,91 +261,102 @@ const Brands = () => {
                   className="group relative block"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  {/* ✅ كرت موحّد التصميم - نفس أسلوب الأقسام */}
+                  {/* ✅ الكرت الفخم: مقسّم لجزئين */}
                   <div className={`
                     relative overflow-hidden rounded-[2rem] 
-                    transition-all duration-500 
-                    hover:-translate-y-2 hover:shadow-2xl 
+                    border ${isDark ? palette.borderDark : palette.border} 
+                    ${isDark ? palette.hoverBorderDark : palette.hoverBorder}
+                    ${palette.shadow} ${palette.glow}
+                    transition-all duration-700 ease-out
+                    hover:-translate-y-2
                     aspect-[4/5]
-                    ${isDark ? 'ring-1 ring-gray-700 hover:ring-pink-500/50' : 'ring-1 ring-gray-100 hover:ring-pink-200'}
+                    flex flex-col
+                    ${isDark ? 'bg-gray-800' : 'bg-white'}
                   `}>
                     
-                    {/* ✅ الخلفية: Gradient ملون (من الـ palette) + الصورة فوقها */}
-                    <div className={`absolute inset-0 bg-gradient-to-br ${isDark ? palette.bgDark : palette.bg}`} />
-                    
-                    {/* ✅ اللوجو: يملأ المساحة مع object-contain */}
-                    {hasImage ? (
-                      <img 
-                        src={brandImageUrl} 
-                        alt={brand.displayName}
-                        className="absolute inset-0 w-full h-full object-contain p-8 sm:p-10 transition-transform duration-700 group-hover:scale-110"
-                        loading="lazy"
-                        onError={(e) => { e.target.style.display = 'none'; }}
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className={`text-6xl ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>🏷️</span>
-                      </div>
-                    )}
-
-                    {/* ✅ طبقة Overlay: Gradient من الأسفل - تزداد عند الـ hover */}
-                    <div className={`absolute inset-0 transition-all duration-500 ${
-                      isDark
-                        ? 'bg-gradient-to-t from-black/90 via-black/40 to-transparent group-hover:from-black/95 group-hover:via-black/50'
-                        : 'bg-gradient-to-t from-black/75 via-black/30 to-transparent group-hover:from-black/85 group-hover:via-black/40'
-                    }`} />
-
-                    {/* ✅ المحتوى: رقم + أيقونة في الأعلى | اسم + عدد المنتجات في الأسفل */}
-                    <div className="relative h-full flex flex-col justify-between p-5 sm:p-6">
+                    {/* ✅ الجزء العلوي: اللوجو على خلفية Gradient ملونة */}
+                    <div className={`relative flex-[1.3] overflow-hidden bg-gradient-to-br ${isDark ? palette.bgDark : palette.bg}`}>
                       
-                      {/* الأعلى: رقم البراند */}
-                      <div className="flex items-start justify-between">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center backdrop-blur-md transition-all duration-500 group-hover:scale-110 ${
-                          isDark ? 'bg-white/10 border border-white/20' : 'bg-white/25 border border-white/40'
-                        }`}>
-                          <span className="text-xl">🏷️</span>
-                        </div>
-                        <span className={`text-[10px] font-black text-white/70 uppercase tracking-widest tabular-nums drop-shadow-md`}>
+                      {/* تأثير ضوئي ناعم عند الـ hover */}
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 bg-gradient-to-br from-white/40 via-transparent to-transparent" />
+                      
+                      {/* رقم البراند في الزاوية */}
+                      <div className={`absolute top-3 ${lang === "ar" ? "right-4" : "left-4"} z-20`}>
+                        <span className={`text-[9px] font-black uppercase tracking-widest tabular-nums ${isDark ? 'text-white/30' : 'text-gray-400/60'}`}>
                           #{String(index + 1).padStart(2, '0')}
                         </span>
                       </div>
+                      
+                      {/* اللوجو في المنتصف - يظهر بشكل واضح */}
+                      <div className="relative w-full h-full flex items-center justify-center p-6 sm:p-8">
+                        <div className="relative w-full h-full flex items-center justify-center transition-all duration-700 ease-out group-hover:scale-110">
+                          {hasImage ? (
+                            <img 
+                              src={brandImageUrl} 
+                              alt={brand.displayName}
+                              className="max-w-[85%] max-h-[85%] object-contain drop-shadow-[0_10px_25px_rgba(0,0,0,0.08)] transition-all duration-700 group-hover:drop-shadow-[0_15px_35px_rgba(0,0,0,0.15)]"
+                              loading="lazy"
+                              onError={(e) => { 
+                                e.target.style.display = 'none'; 
+                                if (e.target.parentElement) {
+                                  e.target.parentElement.innerHTML = `<span class="text-5xl ${isDark ? 'text-gray-600' : 'text-gray-300'}">🏷️</span>`;
+                                }
+                              }} 
+                            />
+                          ) : (
+                            <span className={`text-5xl ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>🏷️</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
-                      {/* الأسفل: اسم البراند + عدد المنتجات + زر الاستكشاف */}
-                      <div className="space-y-2.5">
-                        {/* اسم البراند */}
-                        <h3 className={`font-black text-lg sm:text-xl tracking-tight leading-tight drop-shadow-lg text-white ${
-                          lang === "en" ? "font-latin" : ""
-                        } line-clamp-1`}>
-                          {brand.displayName}
-                        </h3>
+                    {/* ✅ الفاصل الأنيق - خط ملون */}
+                    <div className={`h-px bg-gradient-to-r ${isDark ? palette.lineDark : palette.line}`} />
+
+                    {/* ✅ الجزء السفلي: معلومات البراند على خلفية نظيفة */}
+                    <div className={`relative flex-[0.7] p-4 sm:p-5 flex flex-col justify-center ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+                      
+                      {/* اسم البراند */}
+                      <h3 className={`
+                        font-black text-base sm:text-lg
+                        tracking-tight leading-tight
+                        ${isDark ? `text-gray-100 ${palette.hoverTextDark}` : `text-gray-900 ${palette.hoverText}`}
+                        transition-colors duration-500
+                        ${lang === "en" ? "font-latin" : ""}
+                        line-clamp-1
+                        text-center
+                      `}>
+                        {brand.displayName}
+                      </h3>
+                      
+                      {/* عدد المنتجات + زر الاستكشاف */}
+                      <div className="flex items-center justify-between mt-2.5">
+                        {/* عدد المنتجات */}
+                        <div className={`flex items-center gap-1.5 ${lang === "ar" ? "" : "flex-row-reverse"}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${palette.dot} ${isHovered ? 'animate-ping' : ''}`} />
+                          <span className={`text-[11px] font-black tabular-nums ${isDark ? palette.accentTextDark : palette.accentText}`}>
+                            {brand.productCount}
+                          </span>
+                          <span className={`text-[9px] font-bold uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                            {t('products')}
+                          </span>
+                        </div>
                         
-                        {/* عدد المنتجات + زر الاستكشاف */}
-                        <div className="flex items-center justify-between gap-2">
-                          <div className={`flex items-center gap-1.5 transition-all duration-500 ${isHovered ? 'opacity-100' : 'opacity-80'}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${palette.dot} ${isHovered ? 'animate-ping' : ''}`} />
-                            <span className="text-[11px] font-black text-white tabular-nums drop-shadow-md">
-                              {brand.productCount}
-                            </span>
-                            <span className="text-[9px] font-bold uppercase tracking-wider text-white/70">
-                              {t('products')}
-                            </span>
-                          </div>
-                          
-                          <div className={`flex items-center gap-1.5 transition-all duration-500 ${
-                            isHovered ? 'opacity-100 translate-x-0' : 'opacity-70'
-                          } ${lang === "ar" ? "flex-row-reverse" : ""}`}>
-                            <span className="text-[9px] font-bold uppercase tracking-wider text-white/80">
-                              {lang === "ar" ? "استكشف" : "Explore"}
-                            </span>
-                            <svg 
-                              width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" 
-                              className={`text-white/80 transition-transform duration-500 ${
-                                lang === "ar" ? 'group-hover:-translate-x-1 rotate-180' : 'group-hover:translate-x-1'
-                              }`}
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                            </svg>
-                          </div>
+                        {/* زر Explore - يظهر بشكل أنيق */}
+                        <div className={`flex items-center gap-1 transition-all duration-500 ${
+                          isHovered ? 'opacity-100 translate-x-0' : 'opacity-60'
+                        } ${lang === "ar" ? "flex-row-reverse" : ""}`}>
+                          <span className={`text-[9px] font-bold uppercase tracking-wider ${isDark ? palette.accentTextDark : palette.accentText}`}>
+                            {lang === "ar" ? "استكشف" : "Explore"}
+                          </span>
+                          <svg 
+                            width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+                            className={`transition-transform duration-500 ${isDark ? palette.accentTextDark : palette.accentText} ${
+                              lang === "ar" ? 'rotate-180 group-hover:-translate-x-1' : 'group-hover:translate-x-1'
+                            }`}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                          </svg>
                         </div>
                       </div>
                     </div>
@@ -316,7 +367,7 @@ const Brands = () => {
           </div>
         </section>
 
-        {/* ===== Section 2: Main Categories Grid (نفس التصميم الموحّد) ===== */}
+        {/* ===== Section 2: Main Categories Grid - صورة كاملة + Overlay ===== */}
         {mainCategories.length > 0 && (
           <section>
             <div className="flex items-center gap-3 mb-8">
