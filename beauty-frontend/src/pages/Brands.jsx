@@ -1,9 +1,9 @@
-// src/pages/Brands.jsx - النسخة المُحدّثة: الماركات والأقسام الرئيسية ✨
+// src/pages/Brands.jsx - النسخة النهائية: كروت أصغر + أقسام Hero Style ✨
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { useLang } from "../context/LanguageContext";
-import { useTheme } from "../context/ThemeContext"; // ✅ إضافة جديدة لدعم الوضع الليلي
+import { useTheme } from "../context/ThemeContext";
 import SEO from "../components/SEO";
 import { getImageUrl } from "../utils/imageUtils";
 
@@ -11,9 +11,9 @@ const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
 
 const Brands = () => {
   const { lang, t } = useLang();
-  const { isDark } = useTheme(); // ✅ إضافة جديدة
+  const { isDark } = useTheme();
   const [brands, setBrands] = useState([]);
-  const [categories, setCategories] = useState([]); // ✅ إضافة جديدة
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hoveredId, setHoveredId] = useState(null);
@@ -40,7 +40,7 @@ const Brands = () => {
     fetchData();
   }, []);
 
-  // ✅ فلترة الأقسام الرئيسية فقط (التي ليس لها أب - parent_id === null)
+  // ✅ فلترة الأقسام الرئيسية فقط
   const mainCategories = useMemo(() => {
     return categories.filter((c) => c.parent_id === null);
   }, [categories]);
@@ -67,7 +67,7 @@ const Brands = () => {
     type: "collection"
   }), [lang]);
 
-  // ✅ 5 ألوان فخمة ومتناسقة (Luxury Palette)
+  // ✅ 5 ألوان فخمة للبراندات (Luxury Palette)
   const luxuryPalettes = useMemo(() => [
     {
       name: "champagne",
@@ -78,7 +78,7 @@ const Brands = () => {
       border: "border-amber-200/50",
       hoverBorder: "hover:border-amber-300/70",
       dot: "bg-amber-500",
-      shadow: "group-hover:shadow-[0_30px_80px_-25px_rgba(217,119,6,0.25)]",
+      shadow: "group-hover:shadow-[0_20px_50px_-20px_rgba(217,119,6,0.25)]",
     },
     {
       name: "rose",
@@ -89,7 +89,7 @@ const Brands = () => {
       border: "border-rose-200/50",
       hoverBorder: "hover:border-rose-300/70",
       dot: "bg-rose-500",
-      shadow: "group-hover:shadow-[0_30px_80px_-25px_rgba(225,29,72,0.25)]",
+      shadow: "group-hover:shadow-[0_20px_50px_-20px_rgba(225,29,72,0.25)]",
     },
     {
       name: "pearl",
@@ -100,7 +100,7 @@ const Brands = () => {
       border: "border-stone-200/50",
       hoverBorder: "hover:border-stone-400/70",
       dot: "bg-stone-600",
-      shadow: "group-hover:shadow-[0_30px_80px_-25px_rgba(87,83,78,0.25)]",
+      shadow: "group-hover:shadow-[0_20px_50px_-20px_rgba(87,83,78,0.25)]",
     },
     {
       name: "midnight",
@@ -111,7 +111,7 @@ const Brands = () => {
       border: "border-slate-200/50",
       hoverBorder: "hover:border-slate-400/70",
       dot: "bg-slate-600",
-      shadow: "group-hover:shadow-[0_30px_80px_-25px_rgba(71,85,105,0.25)]",
+      shadow: "group-hover:shadow-[0_20px_50px_-20px_rgba(71,85,105,0.25)]",
     },
     {
       name: "mauve",
@@ -122,7 +122,7 @@ const Brands = () => {
       border: "border-purple-200/50",
       hoverBorder: "hover:border-purple-300/70",
       dot: "bg-purple-500",
-      shadow: "group-hover:shadow-[0_30px_80px_-25px_rgba(147,51,234,0.25)]",
+      shadow: "group-hover:shadow-[0_20px_50px_-20px_rgba(147,51,234,0.25)]",
     },
   ], []);
 
@@ -132,9 +132,9 @@ const Brands = () => {
       <div className={`min-h-screen pt-32 px-4 sm:px-6 lg:px-12 ${isDark ? 'bg-gray-900' : 'bg-gradient-to-b from-white via-stone-50/30 to-white'}`} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
         <div className="max-w-[1400px] mx-auto space-y-16">
           <div className={`h-16 w-64 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-3xl animate-pulse mx-auto`} />
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 lg:gap-6">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className={`aspect-[4/5] ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-[2rem] animate-pulse`} />
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-5">
+            {[...Array(10)].map((_, i) => (
+              <div key={i} className={`aspect-square ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-3xl animate-pulse`} />
             ))}
           </div>
         </div>
@@ -164,7 +164,7 @@ const Brands = () => {
     <div className={`min-h-screen pb-20 sm:pb-24 ${isDark ? 'bg-gray-900' : 'bg-gradient-to-b from-white via-stone-50/30 to-white'}`} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
       <SEO title={brandsSeoData.title} description={brandsSeoData.description} image={brandsSeoData.image} url={brandsSeoData.url} type={brandsSeoData.type} />
       
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 space-y-20 sm:space-y-24 pt-28 sm:pt-32">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 space-y-16 sm:space-y-20 pt-28 sm:pt-32">
         
         {/* ===== Header ===== */}
         <div className="text-center space-y-5">
@@ -196,7 +196,7 @@ const Brands = () => {
           </div>
         </div>
 
-        {/* ===== Section 1: Brands Grid ===== */}
+        {/* ===== Section 1: Brands Grid - Smaller & More Elegant ===== */}
         <section>
           <div className="flex items-center gap-3 mb-8">
             <span className="text-2xl">🏷️</span>
@@ -204,7 +204,8 @@ const Brands = () => {
             <div className={`flex-1 h-px ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}></div>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 lg:gap-6">
+          {/* ✅ Changed: 5 columns on large screens, aspect-square, smaller padding */}
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-5">
             {enrichedBrands.map((brand, index) => {
               const isHovered = hoveredId === brand.id;
               const brandImageUrl = getImageUrl(brand.image);
@@ -217,96 +218,79 @@ const Brands = () => {
                   onMouseEnter={() => setHoveredId(brand.id)}
                   onMouseLeave={() => setHoveredId(null)}
                   className="group relative block"
-                  style={{ animationDelay: `${index * 50}ms` }}
+                  style={{ animationDelay: `${index * 30}ms` }}
                 >
                   <div className={`
-                    relative overflow-hidden rounded-[2rem] 
+                    relative overflow-hidden rounded-3xl 
                     bg-gradient-to-br ${isDark ? 'from-gray-800 via-gray-800 to-gray-900' : palette.bg}
                     border ${isDark ? 'border-gray-700 hover:border-gray-600' : `${palette.border} ${palette.hoverBorder}`} 
                     ${palette.shadow}
-                    transition-all duration-700 ease-out
-                    hover:-translate-y-2
-                    aspect-[4/5]
+                    transition-all duration-500 ease-out
+                    hover:-translate-y-1
+                    aspect-square
                     flex flex-col
                   `}>
                     
-                    <div className={`absolute top-4 ${lang === "ar" ? "right-5" : "left-5"} z-20`}>
-                      <span className={`text-[10px] font-black uppercase tracking-widest tabular-nums ${isDark ? 'text-gray-500' : 'text-gray-400/60'}`}>
+                    <div className={`absolute top-3 ${lang === "ar" ? "right-4" : "left-4"} z-20`}>
+                      <span className={`text-[9px] font-black uppercase tracking-widest tabular-nums ${isDark ? 'text-gray-500' : 'text-gray-400/60'}`}>
                         #{String(index + 1).padStart(2, '0')}
                       </span>
                     </div>
 
-                    <div className="relative flex-[1.3] flex items-center justify-center p-6 md:p-8 overflow-hidden">
+                    {/* ✅ Smaller logo area */}
+                    <div className="relative flex-1 flex items-center justify-center p-4 overflow-hidden">
                       <div className={`
                         absolute inset-0 opacity-0 group-hover:opacity-100
-                        transition-opacity duration-1000
-                        bg-gradient-to-br from-white/60 via-transparent to-transparent
+                        transition-opacity duration-700
+                        bg-gradient-to-br from-white/40 via-transparent to-transparent
                       `} />
                       
                       <div className={`
                         relative w-full h-full flex items-center justify-center
-                        transition-all duration-700 ease-out
-                        group-hover:scale-110
+                        transition-all duration-500 ease-out
+                        group-hover:scale-105
                       `}>
                         {brand.image ? (
                           <img 
                             src={brandImageUrl} 
                             alt={brand.displayName} 
-                            className="max-w-full max-h-full object-contain drop-shadow-[0_15px_30px_rgba(0,0,0,0.08)] transition-all duration-700 group-hover:drop-shadow-[0_20px_40px_rgba(0,0,0,0.12)]"
+                            className="max-w-[80%] max-h-[70%] object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.06)] transition-all duration-500 group-hover:drop-shadow-[0_15px_30px_rgba(0,0,0,0.1)]"
                             loading="lazy"
                             onError={(e) => { 
                               e.target.style.display = 'none'; 
                               if (e.target.parentElement) {
-                                e.target.parentElement.innerHTML = `<span class="text-5xl ${isDark ? 'text-gray-600' : 'text-gray-300'}">🏷️</span>`;
+                                e.target.parentElement.innerHTML = `<span class="text-4xl ${isDark ? 'text-gray-600' : 'text-gray-300'}">🏷️</span>`;
                               }
                             }} 
                           />
                         ) : (
-                          <span className={`text-5xl ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>🏷️</span>
+                          <span className={`text-4xl ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>🏷️</span>
                         )}
                       </div>
                     </div>
 
-                    <div className={`mx-6 h-px bg-gradient-to-r from-transparent ${isDark ? 'via-gray-600' : 'via-gray-300/50'} to-transparent`} />
-
-                    <div className="px-5 py-4 text-center space-y-2.5 flex-shrink-0">
+                    {/* ✅ Compact info area */}
+                    <div className={`px-4 pb-4 text-center space-y-1.5 flex-shrink-0`}>
                       <h2 className={`
                         font-black 
-                        text-base md:text-lg
+                        text-sm md:text-base
                         tracking-tight leading-tight
                         ${isDark ? 'text-gray-200 group-hover:text-pink-400' : `text-gray-900 ${palette.hoverText}`}
-                        transition-colors duration-500
+                        transition-colors duration-300
                         ${lang === "en" ? "font-latin" : ""}
                         line-clamp-1
                       `}>
                         {brand.displayName}
                       </h2>
                       
-                      <div className={`flex items-center justify-center gap-2 ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
-                        <span className={`w-2 h-2 rounded-full ${isDark ? 'bg-pink-500' : palette.dot} ${isHovered ? 'animate-ping' : ''}`} />
-                        <span className={`text-xs font-black tabular-nums ${isDark ? 'text-pink-400' : palette.accentText}`}>
+                      <div className={`flex items-center justify-center gap-1.5 ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${isDark ? 'bg-pink-500' : palette.dot} ${isHovered ? 'animate-ping' : ''}`} />
+                        <span className={`text-[11px] font-black tabular-nums ${isDark ? 'text-pink-400' : palette.accentText}`}>
                           {brand.productCount}
                         </span>
-                        <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        <span className={`text-[9px] font-bold uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
                           {t('products')}
                         </span>
-                      </div>
-
-                      <div className={`
-                        inline-flex items-center gap-2 
-                        text-[10px] font-black uppercase tracking-wider
-                        ${isDark ? 'text-pink-400' : palette.accentText}
-                        transition-all duration-500 ease-out
-                        ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}
-                        ${lang === "ar" ? "flex-row-reverse" : ""}
-                      `}>
-                        <span>{lang === "ar" ? "استكشف المجموعة" : "Explore Collection"}</span>
-                        <svg 
-                          width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" 
-                          className={`transition-transform duration-300 ${lang === "en" ? "rotate-180 group-hover:-translate-x-1" : "group-hover:translate-x-1"}`}
-                        >
-                          <path d="M5 12h14M12 5l7 7-7 7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
                       </div>
                     </div>
                   </div>
@@ -316,7 +300,7 @@ const Brands = () => {
           </div>
         </section>
 
-        {/* ===== Section 2: Main Categories Grid ===== */}
+        {/* ===== Section 2: Main Categories - Hero Style with Full Background Images ===== */}
         {mainCategories.length > 0 && (
           <section>
             <div className="flex items-center gap-3 mb-8">
@@ -327,7 +311,8 @@ const Brands = () => {
               <div className={`flex-1 h-px ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}></div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+            {/* ✅ Hero Style Grid - Full Background Images with Overlay */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
               {mainCategories.map((cat, index) => {
                 const catImageUrl = getImageUrl(cat.image);
                 const catName = lang === "ar" ? cat.name_ar : cat.name_en;
@@ -335,50 +320,84 @@ const Brands = () => {
                 return (
                   <Link 
                     key={cat.id} 
-                    to={`/shop?parent=${cat.id}`} // ✅ التوجيه لصفحة المتجر مع فلتر الأب
-                    className={`group relative block rounded-[2rem] border p-5 sm:p-6 transition-all duration-500 hover:-translate-y-1 hover:shadow-lg overflow-hidden ${
-                      isDark 
-                        ? 'bg-gray-800 border-gray-700 hover:border-pink-500/50 hover:bg-gray-750' 
-                        : 'bg-white border-gray-100 hover:border-pink-200 hover:bg-pink-50/30'
-                    }`}
+                    to={`/shop?parent=${cat.id}`}
+                    className="group relative block overflow-hidden rounded-3xl aspect-[4/5]"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    {/* خلفية متدرجة خفيفة عند الـ hover */}
-                    <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${
-                      isDark ? 'bg-gradient-to-br from-pink-900/10 to-transparent' : 'bg-gradient-to-br from-pink-50 to-transparent'
-                    }`} />
+                    {/* ✅ Background Image - Full Cover */}
+                    <div className="absolute inset-0">
+                      {cat.image ? (
+                        <img 
+                          src={catImageUrl} 
+                          alt={catName}
+                          className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                          loading="lazy"
+                          onError={(e) => { 
+                            e.target.style.display = 'none';
+                            // Fallback: show placeholder emoji with gradient
+                            if (e.target.parentElement) {
+                              e.target.parentElement.classList.add('bg-gradient-to-br');
+                              e.target.parentElement.classList.add('from-gray-200', 'to-gray-300');
+                              e.target.parentElement.innerHTML = `<span class="absolute inset-0 flex items-center justify-center text-7xl opacity-20">📁</span>`;
+                            }
+                          }}
+                        />
+                      ) : (
+                        <div className={`w-full h-full flex items-center justify-center ${
+                          isDark 
+                            ? 'bg-gradient-to-br from-gray-700 to-gray-900' 
+                            : 'bg-gradient-to-br from-pink-50 to-purple-50'
+                        }`}>
+                          <span className="text-7xl opacity-20">📁</span>
+                        </div>
+                      )}
+                    </div>
 
-                    <div className="relative flex items-start justify-between mb-4">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 ${
-                        isDark ? 'bg-gray-700 group-hover:bg-pink-900/30' : 'bg-pink-50 group-hover:bg-pink-100'
-                      }`}>
-                        {cat.image ? (
-                          <img 
-                            src={catImageUrl} 
-                            alt="" 
-                            className="w-8 h-8 object-contain" 
-                            onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.textContent = '📁'; }} 
-                          />
-                        ) : '📁'}
+                    {/* ✅ Gradient Overlay - Dark for text readability */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10 group-hover:from-black/90 group-hover:via-black/50 group-hover:to-black/20 transition-all duration-500" />
+
+                    {/* ✅ Subtle color tint on hover */}
+                    <div className="absolute inset-0 bg-pink-600/0 group-hover:bg-pink-600/10 transition-colors duration-500 mix-blend-overlay" />
+
+                    {/* ✅ Content - Name and Explore Button */}
+                    <div className="relative h-full flex flex-col justify-end p-5 sm:p-6">
+                      {/* Top Badge - Category Number */}
+                      <div className={`absolute top-4 ${lang === "ar" ? "right-4" : "left-4"}`}>
+                        <span className="text-[9px] font-black uppercase tracking-widest tabular-nums text-white/60">
+                          #{String(index + 1).padStart(2, '0')}
+                        </span>
                       </div>
-                      <svg 
-                        className={`w-5 h-5 transition-transform duration-500 group-hover:translate-x-1 ${
-                          lang === "ar" ? 'rotate-180 group-hover:-translate-x-1' : ''
-                        } ${isDark ? 'text-gray-500 group-hover:text-pink-400' : 'text-gray-300 group-hover:text-pink-500'}`} 
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                      </svg>
+
+                      {/* Arrow Icon - Top Right */}
+                      <div className={`absolute top-4 ${lang === "ar" ? "left-4" : "right-4"}`}>
+                        <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center transition-all duration-500 group-hover:bg-white group-hover:scale-110">
+                          <svg 
+                            className={`w-4 h-4 text-white transition-all duration-500 group-hover:text-gray-900 ${
+                              lang === "ar" ? 'rotate-180 group-hover:rotate-0' : 'group-hover:rotate-180'
+                            }`} 
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                          </svg>
+                        </div>
+                      </div>
+
+                      {/* Category Name & Description */}
+                      <div className="space-y-2 transform transition-transform duration-500 group-hover:translate-y-[-4px]">
+                        <h3 className="text-white font-black text-xl sm:text-2xl tracking-tight leading-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
+                          {catName}
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          <span className={`w-8 h-0.5 bg-white transition-all duration-500 group-hover:w-12 ${isDark ? 'bg-pink-400' : 'bg-white'}`} />
+                          <p className="text-white/80 text-[10px] font-bold uppercase tracking-wider">
+                            {lang === "ar" ? "تصفح المنتجات" : "Explore Products"}
+                          </p>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="relative space-y-1">
-                      <h3 className={`font-black text-base tracking-tight ${isDark ? 'text-white group-hover:text-pink-400' : 'text-gray-900 group-hover:text-pink-600'} transition-colors`}>
-                        {catName}
-                      </h3>
-                      <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                        {lang === "ar" ? "تصفح المنتجات" : "Explore Products"}
-                      </p>
-                    </div>
+                    {/* ✅ Hover Border Glow */}
+                    <div className="absolute inset-0 rounded-3xl border-2 border-white/0 group-hover:border-white/20 transition-all duration-500 pointer-events-none" />
                   </Link>
                 );
               })}
