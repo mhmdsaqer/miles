@@ -38,7 +38,7 @@ const Navbar = () => {
 
   const navLinks = useMemo(() => [
     { name: t('home'), path: "/" },
-    { name: t('brands'), path: "/brands" },
+    { name: t('brandsAndcategories'), path: "/brands" },
     { name: t('shop'), path: "/shop" }
   ], [t]);
 

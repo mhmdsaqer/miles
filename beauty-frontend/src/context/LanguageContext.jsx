@@ -10,6 +10,7 @@ readOnly  : { ar: " ", en: " " },
 // في كائن TRANSLATIONS
 outOfStock: { ar: "نفذت الكمية", en: "Out of Stock" },
 unavailable: { ar: "غير متوفر", en: "Unavailable" },
+brandsAndcategories:{ar : "الماركات والأصناف",en :"Brands and Categories"},
 // داخل كائن TRANSLATIONS في src/context/LanguageContext.jsx
 mainCategories: { ar: "الأقسام الرئيسية", en: "Main Categories" },
 exploreCategory: { ar: "تصفح المنتجات", en: "Explore Products" },
