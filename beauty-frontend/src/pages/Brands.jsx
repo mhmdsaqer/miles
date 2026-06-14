@@ -1,4 +1,4 @@
-// src/pages/Brands.jsx - النسخة النهائية: كروت أصغر + أقسام Hero Style ✨
+// src/pages/Brands.jsx - النسخة المُحدّثة: تصغير البراندات + تصميم جديد للأقسام ✨
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
@@ -18,7 +18,6 @@ const Brands = () => {
   const [error, setError] = useState(null);
   const [hoveredId, setHoveredId] = useState(null);
 
-  // ✅ جلب البراندات والأقسام معاً (Parallel Fetching)
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -40,7 +39,6 @@ const Brands = () => {
     fetchData();
   }, []);
 
-  // ✅ فلترة الأقسام الرئيسية فقط
   const mainCategories = useMemo(() => {
     return categories.filter((c) => c.parent_id === null);
   }, [categories]);
@@ -67,7 +65,6 @@ const Brands = () => {
     type: "collection"
   }), [lang]);
 
-  // ✅ 5 ألوان فخمة للبراندات (Luxury Palette)
   const luxuryPalettes = useMemo(() => [
     {
       name: "champagne",
@@ -78,7 +75,7 @@ const Brands = () => {
       border: "border-amber-200/50",
       hoverBorder: "hover:border-amber-300/70",
       dot: "bg-amber-500",
-      shadow: "group-hover:shadow-[0_20px_50px_-20px_rgba(217,119,6,0.25)]",
+      shadow: "group-hover:shadow-[0_20px_50px_-15px_rgba(217,119,6,0.25)]",
     },
     {
       name: "rose",
@@ -89,7 +86,7 @@ const Brands = () => {
       border: "border-rose-200/50",
       hoverBorder: "hover:border-rose-300/70",
       dot: "bg-rose-500",
-      shadow: "group-hover:shadow-[0_20px_50px_-20px_rgba(225,29,72,0.25)]",
+      shadow: "group-hover:shadow-[0_20px_50px_-15px_rgba(225,29,72,0.25)]",
     },
     {
       name: "pearl",
@@ -100,7 +97,7 @@ const Brands = () => {
       border: "border-stone-200/50",
       hoverBorder: "hover:border-stone-400/70",
       dot: "bg-stone-600",
-      shadow: "group-hover:shadow-[0_20px_50px_-20px_rgba(87,83,78,0.25)]",
+      shadow: "group-hover:shadow-[0_20px_50px_-15px_rgba(87,83,78,0.25)]",
     },
     {
       name: "midnight",
@@ -111,7 +108,7 @@ const Brands = () => {
       border: "border-slate-200/50",
       hoverBorder: "hover:border-slate-400/70",
       dot: "bg-slate-600",
-      shadow: "group-hover:shadow-[0_20px_50px_-20px_rgba(71,85,105,0.25)]",
+      shadow: "group-hover:shadow-[0_20px_50px_-15px_rgba(71,85,105,0.25)]",
     },
     {
       name: "mauve",
@@ -122,19 +119,18 @@ const Brands = () => {
       border: "border-purple-200/50",
       hoverBorder: "hover:border-purple-300/70",
       dot: "bg-purple-500",
-      shadow: "group-hover:shadow-[0_20px_50px_-20px_rgba(147,51,234,0.25)]",
+      shadow: "group-hover:shadow-[0_20px_50px_-15px_rgba(147,51,234,0.25)]",
     },
   ], []);
 
-  // ✅ Loading State
   if (loading) {
     return (
       <div className={`min-h-screen pt-32 px-4 sm:px-6 lg:px-12 ${isDark ? 'bg-gray-900' : 'bg-gradient-to-b from-white via-stone-50/30 to-white'}`} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
         <div className="max-w-[1400px] mx-auto space-y-16">
           <div className={`h-16 w-64 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-3xl animate-pulse mx-auto`} />
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-5">
-            {[...Array(10)].map((_, i) => (
-              <div key={i} className={`aspect-square ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-3xl animate-pulse`} />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 lg:gap-6">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className={`aspect-square ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-[2rem] animate-pulse`} />
             ))}
           </div>
         </div>
@@ -142,7 +138,6 @@ const Brands = () => {
     );
   }
 
-  // ✅ Error State
   if (error) {
     return (
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-white'}`} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
@@ -164,7 +159,7 @@ const Brands = () => {
     <div className={`min-h-screen pb-20 sm:pb-24 ${isDark ? 'bg-gray-900' : 'bg-gradient-to-b from-white via-stone-50/30 to-white'}`} dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
       <SEO title={brandsSeoData.title} description={brandsSeoData.description} image={brandsSeoData.image} url={brandsSeoData.url} type={brandsSeoData.type} />
       
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 space-y-16 sm:space-y-20 pt-28 sm:pt-32">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 space-y-20 sm:space-y-24 pt-28 sm:pt-32">
         
         {/* ===== Header ===== */}
         <div className="text-center space-y-5">
@@ -196,7 +191,7 @@ const Brands = () => {
           </div>
         </div>
 
-        {/* ===== Section 1: Brands Grid - Smaller & More Elegant ===== */}
+        {/* ===== Section 1: Brands Grid (أصغر حجماً - Square) ===== */}
         <section>
           <div className="flex items-center gap-3 mb-8">
             <span className="text-2xl">🏷️</span>
@@ -204,8 +199,7 @@ const Brands = () => {
             <div className={`flex-1 h-px ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}></div>
           </div>
           
-          {/* ✅ Changed: 5 columns on large screens, aspect-square, smaller padding */}
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 lg:gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-5">
             {enrichedBrands.map((brand, index) => {
               const isHovered = hoveredId === brand.id;
               const brandImageUrl = getImageUrl(brand.image);
@@ -218,15 +212,16 @@ const Brands = () => {
                   onMouseEnter={() => setHoveredId(brand.id)}
                   onMouseLeave={() => setHoveredId(null)}
                   className="group relative block"
-                  style={{ animationDelay: `${index * 30}ms` }}
+                  style={{ animationDelay: `${index * 50}ms` }}
                 >
+                  {/* ✅ تم تغيير aspect-[4/5] إلى aspect-square لتصغير الكروت */}
                   <div className={`
-                    relative overflow-hidden rounded-3xl 
+                    relative overflow-hidden rounded-[2rem] 
                     bg-gradient-to-br ${isDark ? 'from-gray-800 via-gray-800 to-gray-900' : palette.bg}
                     border ${isDark ? 'border-gray-700 hover:border-gray-600' : `${palette.border} ${palette.hoverBorder}`} 
                     ${palette.shadow}
-                    transition-all duration-500 ease-out
-                    hover:-translate-y-1
+                    transition-all duration-700 ease-out
+                    hover:-translate-y-2
                     aspect-square
                     flex flex-col
                   `}>
@@ -237,24 +232,24 @@ const Brands = () => {
                       </span>
                     </div>
 
-                    {/* ✅ Smaller logo area */}
-                    <div className="relative flex-1 flex items-center justify-center p-4 overflow-hidden">
+                    {/* ✅ منطقة اللوجو - أصغر padding */}
+                    <div className="relative flex-[1.4] flex items-center justify-center p-4 md:p-6 overflow-hidden">
                       <div className={`
                         absolute inset-0 opacity-0 group-hover:opacity-100
-                        transition-opacity duration-700
-                        bg-gradient-to-br from-white/40 via-transparent to-transparent
+                        transition-opacity duration-1000
+                        bg-gradient-to-br from-white/60 via-transparent to-transparent
                       `} />
                       
                       <div className={`
                         relative w-full h-full flex items-center justify-center
-                        transition-all duration-500 ease-out
-                        group-hover:scale-105
+                        transition-all duration-700 ease-out
+                        group-hover:scale-110
                       `}>
                         {brand.image ? (
                           <img 
                             src={brandImageUrl} 
                             alt={brand.displayName} 
-                            className="max-w-[80%] max-h-[70%] object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.06)] transition-all duration-500 group-hover:drop-shadow-[0_15px_30px_rgba(0,0,0,0.1)]"
+                            className="max-w-[80%] max-h-[80%] object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.08)] transition-all duration-700 group-hover:drop-shadow-[0_15px_30px_rgba(0,0,0,0.12)]"
                             loading="lazy"
                             onError={(e) => { 
                               e.target.style.display = 'none'; 
@@ -269,14 +264,16 @@ const Brands = () => {
                       </div>
                     </div>
 
-                    {/* ✅ Compact info area */}
-                    <div className={`px-4 pb-4 text-center space-y-1.5 flex-shrink-0`}>
+                    <div className={`mx-4 h-px bg-gradient-to-r from-transparent ${isDark ? 'via-gray-600' : 'via-gray-300/50'} to-transparent`} />
+
+                    {/* ✅ معلومات البراند - أصغر padding */}
+                    <div className="px-3 py-3 text-center space-y-1.5 flex-shrink-0">
                       <h2 className={`
                         font-black 
                         text-sm md:text-base
                         tracking-tight leading-tight
                         ${isDark ? 'text-gray-200 group-hover:text-pink-400' : `text-gray-900 ${palette.hoverText}`}
-                        transition-colors duration-300
+                        transition-colors duration-500
                         ${lang === "en" ? "font-latin" : ""}
                         line-clamp-1
                       `}>
@@ -292,6 +289,23 @@ const Brands = () => {
                           {t('products')}
                         </span>
                       </div>
+
+                      <div className={`
+                        inline-flex items-center gap-1.5 
+                        text-[9px] font-black uppercase tracking-wider
+                        ${isDark ? 'text-pink-400' : palette.accentText}
+                        transition-all duration-500 ease-out
+                        ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}
+                        ${lang === "ar" ? "flex-row-reverse" : ""}
+                      `}>
+                        <span>{lang === "ar" ? "استكشف" : "Explore"}</span>
+                        <svg 
+                          width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+                          className={`transition-transform duration-300 ${lang === "en" ? "rotate-180 group-hover:-translate-x-1" : "group-hover:translate-x-1"}`}
+                        >
+                          <path d="M5 12h14M12 5l7 7-7 7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </div>
                     </div>
                   </div>
                 </Link>
@@ -300,7 +314,7 @@ const Brands = () => {
           </div>
         </section>
 
-        {/* ===== Section 2: Main Categories - Hero Style with Full Background Images ===== */}
+        {/* ===== Section 2: Main Categories Grid (تصميم جديد: صورة كاملة + Overlay) ===== */}
         {mainCategories.length > 0 && (
           <section>
             <div className="flex items-center gap-3 mb-8">
@@ -311,93 +325,87 @@ const Brands = () => {
               <div className={`flex-1 h-px ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}></div>
             </div>
 
-            {/* ✅ Hero Style Grid - Full Background Images with Overlay */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
               {mainCategories.map((cat, index) => {
                 const catImageUrl = getImageUrl(cat.image);
                 const catName = lang === "ar" ? cat.name_ar : cat.name_en;
+                const hasImage = !!cat.image;
                 
                 return (
                   <Link 
                     key={cat.id} 
                     to={`/shop?parent=${cat.id}`}
-                    className="group relative block overflow-hidden rounded-3xl aspect-[4/5]"
+                    className={`group relative block rounded-[2rem] overflow-hidden transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl aspect-[4/5] ${
+                      isDark ? 'ring-1 ring-gray-700 hover:ring-pink-500/50' : 'ring-1 ring-gray-100 hover:ring-pink-200'
+                    }`}
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    {/* ✅ Background Image - Full Cover */}
-                    <div className="absolute inset-0">
-                      {cat.image ? (
-                        <img 
-                          src={catImageUrl} 
-                          alt={catName}
-                          className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-                          loading="lazy"
-                          onError={(e) => { 
-                            e.target.style.display = 'none';
-                            // Fallback: show placeholder emoji with gradient
-                            if (e.target.parentElement) {
-                              e.target.parentElement.classList.add('bg-gradient-to-br');
-                              e.target.parentElement.classList.add('from-gray-200', 'to-gray-300');
-                              e.target.parentElement.innerHTML = `<span class="absolute inset-0 flex items-center justify-center text-7xl opacity-20">📁</span>`;
-                            }
-                          }}
-                        />
-                      ) : (
-                        <div className={`w-full h-full flex items-center justify-center ${
-                          isDark 
-                            ? 'bg-gradient-to-br from-gray-700 to-gray-900' 
-                            : 'bg-gradient-to-br from-pink-50 to-purple-50'
+                    {/* ✅ الصورة تملأ الخلفية بالكامل */}
+                    {hasImage ? (
+                      <img 
+                        src={catImageUrl} 
+                        alt={catName}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        loading="lazy"
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div className={`absolute inset-0 ${isDark ? 'bg-gradient-to-br from-gray-700 to-gray-900' : 'bg-gradient-to-br from-pink-50 to-purple-50'}`} />
+                    )}
+
+                    {/* ✅ طبقة Overlay شفافة - تزداد عند الـ hover */}
+                    <div className={`absolute inset-0 transition-all duration-500 ${
+                      hasImage
+                        ? 'bg-gradient-to-t from-black/80 via-black/40 to-black/20 group-hover:from-black/90 group-hover:via-black/50 group-hover:to-black/30'
+                        : isDark 
+                          ? 'bg-gradient-to-t from-gray-900/90 via-gray-900/60 to-gray-900/30'
+                          : 'bg-gradient-to-t from-pink-900/70 via-pink-900/30 to-transparent'
+                    }`} />
+
+                    {/* ✅ المحتوى: اسم القسم + أيقونة + زر الاستكشاف */}
+                    <div className="relative h-full flex flex-col justify-between p-5 sm:p-6">
+                      {/* الأعلى: أيقونة + رقم */}
+                      <div className="flex items-start justify-between">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center backdrop-blur-md transition-all duration-500 group-hover:scale-110 ${
+                          isDark ? 'bg-white/10 border border-white/20' : 'bg-white/20 border border-white/30'
                         }`}>
-                          <span className="text-7xl opacity-20">📁</span>
+                          <span className="text-xl">
+                            {hasImage ? '' : '📁'}
+                          </span>
+                          {hasImage && (
+                            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                            </svg>
+                          )}
                         </div>
-                      )}
-                    </div>
-
-                    {/* ✅ Gradient Overlay - Dark for text readability */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/10 group-hover:from-black/90 group-hover:via-black/50 group-hover:to-black/20 transition-all duration-500" />
-
-                    {/* ✅ Subtle color tint on hover */}
-                    <div className="absolute inset-0 bg-pink-600/0 group-hover:bg-pink-600/10 transition-colors duration-500 mix-blend-overlay" />
-
-                    {/* ✅ Content - Name and Explore Button */}
-                    <div className="relative h-full flex flex-col justify-end p-5 sm:p-6">
-                      {/* Top Badge - Category Number */}
-                      <div className={`absolute top-4 ${lang === "ar" ? "right-4" : "left-4"}`}>
-                        <span className="text-[9px] font-black uppercase tracking-widest tabular-nums text-white/60">
+                        <span className={`text-[10px] font-black text-white/60 uppercase tracking-widest tabular-nums`}>
                           #{String(index + 1).padStart(2, '0')}
                         </span>
                       </div>
 
-                      {/* Arrow Icon - Top Right */}
-                      <div className={`absolute top-4 ${lang === "ar" ? "left-4" : "right-4"}`}>
-                        <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center transition-all duration-500 group-hover:bg-white group-hover:scale-110">
+                      {/* الأسفل: اسم القسم + زر الاستكشاف */}
+                      <div className="space-y-3">
+                        <h3 className="font-black text-lg sm:text-xl text-white tracking-tight leading-tight drop-shadow-lg">
+                          {catName}
+                        </h3>
+                        
+                        <div className={`flex items-center gap-2 transition-all duration-500 ${
+                          isDark ? 'opacity-80 group-hover:opacity-100' : 'opacity-90 group-hover:opacity-100'
+                        }`}>
+                          <span className={`text-[10px] font-bold uppercase tracking-wider text-white/80`}>
+                            {lang === "ar" ? "تصفح المنتجات" : "Explore Products"}
+                          </span>
                           <svg 
-                            className={`w-4 h-4 text-white transition-all duration-500 group-hover:text-gray-900 ${
-                              lang === "ar" ? 'rotate-180 group-hover:rotate-0' : 'group-hover:rotate-180'
-                            }`} 
-                            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+                            className={`w-4 h-4 text-white/80 transition-transform duration-500 ${
+                              lang === "ar" ? 'group-hover:-translate-x-1' : 'group-hover:translate-x-1'
+                            }`}
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor"
                           >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                           </svg>
                         </div>
                       </div>
-
-                      {/* Category Name & Description */}
-                      <div className="space-y-2 transform transition-transform duration-500 group-hover:translate-y-[-4px]">
-                        <h3 className="text-white font-black text-xl sm:text-2xl tracking-tight leading-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
-                          {catName}
-                        </h3>
-                        <div className="flex items-center gap-2">
-                          <span className={`w-8 h-0.5 bg-white transition-all duration-500 group-hover:w-12 ${isDark ? 'bg-pink-400' : 'bg-white'}`} />
-                          <p className="text-white/80 text-[10px] font-bold uppercase tracking-wider">
-                            {lang === "ar" ? "تصفح المنتجات" : "Explore Products"}
-                          </p>
-                        </div>
-                      </div>
                     </div>
-
-                    {/* ✅ Hover Border Glow */}
-                    <div className="absolute inset-0 rounded-3xl border-2 border-white/0 group-hover:border-white/20 transition-all duration-500 pointer-events-none" />
                   </Link>
                 );
               })}
