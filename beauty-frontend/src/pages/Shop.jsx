@@ -1,4 +1,4 @@
-// src/pages/Shop.jsx - النسخة المحسّنة للجوال والديسكتوب مع نظام فلترة ذكي 📱💻
+// src/pages/Shop.jsx - النسخة المُصلحة نهائياً مع Drawer للجوال 📱💻
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import SEO from "../components/SEO";
@@ -11,10 +11,49 @@ import { toast } from "sonner";
 const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
 const ITEMS_PER_PAGE = 20;
 
+// ✅ Hook مخصص للتحقق من حجم الشاشة (يتحدث تلقائياً)
+const useMediaQuery = (query) => {
+  const [matches, setMatches] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.matchMedia(query).matches;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia(query);
+    const listener = (e) => setMatches(e.matches);
+    
+    // ✅ استخدام addEventListener الحديث مع fallback
+    if (media.addEventListener) {
+      media.addEventListener("change", listener);
+    } else {
+      media.addListener(listener);
+    }
+    
+    // ✅ مزامنة أولية
+    setMatches(media.matches);
+    
+    return () => {
+      if (media.removeEventListener) {
+        media.removeEventListener("change", listener);
+      } else {
+        media.removeListener(listener);
+      }
+    };
+  }, [query]);
+
+  return matches;
+};
+
 const Shop = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { lang, t } = useLang();
   const { isDark } = useTheme();
+
+  // ✅ التحقق من حجم الشاشة
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   // --- States ---
   const [products, setProducts] = useState([]);
@@ -26,7 +65,7 @@ const Shop = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [totalProducts, setTotalProducts] = useState(0);
-  const [showFilters, setShowFilters] = useState(false); // ✅ جديد: التحكم بعرض الفلاتر على الجوال
+  const [showFilters, setShowFilters] = useState(false);
 
   const [filters, setFilters] = useState(() => ({
     parent: searchParams.get("parent") ? Number(searchParams.get("parent")) : null,
@@ -52,6 +91,32 @@ const Shop = () => {
     if (filters.view !== "grid") params.view = filters.view;
     setSearchParams(params, { replace: true });
   }, [filters, setSearchParams]);
+
+  // ✅ منع التمرير عند فتح الفلاتر على الجوال
+  useEffect(() => {
+    if (showFilters && !isDesktop) {
+      const scrollY = window.scrollY;
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = "100%";
+      document.body.style.overflow = "hidden";
+      
+      return () => {
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.width = "";
+        document.body.style.overflow = "";
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [showFilters, isDesktop]);
+
+  // ✅ إغلاق الفلاتر عند الانتقال للديسكتوب
+  useEffect(() => {
+    if (isDesktop) {
+      setShowFilters(false);
+    }
+  }, [isDesktop]);
 
   // ✅ جلب المنتجات
   const fetchProducts = useCallback(async (page, reset = false) => {
@@ -187,6 +252,98 @@ const Shop = () => {
     }
   }, [loadingMore, hasNextPage, currentPage, fetchProducts]);
 
+  // ✅ مكون محتوى الفلاتر (قابل لإعادة الاستخدام في الديسكتوب والجوال)
+  const FiltersContent = () => (
+    <>
+      {/* Categories Tree */}
+      <div className={`rounded-[2rem] p-6 border shadow-sm transition-colors ${
+        isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-50'
+      }`}>
+        <h3 className={`text-[10px] font-black uppercase tracking-[0.3em] mb-5 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          {t("categories")}
+        </h3>
+        <div className="space-y-1 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
+          {mainCats.length === 0 ? (
+            <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              {lang === "ar" ? "لا توجد تصنيفات" : "No categories"}
+            </p>
+          ) : (
+            mainCats.map(cat => (
+              <div key={cat.id} className="space-y-1">
+                <button
+                  onClick={() => updateFilter("parent", cat.id)}
+                  className={`w-full ${lang === "ar" ? "text-right" : "text-left"} px-4 py-3 rounded-xl text-[13px] font-bold transition-all flex justify-between items-center group
+                  ${filters.parent === cat.id 
+                    ? (isDark ? "bg-pink-600 text-white" : "bg-gray-900 text-white") 
+                    : `${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-50'}`}`}
+                >
+                  {getCategoryName(cat)}
+                  <span className={`w-2 h-2 rounded-full ${filters.parent === cat.id ? "bg-pink-500" : (isDark ? "bg-gray-600" : "bg-gray-200")}`} />
+                </button>
+                {filters.parent === cat.id && childCats.length > 0 && (
+                  <div className={`${lang === "ar" ? "mr-4" : "ml-4"} space-y-1 py-1`}>
+                    {childCats.map(child => (
+                      <div key={child.id}>
+                        <button
+                          onClick={() => updateFilter("child", child.id)}
+                          className={`w-full ${lang === "ar" ? "text-right" : "text-left"} py-2 px-2 text-xs font-semibold rounded-lg transition-all
+                          ${filters.child === child.id 
+                            ? (isDark ? "text-pink-400 bg-pink-900/30 font-bold" : "text-pink-600 bg-pink-50 font-bold") 
+                            : `${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-700'}`}`}
+                        >
+                          {getCategoryName(child)}
+                        </button>
+                        {filters.child === child.id && grandChildCats.length > 0 && (
+                          <div className={`${lang === "ar" ? "mr-3" : "ml-3"} space-y-1 mt-1`}>
+                            {grandChildCats.map(grand => (
+                              <button
+                                key={grand.id}
+                                onClick={() => updateFilter("grandchild", grand.id)}
+                                className={`w-full ${lang === "ar" ? "text-right" : "text-left"} py-1 px-2 text-[10px] rounded transition-all
+                                ${filters.grandchild === grand.id 
+                                  ? (isDark ? "text-white font-bold bg-gray-700" : "text-gray-900 font-bold bg-gray-100") 
+                                  : `${isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-300 hover:text-gray-500'}`}`}
+                              >
+                                {getCategoryName(grand)}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Price Range */}
+      <div className={`rounded-[2rem] p-6 border shadow-sm transition-colors ${
+        isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-50'
+      }`}>
+        <h3 className={`text-[10px] font-black uppercase tracking-[0.3em] mb-5 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          {t("priceRange")}
+        </h3>
+        <div className="space-y-4">
+          <div className={`flex justify-between text-sm font-bold ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
+            <span>₪{filters.minPrice}</span>
+            <span>₪{filters.maxPrice}</span>
+          </div>
+          <input
+            type="range" 
+            min="0" 
+            max="300" 
+            value={filters.maxPrice}
+            onChange={(e) => updateFilter("maxPrice", Number(e.target.value))}
+            className="w-full accent-pink-500"
+          />
+        </div>
+      </div>
+    </>
+  );
+
   // ===== Error State =====
   if (error) {
     return (
@@ -268,14 +425,23 @@ const Shop = () => {
 
             {/* ✅ زر الفلترة للجوال */}
             <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="md:hidden flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border transition-colors"
+              onClick={() => setShowFilters(true)}
+              className={`md:hidden flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border transition-colors ${
+                isDark 
+                  ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700' 
+                  : 'bg-white border-gray-200 text-gray-900 hover:border-pink-300 hover:text-pink-600'
+              }`}
               aria-label={t("filter")}
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.707A1 1 0 013 7V4z" />
               </svg>
               {t("filter")}
+              {activeFilters.length > 0 && (
+                <span className="bg-pink-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">
+                  {activeFilters.length}
+                </span>
+              )}
             </button>
           </div>
 
@@ -293,13 +459,15 @@ const Shop = () => {
                     : 'bg-white border-gray-100 text-gray-900 placeholder-gray-300'
                 }`}
               />
-              <svg className={`absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 ${isDark ? 'text-gray-500' : 'text-gray-300'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              <svg className={`absolute ${lang === "ar" ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 w-5 h-5 ${isDark ? 'text-gray-500' : 'text-gray-300'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
             </div>
             <div className="relative min-w-[180px]">
               <select 
                 value={filters.brand} 
                 onChange={(e) => updateFilter("brand", e.target.value)}
-                className={`appearance-none border rounded-2xl pl-10 pr-4 py-3.5 text-[11px] font-bold w-full outline-none focus:ring-2 focus:ring-pink-500/20 transition-colors ${
+                className={`appearance-none border rounded-2xl px-4 py-3.5 text-[11px] font-bold w-full outline-none focus:ring-2 focus:ring-pink-500/20 transition-colors ${
                   isDark 
                     ? 'bg-gray-800 border-gray-700 text-white' 
                     : 'bg-white border-gray-100 text-gray-900'
@@ -405,86 +573,12 @@ const Shop = () => {
         )}
 
         <div className="flex flex-col lg:flex-row gap-16">
-          {/* ===== Sidebar Filters (مخفي على الجوال) ===== */}
-          {(showFilters || window.innerWidth >= 768) && (
-            <aside className="w-full lg:w-72 shrink-0">
-              <div className="sticky top-36 space-y-8">
-                {/* Categories Tree */}
-                <div className={`rounded-[2rem] p-6 border shadow-sm transition-colors ${
-                  isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-50'
-                }`}>
-                  <h3 className={`text-[10px] font-black uppercase tracking-[0.3em] mb-5 ${isDark ? 'text-white' : 'text-gray-900'}`}>{t("categories")}</h3>
-                  <div className="space-y-1 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
-                    {mainCats.map(cat => (
-                      <div key={cat.id} className="space-y-1">
-                        <button
-                          onClick={() => updateFilter("parent", cat.id)}
-                          className={`w-full ${lang === "ar" ? "text-right" : "text-left"} px-4 py-3 rounded-xl text-[13px] font-bold transition-all flex justify-between items-center group
-                          ${filters.parent === cat.id 
-                            ? (isDark ? "bg-pink-600 text-white" : "bg-gray-900 text-white") 
-                            : `${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-50'}`}`}
-                        >
-                          {getCategoryName(cat)}
-                          <span className={`w-2 h-2 rounded-full ${filters.parent === cat.id ? "bg-pink-500" : (isDark ? "bg-gray-600" : "bg-gray-200")}`} />
-                        </button>
-                        {filters.parent === cat.id && childCats.length > 0 && (
-                          <div className={`${lang === "ar" ? "mr-4" : "ml-4"} space-y-1 py-1`}>
-                            {childCats.map(child => (
-                              <div key={child.id}>
-                                <button
-                                  onClick={() => updateFilter("child", child.id)}
-                                  className={`w-full ${lang === "ar" ? "text-right" : "text-left"} py-2 px-2 text-xs font-semibold rounded-lg transition-all
-                                  ${filters.child === child.id 
-                                    ? (isDark ? "text-pink-400 bg-pink-900/30 font-bold" : "text-pink-600 bg-pink-50 font-bold") 
-                                    : `${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-700'}`}`}
-                                >
-                                  {getCategoryName(child)}
-                                </button>
-                                {filters.child === child.id && grandChildCats.length > 0 && (
-                                  <div className={`${lang === "ar" ? "mr-3" : "ml-3"} space-y-1 mt-1`}>
-                                    {grandChildCats.map(grand => (
-                                      <button
-                                        key={grand.id}
-                                        onClick={() => updateFilter("grandchild", grand.id)}
-                                        className={`w-full ${lang === "ar" ? "text-right" : "text-left"} py-1 px-2 text-[10px] rounded transition-all
-                                        ${filters.grandchild === grand.id 
-                                          ? (isDark ? "text-white font-bold bg-gray-700" : "text-gray-900 font-bold bg-gray-100") 
-                                          : `${isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-300 hover:text-gray-500'}`}`}
-                                      >
-                                        {getCategoryName(grand)}
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Price Range */}
-                <div className={`rounded-[2rem] p-6 border shadow-sm transition-colors ${
-                  isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-50'
-                }`}>
-                  <h3 className={`text-[10px] font-black uppercase tracking-[0.3em] mb-5 ${isDark ? 'text-white' : 'text-gray-900'}`}>{t("priceRange")}</h3>
-                  <div className="space-y-4">
-                    <div className={`flex justify-between text-sm font-bold ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
-                      <span>₪{filters.minPrice}</span>
-                      <span>₪{filters.maxPrice}</span>
-                    </div>
-                    <input
-                      type="range" min="0" max="300" value={filters.maxPrice}
-                      onChange={(e) => updateFilter("maxPrice", Number(e.target.value))}
-                      className="w-full accent-pink-500"
-                    />
-                  </div>
-                </div>
-              </div>
-            </aside>
-          )}
+          {/* ===== Sidebar Filters - للديسكتوب فقط ===== */}
+          <aside className="hidden lg:block w-full lg:w-72 shrink-0">
+            <div className="sticky top-36 space-y-8">
+              <FiltersContent />
+            </div>
+          </aside>
 
           {/* ===== Products Grid ===== */}
           <main className="flex-1 pb-20">
@@ -523,15 +617,101 @@ const Shop = () => {
             )}
           </main>
         </div>
-
-        {/* ✅ Overlay لفلترة الجوال */}
-        {showFilters && window.innerWidth < 768 && (
-          <div 
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
-            onClick={() => setShowFilters(false)}
-          />
-        )}
       </div>
+
+      {/* ✅ ✅ ✅ Mobile Filters Drawer - منفصل تماماً عن الـ Layout */}
+      {showFilters && !isDesktop && (
+        <>
+          {/* Overlay - z-40 */}
+          <div 
+            className="fixed inset-0 z-[998] bg-black/50 backdrop-blur-sm transition-opacity animate-fadeIn"
+            onClick={() => setShowFilters(false)}
+            aria-hidden="true"
+          />
+          
+          {/* Drawer Panel - z-50 (فوق الـ Overlay) */}
+          <div 
+            className={`fixed z-[999] top-0 ${lang === "ar" ? 'right-0' : 'left-0'} h-full w-[85%] max-w-sm shadow-2xl transition-transform duration-300 ease-out animate-slideIn ${
+              isDark ? 'bg-gray-900' : 'bg-[#fcfcfc]'
+            }`}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("filter")}
+          >
+            {/* Drawer Header */}
+            <div className={`sticky top-0 z-10 flex items-center justify-between p-5 border-b ${
+              isDark ? 'bg-gray-900 border-gray-800' : 'bg-[#fcfcfc] border-gray-100'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  isDark ? 'bg-pink-900/30' : 'bg-pink-50'
+                }`}>
+                  <svg className={`w-5 h-5 ${isDark ? 'text-pink-400' : 'text-pink-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.707A1 1 0 013 7V4z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className={`text-lg font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {t("filter")}
+                  </h2>
+                  <p className={`text-[10px] font-bold ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
+                    {activeFilters.length > 0 
+                      ? `${activeFilters.length} ${lang === "ar" ? "فلتر نشط" : "active filter(s)"}`
+                      : (lang === "ar" ? "اختر الفلاتر" : "Choose filters")
+                    }
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowFilters(false)}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                  isDark ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                }`}
+                aria-label={t("close")}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Drawer Content - Scrollable */}
+            <div className="h-[calc(100%-80px)] overflow-y-auto p-5 space-y-5 scrollbar-hide">
+              <FiltersContent />
+            </div>
+
+            {/* Drawer Footer - Apply Button */}
+            <div className={`sticky bottom-0 p-4 border-t ${
+              isDark ? 'bg-gray-900 border-gray-800' : 'bg-[#fcfcfc] border-gray-100'
+            }`}>
+              <div className="flex gap-3">
+                {activeFilters.length > 0 && (
+                  <button
+                    onClick={() => {
+                      clearAllFilters();
+                      setShowFilters(false);
+                    }}
+                    className={`flex-1 py-3.5 rounded-xl text-xs font-bold transition-colors ${
+                      isDark 
+                        ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {t("clearAll")}
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowFilters(false)}
+                  className="flex-1 bg-pink-600 text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-pink-700 transition-colors shadow-lg shadow-pink-500/20"
+                >
+                  {lang === "ar" ? "عرض النتائج" : "View Results"} 
+                  {totalProducts > 0 && ` (${totalProducts})`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
