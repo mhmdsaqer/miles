@@ -1,4 +1,4 @@
-// src/pages/BrandDetails.jsx - النسخة المُحسّنة مع Pagination + Load More ⚡
+// src/pages/BrandDetails.jsx - النسخة المُحسّنة مع دعم Header Image ⚡
 import SEO from "../components/SEO";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
@@ -107,7 +107,7 @@ const BrandDetails = () => {
       description: lang === "ar"
         ? `اكتشفي مجموعة ${brandDisplayName} من منتجات العناية والجمال الأصلية في MILES Beauty Store. شحن آمن، دفع عند الاستلام، ومنتجات أصلية 100%.`
         : `Discover the ${brandDisplayName} collection of original beauty and care products at MILES Beauty Store. Secure shipping, cash on delivery, and 100% authentic products.`,
-      image: getImageUrl(brand.image),
+      image: getImageUrl(brand.header_image || brand.image), // ✅ استخدام صورة الهيدر إذا وجدت
       url: `/brands/${id}`,
       type: "collection",
       brandData: {
@@ -115,6 +115,7 @@ const BrandDetails = () => {
         "name": brand.name,
         "url": `https://miles-beauty.com/brands/${id}`,
         "logo": getImageUrl(brand.image),
+        "image": getImageUrl(brand.header_image || brand.image), // ✅ إضافة image للـ SEO
         "sameAs": []
       }
     };
@@ -187,26 +188,44 @@ const BrandDetails = () => {
 
       {/* ===== Hero Banner ===== */}
       <div className="relative bg-gray-900 overflow-hidden">
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-pink-500 rounded-full blur-[120px]" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-white rounded-full blur-[80px]" />
-        </div>
+        
+        {/* ✅ التحقق من وجود صورة الهيدر */}
+        {brand.header_image ? (
+          <>
+            {/* صورة الهيدر */}
+            <img
+              src={getImageUrl(brand.header_image)}
+              alt={`${brandDisplayName} Header`}
+              className="absolute inset-0 w-full h-full object-cover"
+              loading="eager"
+            />
+            {/* طبقة تعتيم متدرجة لضمان وضوح النص الأبيض فوق أي صورة */}
+            <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/70 to-gray-900/40" />
+          </>
+        ) : (
+          /* ✅ الخلفية السوداء الافتراضية (Fallback) في حال عدم وجود صورة هيدر */
+          <div className="absolute inset-0 opacity-5">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-pink-500 rounded-full blur-[120px]" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-white rounded-full blur-[80px]" />
+          </div>
+        )}
 
+        {/* محتوى الهيدر (النص والأزرار) */}
         <div className="relative max-w-[1400px] mx-auto px-6 lg:px-12 pt-40 pb-16 flex flex-col md:flex-row items-end justify-between gap-8">
           <div className={`space-y-4 ${lang === "ar" ? "text-right" : "text-left"}`}>
-            <nav className={`flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
+            <nav className={`flex items-center gap-2 text-[10px] font-bold text-gray-300 uppercase tracking-[0.2em] ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
               <Link to="/" className="hover:text-white transition-colors">{t('shop')}</Link>
-              <span className="text-gray-700">/</span>
+              <span className="text-gray-500">/</span>
               <Link to="/brands" className="hover:text-white transition-colors">{t('brands')}</Link>
-              <span className="text-gray-700">/</span>
+              <span className="text-gray-500">/</span>
               <span className="text-pink-400">{brandDisplayName.toUpperCase()}</span>
             </nav>
 
-            <h1 className="text-6xl md:text-8xl font-black text-white tracking-tighter leading-none italic">
+            <h1 className="text-6xl md:text-8xl font-black text-white tracking-tighter leading-none italic drop-shadow-lg">
               {brandDisplayName}
             </h1>
 
-            <p className="text-gray-400 text-sm font-medium">
+            <p className="text-gray-300 text-sm font-medium drop-shadow-md">
               <span className="text-white font-black">{totalProducts}</span> {t('productsInCollection')}
             </p>
           </div>

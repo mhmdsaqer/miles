@@ -171,6 +171,13 @@ const brandSchema = Joi.object({
   .messages({
     "any.only": "مسار الصورة يجب أن يكون إما رابط HTTPS صحيح أو مسار محلي (assets/...)",
   }),
+	  // ✅ ✅ أضف هذا الحقل للسماح بمرور صورة الهيدر
+  header_image: Joi.alternatives().try(
+    Joi.string().uri({ scheme: ['https'] }),
+    Joi.string().pattern(/^(assets\/.+\.(jpg|jpeg|png|webp|gif))$/i)
+  ).allow("").optional().messages({
+    "any.only": "مسار صورة الهيدر يجب أن يكون إما رابط HTTPS صحيح أو مسار محلي",
+  }),
 });
 
 // ============================================

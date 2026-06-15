@@ -24,7 +24,8 @@ const AdminBrands = () => {
     id: "",
     name: "",
     code: "",
-    image: ""
+    image: "",
+    header_image: "" // ✅ إضافة الحقل الجديد
   });
 
   // ✅ ✅ ✅ دوال التحقق من الصلاحيات (مبسطة وسهلة الاستخدام)
@@ -93,7 +94,7 @@ const AdminBrands = () => {
 
     if (brand) {
       setEditingId(brand.id);
-      setFormData({ ...brand });
+      setFormData({ ...brand, header_image: brand.header_image || "" });
     } else {
       setEditingId(null);
       setFormData({ id: "", name: "", code: "", image: "" });
@@ -430,6 +431,19 @@ const AdminBrands = () => {
                 }}  // ✅ تأكد من وجود }} هنا
                 onImageSelect={(path) => setFormData(prev => ({ ...prev, image: path }))}
               />
+              {/* ✅ ✅ ✅ مكون رفع صورة الهيدر الجديد */}
+		<ImageUploader
+		  label={lang === "ar" ? "صورة الهيدر الخلفية (اختياري)" : "Header Background Image (Optional)"}
+		  currentImage={formData.header_image}
+		  resourceType="brands"
+		  resourceData={{
+		    name: formData.name,
+		    name_ar: formData.name,
+		    name_en: formData.name,
+		    isHeader: true // ✅ هذا السطر هو ما سيجعل الـ Backend يسمي الملف nevertti-header
+		  }}
+		  onImageSelect={(path) => setFormData(prev => ({ ...prev, header_image: path }))}
+		/>
               
               <div className="flex gap-3 pt-2">
                 <button 

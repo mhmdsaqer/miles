@@ -92,6 +92,7 @@ const uploadToCloudinary = async (fileBuffer, originalName, uploadParams) => {
     brandName,
     categoryName,
     brandId,
+    isHeader,
     sku,
     productName
   } = uploadParams;
@@ -103,7 +104,12 @@ const uploadToCloudinary = async (fileBuffer, originalName, uploadParams) => {
 
   if (resourceType === "brands") {
     resourceFolder = "brands";
-    if (brandName) filename = slugify(brandName);
+    if (brandName) {
+    filename = slugify(brandName);
+    if (isHeader) {
+        filename += "-header";
+      }
+    }
   }
   else if (resourceType === "categories") {
     resourceFolder = "categories";
@@ -218,6 +224,7 @@ const parseFormData = (req, res, next) => {
       brandId: req.body?.brand_id,
       sku: req.body?.sku,
       productName: req.body?.name_en || req.body?.name_ar,
+      isHeader: req.body?.isHeader === "true" || req.body?.isHeader === true, // ✅ قراءة قيمة isHeader
       file: req.file  // الملف في الذاكرة
     };
     

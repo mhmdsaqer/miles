@@ -1168,7 +1168,6 @@ router.get("/brands",
   }
 );
 
-// ✅ ✅ ✅ إضافة براند - مع التحقق اليدوي من الصورة
 router.post("/brands", 
   authMiddleware,
   checkPermission(PERMISSIONS.BRANDS.CREATE),
@@ -1178,12 +1177,19 @@ router.post("/brands",
   
   async (req, res) => {
     try {
-      const { id, name, code, image } = req.body;
+      const { id, name, code, image, header_image } = req.body; // ✅ إضافة header_image
       
-      // ✅ التحقق اليدوي من أن الصورة رابط HTTPS
+      // ✅ التحقق اليدوي من أن الصورة الرئيسية رابط HTTPS
       if (!image || !/^https:\/\//i.test(image)) {
         return res.status(400).json({ 
           message: "❌ صورة البراند مطلوبة ويجب أن تكون رابط HTTPS صحيح" 
+        });
+      }
+
+      // ✅ التحقق من صورة الهيدر (اختيارية، ولكن إذا وجدت يجب أن تكون رابط HTTPS صحيح)
+      if (header_image && !/^https:\/\//i.test(header_image)) {
+        return res.status(400).json({ 
+          message: "❌ صورة الهيدر يجب أن تكون رابط HTTPS صحيح" 
         });
       }
       
@@ -1191,7 +1197,8 @@ router.post("/brands",
       if (exists) return res.status(400).json({ message: "⚠️ براند بهذا المعرف موجود" });
 
       const newBrand = await Brand.create({
-        id, name, code, image
+        id, name, code, image,
+        header_image: header_image || "" // ✅ حفظ صورة الهيدر (فارغة إذا لم تُرفع)
       });
       
       await audit.create(req.user, "brand", newBrand.toObject(), req);
@@ -1214,15 +1221,21 @@ router.put("/brands/:id",
   validate(schemas.brand.fork(["id"], field => field.optional()), "body"),
   async (req, res) => {
     try {
-      const { image, ...updateData } = req.body;
+      const { image, header_image, ...updateData } = req.body; // ✅ استخراج header_image
       
       // 1️⃣ جلب بيانات البراند القديمة أولاً لمعرفة رابط الصورة القديمة
       const oldBrand = await Brand.findOne({ id: Number(req.params.id) });
       if (!oldBrand) return res.status(404).json({ message: "Brand not found" });
 
-      // 2️⃣ إذا تم رفع صورة جديدة، نجهّز رابطها للحفظ
-      if (req.uploadedPath) {
-        updateData.image = req.uploadedPath;
+      // 2️⃣ تجهيز رابط الصورة الرئيسية (سواء من الرفع المباشر أو من الرابط في الـ body)
+      const finalImageUrl = req.uploadedPath || image;
+      if (finalImageUrl) {
+        updateData.image = finalImageUrl;
+      }
+
+      // ✅ 2.5 تجهيز رابط صورة الهيدر
+      if (header_image !== undefined) {
+        updateData.header_image = header_image || "";
       }
       
       // 3️⃣ تحديث البيانات في MongoDB
@@ -1232,13 +1245,11 @@ router.put("/brands/:id",
         { returnDocument: 'after' }
       );
         
-      
-         // ✅ ✅ ✅ الإصلاح: التحقق من تطابق الـ public_id قبل الحذف
-      if (req.uploadedPath && oldBrand.image && oldBrand.image !== req.uploadedPath && oldBrand.image.startsWith("https://res.cloudinary.com/")) {
+      // 4️⃣ حذف الصورة الرئيسية القديمة من Cloudinary إذا تغيرت
+      if (finalImageUrl && oldBrand.image && oldBrand.image !== finalImageUrl && oldBrand.image.startsWith("https://res.cloudinary.com/")) {
         const oldPublicId = extractPublicIdFromUrl(oldBrand.image);
-        const newPublicId = extractPublicIdFromUrl(req.uploadedPath);
+        const newPublicId = extractPublicIdFromUrl(finalImageUrl);
         
-        // ✅ فقط إذا كان الـ public_id مختلفاً، نحذف الصورة القديمة
         if (oldPublicId && newPublicId && oldPublicId !== newPublicId) {
           deleteFromCloudinary(oldBrand.image).then((success) => {
             if (success) {
@@ -1251,6 +1262,22 @@ router.put("/brands/:id",
           });
         } else {
           console.log(`⏭️ Skipping deletion: Same public_id (${oldPublicId}) - image was overwritten`);
+        }
+      }
+
+      // ✅ 4.5 حذف صورة الهيدر القديمة من Cloudinary إذا تغيرت أو أُلغيت
+      if (header_image !== undefined && oldBrand.header_image && oldBrand.header_image !== updateData.header_image && oldBrand.header_image.startsWith("https://res.cloudinary.com/")) {
+        const oldHeaderPublicId = extractPublicIdFromUrl(oldBrand.header_image);
+        const newHeaderPublicId = updateData.header_image ? extractPublicIdFromUrl(updateData.header_image) : null;
+        
+        if (oldHeaderPublicId && (!newHeaderPublicId || oldHeaderPublicId !== newHeaderPublicId)) {
+          deleteFromCloudinary(oldBrand.header_image).then((success) => {
+            if (success) {
+              console.log(`✅ Deleted old brand header image from Cloudinary: ${oldBrand.header_image}`);
+            }
+          }).catch(err => {
+            console.error("❌ Error deleting old header image from Cloudinary:", err);
+          });
         }
       }
       
@@ -1273,6 +1300,7 @@ router.put("/brands/:id",
     }
   }
 );
+
 router.delete("/brands/:id", 
   authMiddleware,
   checkPermission(PERMISSIONS.BRANDS.DELETE),
@@ -1325,12 +1353,21 @@ router.delete("/brands/:id",
         return res.status(404).json({ message: "Brand not found" });
       }
 
-      // ✅ 8️⃣ حذف صورة البراند من Cloudinary
+      // ✅ 8️⃣ حذف صورة البراند الرئيسية من Cloudinary
       if (brand.image?.startsWith("https://res.cloudinary.com/")) {
         const publicId = extractPublicIdFromUrl(brand.image);
         if (publicId) {
           await deleteFromCloudinary(publicId);
           console.log(`🗑️ Deleted brand image from Cloudinary: ${publicId}`);
+        }
+      }
+
+      // ✅ 8.5 حذف صورة الهيدر من Cloudinary
+      if (brand.header_image?.startsWith("https://res.cloudinary.com/")) {
+        const headerPublicId = extractPublicIdFromUrl(brand.header_image);
+        if (headerPublicId) {
+          await deleteFromCloudinary(headerPublicId);
+          console.log(`🗑️ Deleted brand header image from Cloudinary: ${headerPublicId}`);
         }
       }
 
