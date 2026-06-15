@@ -1,4 +1,4 @@
-// src/pages/BrandDetails.jsx - النسخة الفاخرة مع Header Image محسّن ⚡✨
+// src/pages/BrandDetails.jsx - النسخة الفاخرة النهائية مع Header Image مثالي ⚡✨
 import SEO from "../components/SEO";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
@@ -28,7 +28,7 @@ const BrandDetails = () => {
   const [hasNextPage, setHasNextPage] = useState(false);
   const [totalProducts, setTotalProducts] = useState(0);
 
-  // ✅ جلب البيانات الأولية (أول 24 منتج + معلومات البراند)
+  // ✅ جلب البيانات الأولية
   useEffect(() => {
     const fetchInitialData = async () => {
       setLoading(true);
@@ -123,7 +123,7 @@ const BrandDetails = () => {
     return (
       <div className="min-h-screen bg-[#FAFAFA] pt-32 px-6 lg:px-12" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
         <div className="max-w-[1400px] mx-auto space-y-10 animate-pulse">
-          <div className="h-12 w-48 bg-gray-100 rounded-2xl" />
+          <div className="h-[60vh] bg-gray-100 rounded-[3rem]" />
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-8">
             {[...Array(8)].map((_, i) => (
               <div key={i} className="aspect-[4/5] bg-gray-100 rounded-[2.5rem]" />
@@ -183,104 +183,108 @@ const BrandDetails = () => {
         />
       )}
 
-      {/* ===== Hero Banner - النسخة الفاخرة ✨ ===== */}
-      <div className="relative bg-gray-900 overflow-hidden min-h-[500px] md:min-h-[600px]">
+      {/* ===== Hero Banner - النسخة الفاخرة النهائية ✨ ===== */}
+      {/* ✅ الارتفاع: 80% من ارتفاع الشاشة (متجاوب) */}
+      <div className="relative bg-gray-900 overflow-hidden h-[75vh] min-h-[550px] max-h-[900px] w-full">
         
-        {/* ✅ 1️⃣ صورة الهيدر (إذا وجدت) */}
+        {/* ✅ 1️⃣ صورة الهيدر - تملأ المساحة بالكامل بدون قص مزعج */}
         {brand.header_image ? (
           <img
             src={getImageUrl(brand.header_image)}
             alt={`${brandDisplayName} Header`}
-            className="absolute inset-0 w-full h-full object-cover scale-105"
+            className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-[2000ms] ease-out hover:scale-105"
             loading="eager"
           />
         ) : (
           /* ✅ الخلفية السوداء الافتراضية مع تأثيرات ضوئية فاخرة */
           <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-gray-800">
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-pink-500/10 rounded-full blur-[150px]" />
-            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-purple-500/10 rounded-full blur-[120px]" />
+            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-pink-500/10 rounded-full blur-[180px] animate-pulse-slow" />
+            <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[150px] animate-pulse-slow" />
           </div>
         )}
 
-        {/* ✅ 2️⃣ طبقات التعتيم الذكية (Smart Overlays) - تركز التعتيم فقط حيث النص */}
-        {/* طبقة Vignette (تعتيم الأطراف) */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-transparent to-black/40" />
+        {/* ✅ 2️⃣ طبقات التعتيم الذكية - شفافة في الأعلى، داكنة في الأسفل فقط */}
+        {/* طبقة Vignette خفيفة جداً (تعتيم زوايا) */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.3)_100%)]" />
         
-        {/* طبقة التعتيم السفلي (حيث النص) - تدرج ناعم جداً */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+        {/* ✅ طبقة التعتيم السفلي (حيث النص) - تدرج ناعم جداً وشفاف */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
         
-        {/* طبقة لمسة لونية فاخرة (Luxury Glow) */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-pink-900/20 to-transparent" />
+        {/* طبقة لمسة لونية فاخرة (Luxury Glow) في الأسفل */}
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-pink-900/30 to-transparent" />
 
-        {/* ✅ 3️⃣ تأثير Grid Pattern خفيف (للفخامة) */}
+        {/* ✅ 3️⃣ تأثير Grid Pattern خفيف جداً (للفخامة) */}
         <div 
-          className="absolute inset-0 opacity-[0.03]"
+          className="absolute inset-0 opacity-[0.02] pointer-events-none"
           style={{
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-            backgroundSize: '50px 50px'
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px)`,
+            backgroundSize: '60px 60px'
           }}
         />
 
-        {/* ✅ 4️⃣ محتوى الهيدر (النص والأزرار) */}
-        <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-12 pt-40 pb-16 flex flex-col md:flex-row items-end justify-between gap-8">
-          
-          {/* الجانب الأيسر: المعلومات */}
-          <div className={`space-y-6 ${lang === "ar" ? "text-right" : "text-left"}`}>
+        {/* ✅ 4️⃣ محتوى الهيدر (النص والأزرار) - في الأسفل */}
+        <div className="absolute bottom-0 left-0 right-0 z-10">
+          <div className="max-w-[1400px] mx-auto px-6 lg:px-12 pb-12 md:pb-16 flex flex-col md:flex-row items-end justify-between gap-8">
             
-            {/* Breadcrumb */}
-            <nav className={`flex items-center gap-2 text-[10px] font-bold text-white/60 uppercase tracking-[0.3em] ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
-              <Link to="/" className="hover:text-white transition-colors">{t('shop')}</Link>
-              <span className="text-white/30">/</span>
-              <Link to="/brands" className="hover:text-white transition-colors">{t('brands')}</Link>
-              <span className="text-white/30">/</span>
-              <span className="text-pink-400">{brandDisplayName.toUpperCase()}</span>
-            </nav>
-
-            {/* ✅ اللوجو + اسم البراند (بتصميم فاخر) */}
-            <div className="flex items-center gap-5">
-              {/* اللوجو في إطار زجاجي */}
-              {brand.image && (
-                <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center p-3 shadow-2xl">
-                  <img
-                    src={getImageUrl(brand.image)}
-                    alt={brandDisplayName}
-                    className="max-w-full max-h-full object-contain drop-shadow-lg"
-                  />
-                </div>
-              )}
+            {/* الجانب الأيسر: المعلومات */}
+            <div className={`space-y-5 ${lang === "ar" ? "text-right" : "text-left"}`}>
               
-              {/* اسم البراند */}
-              <div>
-                <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-white tracking-tighter leading-none italic drop-shadow-[0_5px_15px_rgba(0,0,0,0.5)]">
-                  {brandDisplayName}
-                </h1>
-                {/* خط زخرفي تحت الاسم */}
-                <div className={`mt-3 h-1 w-20 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full ${lang === "ar" ? "ml-auto" : "mr-auto"}`} />
+              {/* Breadcrumb */}
+              <nav className={`flex items-center gap-2 text-[10px] font-bold text-white/70 uppercase tracking-[0.3em] ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
+                <Link to="/" className="hover:text-white transition-colors">{t('shop')}</Link>
+                <span className="text-white/30">/</span>
+                <Link to="/brands" className="hover:text-white transition-colors">{t('brands')}</Link>
+                <span className="text-white/30">/</span>
+                <span className="text-pink-400">{brandDisplayName.toUpperCase()}</span>
+              </nav>
+
+              {/* ✅ اللوجو + اسم البراند (بتصميم فاخر جداً) */}
+              <div className="flex items-center gap-5 md:gap-6">
+                {/* اللوجو في إطار زجاجي فاخر */}
+                {brand.image && (
+                  <div className="w-16 h-16 md:w-24 md:h-24 rounded-2xl md:rounded-3xl bg-white/10 backdrop-blur-2xl border border-white/30 flex items-center justify-center p-3 md:p-4 shadow-2xl ring-1 ring-white/10">
+                    <img
+                      src={getImageUrl(brand.image)}
+                      alt={brandDisplayName}
+                      className="max-w-full max-h-full object-contain drop-shadow-[0_5px_15px_rgba(0,0,0,0.3)]"
+                    />
+                  </div>
+                )}
+                
+                {/* اسم البراند */}
+                <div>
+                  <h1 className="text-4xl md:text-6xl lg:text-8xl font-black text-white tracking-tighter leading-none italic drop-shadow-[0_5px_20px_rgba(0,0,0,0.6)]">
+                    {brandDisplayName}
+                  </h1>
+                  {/* خط زخرفي تحت الاسم */}
+                  <div className={`mt-3 h-1 w-16 md:w-24 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full shadow-lg shadow-pink-500/50 ${lang === "ar" ? "ml-auto" : "mr-auto"}`} />
+                </div>
+              </div>
+
+              {/* عدد المنتجات */}
+              <div className={`flex items-center gap-3 ${lang === "ar" ? "flex-row-reverse" : ""}`}>
+                <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse shadow-lg shadow-pink-500/50" />
+                <p className="text-white/90 text-sm font-medium drop-shadow-md">
+                  <span className="text-white font-black text-xl">{totalProducts}</span> {t('productsInCollection')}
+                </p>
               </div>
             </div>
 
-            {/* عدد المنتجات */}
-            <div className={`flex items-center gap-3 ${lang === "ar" ? "flex-row-reverse" : ""}`}>
-              <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
-              <p className="text-white/80 text-sm font-medium drop-shadow-md">
-                <span className="text-white font-black text-lg">{totalProducts}</span> {t('productsInCollection')}
-              </p>
-            </div>
+            {/* الجانب الأيمن: زر العودة */}
+            <button
+              onClick={() => navigate("/brands")}
+              className={`group flex items-center gap-3 bg-white/10 backdrop-blur-2xl border border-white/30 text-white px-5 py-3 md:px-6 md:py-3.5 rounded-2xl text-[10px] md:text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-gray-900 transition-all shrink-0 shadow-2xl ring-1 ring-white/10 ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={lang === "en" ? "rotate-180" : ""}>
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+              {t('allBrands')}
+            </button>
           </div>
-
-          {/* الجانب الأيمن: زر العودة */}
-          <button
-            onClick={() => navigate("/brands")}
-            className={`group flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 text-white px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-gray-900 transition-all shrink-0 shadow-2xl ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={lang === "en" ? "rotate-180" : ""}>
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-            {t('allBrands')}
-          </button>
         </div>
       </div>
 
+      {/* ===== باقي المحتوى (Toolbar + Products) ===== */}
       <div className="max-w-[1400px] mx-auto px-6 lg:px-12 mt-12">
         {/* ===== Toolbar ===== */}
         <div className="flex items-center justify-between mb-10 flex-wrap gap-4">
