@@ -1,4 +1,4 @@
-// src/pages/BrandDetails.jsx - النسخة المُحسّنة مع دعم Header Image ⚡
+// src/pages/BrandDetails.jsx - النسخة الفاخرة مع Header Image محسّن ⚡✨
 import SEO from "../components/SEO";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
@@ -33,13 +33,12 @@ const BrandDetails = () => {
     const fetchInitialData = async () => {
       setLoading(true);
       setError(null);
-      setProducts([]); // ✅ مسح المنتجات القديمة
+      setProducts([]);
       setCurrentPage(1);
       
       try {
         const [brandsRes, prodsRes] = await Promise.all([
           axios.get(`${API_URL}/brands`),
-          // ✅ جلب أول 24 منتج فقط مع Pagination + Sort
           axios.get(`${API_URL}/products?brand=${id}&page=1&limit=${ITEMS_PER_PAGE}&sort=${sortBy}`),
         ]);
         
@@ -47,7 +46,6 @@ const BrandDetails = () => {
         setBrand(foundBrand || null);
         setAllBrands(brandsRes.data);
         
-        // ✅ استخراج بيانات المنتجات والـ pagination
         const productsData = prodsRes.data?.products || prodsRes.data || [];
         const pagination = prodsRes.data?.pagination || {};
         
@@ -66,7 +64,7 @@ const BrandDetails = () => {
     
     if (id) fetchInitialData();
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [id, sortBy]); // ✅ إعادة الجلب عند تغيير البراند أو الترتيب
+  }, [id, sortBy]);
 
   // ✅ دالة جلب المزيد من المنتجات (Load More)
   const handleLoadMore = useCallback(async () => {
@@ -82,7 +80,6 @@ const BrandDetails = () => {
       const newProducts = res.data?.products || res.data || [];
       const pagination = res.data?.pagination || {};
       
-      // ✅ إضافة المنتجات الجديدة للمصفوفة الموجودة
       setProducts(prev => [...prev, ...newProducts]);
       setHasNextPage(pagination.hasNextPage || false);
       setCurrentPage(pagination.currentPage || nextPage);
@@ -96,7 +93,7 @@ const BrandDetails = () => {
   // ✅ عرض اسم البراند
   const brandDisplayName = useMemo(() => {
     if (!brand) return "";
-    return brand.name; // ✅ البراندات تحتوي فقط على name
+    return brand.name;
   }, [brand]);
 
   // ✅ بيانات الـ SEO
@@ -107,7 +104,7 @@ const BrandDetails = () => {
       description: lang === "ar"
         ? `اكتشفي مجموعة ${brandDisplayName} من منتجات العناية والجمال الأصلية في MILES Beauty Store. شحن آمن، دفع عند الاستلام، ومنتجات أصلية 100%.`
         : `Discover the ${brandDisplayName} collection of original beauty and care products at MILES Beauty Store. Secure shipping, cash on delivery, and 100% authentic products.`,
-      image: getImageUrl(brand.header_image || brand.image), // ✅ استخدام صورة الهيدر إذا وجدت
+      image: getImageUrl(brand.header_image || brand.image),
       url: `/brands/${id}`,
       type: "collection",
       brandData: {
@@ -115,7 +112,7 @@ const BrandDetails = () => {
         "name": brand.name,
         "url": `https://miles-beauty.com/brands/${id}`,
         "logo": getImageUrl(brand.image),
-        "image": getImageUrl(brand.header_image || brand.image), // ✅ إضافة image للـ SEO
+        "image": getImageUrl(brand.header_image || brand.image),
         "sameAs": []
       }
     };
@@ -186,53 +183,95 @@ const BrandDetails = () => {
         />
       )}
 
-      {/* ===== Hero Banner ===== */}
-      <div className="relative bg-gray-900 overflow-hidden">
+      {/* ===== Hero Banner - النسخة الفاخرة ✨ ===== */}
+      <div className="relative bg-gray-900 overflow-hidden min-h-[500px] md:min-h-[600px]">
         
-        {/* ✅ التحقق من وجود صورة الهيدر */}
+        {/* ✅ 1️⃣ صورة الهيدر (إذا وجدت) */}
         {brand.header_image ? (
-          <>
-            {/* صورة الهيدر */}
-            <img
-              src={getImageUrl(brand.header_image)}
-              alt={`${brandDisplayName} Header`}
-              className="absolute inset-0 w-full h-full object-cover"
-              loading="eager"
-            />
-            {/* طبقة تعتيم متدرجة لضمان وضوح النص الأبيض فوق أي صورة */}
-            <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/70 to-gray-900/40" />
-          </>
+          <img
+            src={getImageUrl(brand.header_image)}
+            alt={`${brandDisplayName} Header`}
+            className="absolute inset-0 w-full h-full object-cover scale-105"
+            loading="eager"
+          />
         ) : (
-          /* ✅ الخلفية السوداء الافتراضية (Fallback) في حال عدم وجود صورة هيدر */
-          <div className="absolute inset-0 opacity-5">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-pink-500 rounded-full blur-[120px]" />
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-white rounded-full blur-[80px]" />
+          /* ✅ الخلفية السوداء الافتراضية مع تأثيرات ضوئية فاخرة */
+          <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-gray-800">
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-pink-500/10 rounded-full blur-[150px]" />
+            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-purple-500/10 rounded-full blur-[120px]" />
           </div>
         )}
 
-        {/* محتوى الهيدر (النص والأزرار) */}
-        <div className="relative max-w-[1400px] mx-auto px-6 lg:px-12 pt-40 pb-16 flex flex-col md:flex-row items-end justify-between gap-8">
-          <div className={`space-y-4 ${lang === "ar" ? "text-right" : "text-left"}`}>
-            <nav className={`flex items-center gap-2 text-[10px] font-bold text-gray-300 uppercase tracking-[0.2em] ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
+        {/* ✅ 2️⃣ طبقات التعتيم الذكية (Smart Overlays) - تركز التعتيم فقط حيث النص */}
+        {/* طبقة Vignette (تعتيم الأطراف) */}
+        <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-transparent to-black/40" />
+        
+        {/* طبقة التعتيم السفلي (حيث النص) - تدرج ناعم جداً */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+        
+        {/* طبقة لمسة لونية فاخرة (Luxury Glow) */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-pink-900/20 to-transparent" />
+
+        {/* ✅ 3️⃣ تأثير Grid Pattern خفيف (للفخامة) */}
+        <div 
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+            backgroundSize: '50px 50px'
+          }}
+        />
+
+        {/* ✅ 4️⃣ محتوى الهيدر (النص والأزرار) */}
+        <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-12 pt-40 pb-16 flex flex-col md:flex-row items-end justify-between gap-8">
+          
+          {/* الجانب الأيسر: المعلومات */}
+          <div className={`space-y-6 ${lang === "ar" ? "text-right" : "text-left"}`}>
+            
+            {/* Breadcrumb */}
+            <nav className={`flex items-center gap-2 text-[10px] font-bold text-white/60 uppercase tracking-[0.3em] ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
               <Link to="/" className="hover:text-white transition-colors">{t('shop')}</Link>
-              <span className="text-gray-500">/</span>
+              <span className="text-white/30">/</span>
               <Link to="/brands" className="hover:text-white transition-colors">{t('brands')}</Link>
-              <span className="text-gray-500">/</span>
+              <span className="text-white/30">/</span>
               <span className="text-pink-400">{brandDisplayName.toUpperCase()}</span>
             </nav>
 
-            <h1 className="text-6xl md:text-8xl font-black text-white tracking-tighter leading-none italic drop-shadow-lg">
-              {brandDisplayName}
-            </h1>
+            {/* ✅ اللوجو + اسم البراند (بتصميم فاخر) */}
+            <div className="flex items-center gap-5">
+              {/* اللوجو في إطار زجاجي */}
+              {brand.image && (
+                <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center p-3 shadow-2xl">
+                  <img
+                    src={getImageUrl(brand.image)}
+                    alt={brandDisplayName}
+                    className="max-w-full max-h-full object-contain drop-shadow-lg"
+                  />
+                </div>
+              )}
+              
+              {/* اسم البراند */}
+              <div>
+                <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-white tracking-tighter leading-none italic drop-shadow-[0_5px_15px_rgba(0,0,0,0.5)]">
+                  {brandDisplayName}
+                </h1>
+                {/* خط زخرفي تحت الاسم */}
+                <div className={`mt-3 h-1 w-20 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full ${lang === "ar" ? "ml-auto" : "mr-auto"}`} />
+              </div>
+            </div>
 
-            <p className="text-gray-300 text-sm font-medium drop-shadow-md">
-              <span className="text-white font-black">{totalProducts}</span> {t('productsInCollection')}
-            </p>
+            {/* عدد المنتجات */}
+            <div className={`flex items-center gap-3 ${lang === "ar" ? "flex-row-reverse" : ""}`}>
+              <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
+              <p className="text-white/80 text-sm font-medium drop-shadow-md">
+                <span className="text-white font-black text-lg">{totalProducts}</span> {t('productsInCollection')}
+              </p>
+            </div>
           </div>
 
+          {/* الجانب الأيمن: زر العودة */}
           <button
             onClick={() => navigate("/brands")}
-            className={`group flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 text-white px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-gray-900 transition-all shrink-0 ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}
+            className={`group flex items-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 text-white px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-gray-900 transition-all shrink-0 shadow-2xl ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={lang === "en" ? "rotate-180" : ""}>
               <path d="M19 12H5M12 19l-7-7 7-7" />
