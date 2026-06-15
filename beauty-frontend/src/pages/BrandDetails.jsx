@@ -1,4 +1,4 @@
-// src/pages/BrandDetails.jsx - النسخة النهائية: صورة كاملة خلف النص + حل مشكلة الـ Navbar ✨
+// src/pages/BrandDetails.jsx - النسخة النهائية: صورة كاملة خلف النص ✨
 import SEO from "../components/SEO";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
@@ -175,17 +175,16 @@ const BrandDetails = () => {
         />
       )}
 
-      {/* ===== Hero Banner - النسخة النهائية مع حل مشكلة الـ Navbar ✨ ===== */}
-      {/* ✅ ✅ ✅ الحل الجذري: pt-24 md:pt-28 لتعويض ارتفاع الـ Navbar الثابت */}
-      <div className="relative bg-gray-900 overflow-hidden pt-24 md:pt-28 md:h-[75vh] md:min-h-[650px] md:max-h-[900px]">
+      {/* ===== Hero Banner - النسخة النهائية: صورة كاملة خلف النص ✨ ===== */}
+      <div className="relative bg-gray-900 overflow-hidden md:h-[75vh] md:min-h-[550px] md:max-h-[900px]">
         
         {/* ✅ 1️⃣ صورة الهيدر */}
         {brand.header_image ? (
           <img
             src={getImageUrl(brand.header_image)}
             alt={`${brandDisplayName} Header`}
-            // ✅ على الموبايل: w-full h-auto block (تظهر كاملة بنسبتها الأصلية وتبدأ من تحت الـ Navbar بفضل pt-24)
-            // ✅ على الديسكتوب: absolute inset-0 object-cover (تملأ الحاوية كخلفية كاملة)
+            // ✅ على الموبايل: w-full h-auto block (تظهر كاملة بنسبتها الأصلية وتحدد ارتفاع الحاوية)
+            // ✅ على الديسكتوب: absolute inset-0 object-cover (تملأ الحاوية كخلفية)
             className="w-full h-auto block md:absolute md:inset-0 md:w-full md:h-full md:object-cover md:object-center transition-transform duration-[2000ms] ease-out hover:scale-105"
             loading="eager"
           />
