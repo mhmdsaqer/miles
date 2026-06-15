@@ -1,4 +1,4 @@
-// src/pages/BrandDetails.jsx - النسخة النهائية الفاخرة ✨
+// src/pages/BrandDetails.jsx - النسخة النهائية: صورة عمودية (3:4) + منتصف الصورة دائماً ✨
 import SEO from "../components/SEO";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
@@ -117,7 +117,7 @@ const BrandDetails = () => {
     return (
       <div className="min-h-screen bg-[#FAFAFA] pt-32 px-6 lg:px-12" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
         <div className="max-w-[1400px] mx-auto space-y-10 animate-pulse">
-          <div className="w-full aspect-[4/5] md:aspect-[16/9] lg:aspect-auto lg:h-[70vh] bg-gray-100 rounded-[3rem]" />
+          <div className="w-full aspect-[3/4] md:aspect-auto md:h-[70vh] bg-gray-100 rounded-[3rem]" />
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-8">
             {[...Array(8)].map((_, i) => (
               <div key={i} className="aspect-[4/5] bg-gray-100 rounded-[2.5rem]" />
@@ -175,38 +175,44 @@ const BrandDetails = () => {
         />
       )}
 
-      {/* ===== Hero Banner - التصميم الفاخر ✨ ===== */}
-      {/* ✅ الصورة الآن بأبعاد 900×1200 (عمودية 3:4) لذا object-center مثالي */}
+      {/* ===== Hero Banner - النسخة النهائية: صورة عمودية (900×1200) + منتصف الصورة دائماً ✨ ===== */}
+      {/* ✅ ✅ ✅ التعديلات:
+          - إزالة pt-24 md:pt-28 (لم نعد بحاجة لتعويض الـ Navbar)
+          - استخدام object-center دائماً (بدون center_10% أو center_25%)
+          - aspect-ratio 3:4 ليتناسب مع أبعاد الصورة العمودية
+      */}
       <div className="relative bg-gray-900 overflow-hidden">
-        {/* ✅ الحاوية: نسب مختلفة لكل شاشة */}
-        <div className="relative w-full aspect-[4/5] sm:aspect-[16/10] md:aspect-[2/1] lg:aspect-auto lg:h-[75vh] lg:min-h-[600px] lg:max-h-[900px]">
+        {/* ✅ الحاوية: نسبة 3:4 للموبايل، ارتفاع محدد للديسكتوب */}
+        <div className="relative w-full aspect-[3/4] md:aspect-auto md:h-[80vh] md:min-h-[600px] md:max-h-[950px]">
           
-          {/* ✅ 1️⃣ صورة الهيدر - تملأ الحاوية بالكامل مع التركيز على المنتصف */}
+          {/* ✅ 1️⃣ صورة الهيدر - تملأ الحاوية بالكامل + object-center دائماً */}
           {brand.header_image ? (
             <img
               src={getImageUrl(brand.header_image)}
               alt={`${brandDisplayName} Header`}
-              // ✅ object-center: يركز على منتصف الصورة (مثالي لصورة 900×1200)
+              // ✅ ✅ ✅ الحل النهائي:
+              // - object-cover: لملء الحاوية بالكامل
+              // - object-center: لأخذ منتصف الصورة دائماً (على جميع البيئات)
               className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-[2000ms] ease-out hover:scale-105"
               loading="eager"
               decoding="async"
             />
           ) : (
-            /* ✅ Fallback: خلفية متدرجة فاخرة */
+            /* ✅ Fallback: خلفية متدرجة فاخرة */}
             <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-gray-800">
               <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-pink-500/10 rounded-full blur-[180px] animate-pulse-slow" />
               <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[150px] animate-pulse-slow" />
             </div>
           )}
 
-          {/* ✅ 2️⃣ طبقات التعتيم الذكية */}
+          {/* ✅ 2️⃣ طبقات التعتيم الذكية - خفيفة لإظهار الصورة */}
           {/* Vignette خفيف جداً */}
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.15)_100%)]" />
           
-          {/* ✅ التعتيم السفلي */}
+          {/* ✅ التعتيم السفلي - أخف بكثير (75% بدلاً من 95%) */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
           
-          {/* لمسة وردية فاخرة */}
+          {/* لمسة وردية فاخرة - أخف */}
           <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-pink-900/20 to-transparent" />
 
           {/* Grid Pattern خفيف */}
