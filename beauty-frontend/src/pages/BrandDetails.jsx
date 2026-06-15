@@ -1,4 +1,4 @@
-// src/pages/BrandDetails.jsx - النسخة الفاخرة النهائية مع Header Image مثالي ⚡✨
+// src/pages/BrandDetails.jsx - النسخة النهائية المتجاوبة تماماً 📱💻✨
 import SEO from "../components/SEO";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
@@ -8,7 +8,7 @@ import ProductCard from "../components/ProductCard";
 import { getImageUrl } from "../utils/imageUtils";
 
 const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
-const ITEMS_PER_PAGE = 24; // ✅ عدد المنتجات في كل صفحة
+const ITEMS_PER_PAGE = 24;
 
 const BrandDetails = () => {
   const { lang, t } = useLang();
@@ -23,12 +23,10 @@ const BrandDetails = () => {
   const [error, setError] = useState(null);
   const [sortBy, setSortBy] = useState("default");
   
-  // ✅ States للـ Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [totalProducts, setTotalProducts] = useState(0);
 
-  // ✅ جلب البيانات الأولية
   useEffect(() => {
     const fetchInitialData = async () => {
       setLoading(true);
@@ -66,7 +64,6 @@ const BrandDetails = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [id, sortBy]);
 
-  // ✅ دالة جلب المزيد من المنتجات (Load More)
   const handleLoadMore = useCallback(async () => {
     if (!hasNextPage || loadingMore) return;
     
@@ -90,13 +87,11 @@ const BrandDetails = () => {
     }
   }, [id, currentPage, hasNextPage, loadingMore, sortBy]);
 
-  // ✅ عرض اسم البراند
   const brandDisplayName = useMemo(() => {
     if (!brand) return "";
     return brand.name;
   }, [brand]);
 
-  // ✅ بيانات الـ SEO
   const brandSeoData = useMemo(() => {
     if (!brand) return null;
     return {
@@ -118,12 +113,11 @@ const BrandDetails = () => {
     };
   }, [brand, brandDisplayName, id, lang]);
 
-  // ===== Loading State =====
   if (loading) {
     return (
       <div className="min-h-screen bg-[#FAFAFA] pt-32 px-6 lg:px-12" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
         <div className="max-w-[1400px] mx-auto space-y-10 animate-pulse">
-          <div className="h-[60vh] bg-gray-100 rounded-[3rem]" />
+          <div className="w-full aspect-[4/5] md:aspect-[16/10] lg:aspect-auto lg:h-[60vh] bg-gray-100 rounded-[3rem]" />
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-8">
             {[...Array(8)].map((_, i) => (
               <div key={i} className="aspect-[4/5] bg-gray-100 rounded-[2.5rem]" />
@@ -134,7 +128,6 @@ const BrandDetails = () => {
     );
   }
 
-  // ===== Error State =====
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
@@ -154,7 +147,6 @@ const BrandDetails = () => {
     );
   }
 
-  // ===== Brand not found =====
   if (!brand) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
@@ -183,118 +175,112 @@ const BrandDetails = () => {
         />
       )}
 
-      {/* ===== Hero Banner - النسخة الفاخرة النهائية ✨ ===== */}
-      {/* ✅ الارتفاع: 80% من ارتفاع الشاشة (متجاوب) */}
-      <div className="relative bg-gray-900 overflow-hidden h-[75vh] min-h-[550px] max-h-[900px] w-full">
-        
-        {/* ✅ 1️⃣ صورة الهيدر - تملأ المساحة بالكامل بدون قص مزعج */}
-        {brand.header_image ? (
-          <img
-            src={getImageUrl(brand.header_image)}
-            alt={`${brandDisplayName} Header`}
-            className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-[2000ms] ease-out hover:scale-105"
-            loading="eager"
+      {/* ===== Hero Banner - النسخة المتجاوبة تماماً ✨ ===== */}
+      {/* ✅ الحل الجذري: استخدام aspect-ratio متجاوب لكل شاشة */}
+      <div className="relative bg-gray-900 overflow-hidden w-full">
+        {/* ✅ الحاوية: نسب مختلفة لكل شاشة */}
+        <div className="relative w-full aspect-[4/5] sm:aspect-[16/10] md:aspect-[2/1] lg:aspect-auto lg:h-[75vh] lg:min-h-[550px] lg:max-h-[900px]">
+          
+          {/* ✅ 1️⃣ صورة الهيدر */}
+          {brand.header_image ? (
+            <img
+              src={getImageUrl(brand.header_image)}
+              alt={`${brandDisplayName} Header`}
+              className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-[2000ms] ease-out hover:scale-105"
+              loading="eager"
+              decoding="async"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-gray-800">
+              <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-pink-500/10 rounded-full blur-[180px] animate-pulse-slow" />
+              <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[150px] animate-pulse-slow" />
+            </div>
+          )}
+
+          {/* ✅ 2️⃣ طبقات التعتيم الذكية */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.3)_100%)]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-pink-900/30 to-transparent" />
+
+          {/* ✅ 3️⃣ تأثير Grid Pattern */}
+          <div 
+            className="absolute inset-0 opacity-[0.02] pointer-events-none"
+            style={{
+              backgroundImage: `linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px)`,
+              backgroundSize: '60px 60px'
+            }}
           />
-        ) : (
-          /* ✅ الخلفية السوداء الافتراضية مع تأثيرات ضوئية فاخرة */
-          <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-gray-800">
-            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-pink-500/10 rounded-full blur-[180px] animate-pulse-slow" />
-            <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[150px] animate-pulse-slow" />
-          </div>
-        )}
 
-        {/* ✅ 2️⃣ طبقات التعتيم الذكية - شفافة في الأعلى، داكنة في الأسفل فقط */}
-        {/* طبقة Vignette خفيفة جداً (تعتيم زوايا) */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.3)_100%)]" />
-        
-        {/* ✅ طبقة التعتيم السفلي (حيث النص) - تدرج ناعم جداً وشفاف */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
-        
-        {/* طبقة لمسة لونية فاخرة (Luxury Glow) في الأسفل */}
-        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-pink-900/30 to-transparent" />
-
-        {/* ✅ 3️⃣ تأثير Grid Pattern خفيف جداً (للفخامة) */}
-        <div 
-          className="absolute inset-0 opacity-[0.02] pointer-events-none"
-          style={{
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px)`,
-            backgroundSize: '60px 60px'
-          }}
-        />
-
-        {/* ✅ 4️⃣ محتوى الهيدر (النص والأزرار) - في الأسفل */}
-        <div className="absolute bottom-0 left-0 right-0 z-10">
-          <div className="max-w-[1400px] mx-auto px-6 lg:px-12 pb-12 md:pb-16 flex flex-col md:flex-row items-end justify-between gap-8">
-            
-            {/* الجانب الأيسر: المعلومات */}
-            <div className={`space-y-5 ${lang === "ar" ? "text-right" : "text-left"}`}>
+          {/* ✅ 4️⃣ محتوى الهيدر */}
+          <div className="absolute bottom-0 left-0 right-0 z-10">
+            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 pb-8 sm:pb-12 md:pb-16 flex flex-col md:flex-row items-end justify-between gap-6 md:gap-8">
               
-              {/* Breadcrumb */}
-              <nav className={`flex items-center gap-2 text-[10px] font-bold text-white/70 uppercase tracking-[0.3em] ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
-                <Link to="/" className="hover:text-white transition-colors">{t('shop')}</Link>
-                <span className="text-white/30">/</span>
-                <Link to="/brands" className="hover:text-white transition-colors">{t('brands')}</Link>
-                <span className="text-white/30">/</span>
-                <span className="text-pink-400">{brandDisplayName.toUpperCase()}</span>
-              </nav>
-
-              {/* ✅ اللوجو + اسم البراند (بتصميم فاخر جداً) */}
-              <div className="flex items-center gap-5 md:gap-6">
-                {/* اللوجو في إطار زجاجي فاخر */}
-                {brand.image && (
-                  <div className="w-16 h-16 md:w-24 md:h-24 rounded-2xl md:rounded-3xl bg-white/10 backdrop-blur-2xl border border-white/30 flex items-center justify-center p-3 md:p-4 shadow-2xl ring-1 ring-white/10">
-                    <img
-                      src={getImageUrl(brand.image)}
-                      alt={brandDisplayName}
-                      className="max-w-full max-h-full object-contain drop-shadow-[0_5px_15px_rgba(0,0,0,0.3)]"
-                    />
-                  </div>
-                )}
+              <div className={`space-y-4 md:space-y-5 ${lang === "ar" ? "text-right" : "text-left"}`}>
                 
-                {/* اسم البراند */}
-                <div>
-                  <h1 className="text-4xl md:text-6xl lg:text-8xl font-black text-white tracking-tighter leading-none italic drop-shadow-[0_5px_20px_rgba(0,0,0,0.6)]">
-                    {brandDisplayName}
-                  </h1>
-                  {/* خط زخرفي تحت الاسم */}
-                  <div className={`mt-3 h-1 w-16 md:w-24 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full shadow-lg shadow-pink-500/50 ${lang === "ar" ? "ml-auto" : "mr-auto"}`} />
+                {/* Breadcrumb */}
+                <nav className={`flex items-center gap-2 text-[9px] sm:text-[10px] font-bold text-white/70 uppercase tracking-[0.3em] ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
+                  <Link to="/" className="hover:text-white transition-colors">{t('shop')}</Link>
+                  <span className="text-white/30">/</span>
+                  <Link to="/brands" className="hover:text-white transition-colors">{t('brands')}</Link>
+                  <span className="text-white/30">/</span>
+                  <span className="text-pink-400">{brandDisplayName.toUpperCase()}</span>
+                </nav>
+
+                {/* ✅ اللوجو + اسم البراند */}
+                <div className="flex items-center gap-3 sm:gap-5 md:gap-6">
+                  {brand.image && (
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-24 md:h-24 rounded-xl sm:rounded-2xl md:rounded-3xl bg-white/10 backdrop-blur-2xl border border-white/30 flex items-center justify-center p-2 sm:p-3 md:p-4 shadow-2xl ring-1 ring-white/10">
+                      <img
+                        src={getImageUrl(brand.image)}
+                        alt={brandDisplayName}
+                        className="max-w-full max-h-full object-contain drop-shadow-[0_5px_15px_rgba(0,0,0,0.3)]"
+                      />
+                    </div>
+                  )}
+                  
+                  <div>
+                    <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-8xl font-black text-white tracking-tighter leading-none italic drop-shadow-[0_5px_20px_rgba(0,0,0,0.6)]">
+                      {brandDisplayName}
+                    </h1>
+                    <div className={`mt-2 sm:mt-3 h-1 w-12 sm:w-16 md:w-24 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full shadow-lg shadow-pink-500/50 ${lang === "ar" ? "ml-auto" : "mr-auto"}`} />
+                  </div>
+                </div>
+
+                {/* عدد المنتجات */}
+                <div className={`flex items-center gap-2 sm:gap-3 ${lang === "ar" ? "flex-row-reverse" : ""}`}>
+                  <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse shadow-lg shadow-pink-500/50" />
+                  <p className="text-white/90 text-xs sm:text-sm font-medium drop-shadow-md">
+                    <span className="text-white font-black text-base sm:text-xl">{totalProducts}</span> {t('productsInCollection')}
+                  </p>
                 </div>
               </div>
 
-              {/* عدد المنتجات */}
-              <div className={`flex items-center gap-3 ${lang === "ar" ? "flex-row-reverse" : ""}`}>
-                <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse shadow-lg shadow-pink-500/50" />
-                <p className="text-white/90 text-sm font-medium drop-shadow-md">
-                  <span className="text-white font-black text-xl">{totalProducts}</span> {t('productsInCollection')}
-                </p>
-              </div>
+              {/* زر العودة */}
+              <button
+                onClick={() => navigate("/brands")}
+                className={`group flex items-center gap-2 sm:gap-3 bg-white/10 backdrop-blur-2xl border border-white/30 text-white px-4 sm:px-5 md:px-6 py-2.5 sm:py-3 md:py-3.5 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-gray-900 transition-all shrink-0 shadow-2xl ring-1 ring-white/10 ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}
+              >
+                <svg width="12" height="12" className="sm:w-3.5 sm:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                  <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+                {t('allBrands')}
+              </button>
             </div>
-
-            {/* الجانب الأيمن: زر العودة */}
-            <button
-              onClick={() => navigate("/brands")}
-              className={`group flex items-center gap-3 bg-white/10 backdrop-blur-2xl border border-white/30 text-white px-5 py-3 md:px-6 md:py-3.5 rounded-2xl text-[10px] md:text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-gray-900 transition-all shrink-0 shadow-2xl ring-1 ring-white/10 ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={lang === "en" ? "rotate-180" : ""}>
-                <path d="M19 12H5M12 19l-7-7 7-7" />
-              </svg>
-              {t('allBrands')}
-            </button>
           </div>
         </div>
       </div>
 
-      {/* ===== باقي المحتوى (Toolbar + Products) ===== */}
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-12 mt-12">
+      {/* ===== باقي المحتوى ===== */}
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 mt-8 sm:mt-12">
         {/* ===== Toolbar ===== */}
-        <div className="flex items-center justify-between mb-10 flex-wrap gap-4">
-          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+        <div className="flex items-center justify-between mb-8 sm:mb-10 flex-wrap gap-4">
+          <p className="text-[10px] sm:text-[11px] font-bold text-gray-400 uppercase tracking-widest">
             {t('showing')} <span className="text-gray-900 font-black">{products.length}</span> / {totalProducts} {t('products')}
           </p>
 
-          <div className={`flex items-center gap-3 ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
-            <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">{t('sortBy')}</span>
-            <div className="flex gap-2">
+          <div className={`flex items-center gap-2 sm:gap-3 ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
+            <span className="text-[9px] sm:text-[10px] font-black text-gray-300 uppercase tracking-widest hidden sm:inline">{t('sortBy')}</span>
+            <div className="flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide pb-1">
               {[
                 { key: "default",    label: lang === "ar" ? "الافتراضي" : "Default" },
                 { key: "price_asc",  label: lang === "ar" ? "السعر ↑" : "Price ↑" },
@@ -305,7 +291,7 @@ const BrandDetails = () => {
                 <button
                   key={opt.key}
                   onClick={() => setSortBy(opt.key)}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wide transition-all
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wide transition-all whitespace-nowrap
                     ${sortBy === opt.key
                       ? "bg-gray-900 text-white"
                       : "bg-white border border-gray-100 text-gray-400 hover:border-gray-300 hover:text-gray-700"}`}
@@ -320,7 +306,7 @@ const BrandDetails = () => {
         {/* ===== Products Grid ===== */}
         {products.length > 0 ? (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-12">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 sm:gap-x-6 gap-y-8 sm:gap-y-12">
               {products.map((product, i) => (
                 <div
                   key={product.id}
@@ -332,13 +318,12 @@ const BrandDetails = () => {
               ))}
             </div>
             
-            {/* ✅ Load More Button */}
             {hasNextPage && (
-              <div className="mt-16 text-center">
+              <div className="mt-12 sm:mt-16 text-center">
                 <button
                   onClick={handleLoadMore}
                   disabled={loadingMore}
-                  className="inline-flex items-center gap-3 bg-white border border-gray-200 px-8 py-4 rounded-2xl text-sm font-bold text-gray-700 hover:border-pink-500 hover:text-pink-600 transition-all disabled:opacity-50"
+                  className="inline-flex items-center gap-3 bg-white border border-gray-200 px-6 sm:px-8 py-3 sm:py-4 rounded-2xl text-xs sm:text-sm font-bold text-gray-700 hover:border-pink-500 hover:text-pink-600 transition-all disabled:opacity-50"
                 >
                   {loadingMore ? (
                     <>
@@ -372,19 +357,19 @@ const BrandDetails = () => {
 
         {/* ===== Other Brands Strip ===== */}
         {allBrands.length > 1 && (
-          <div className="mt-24 pt-12 border-t border-gray-100">
-            <h3 className={`text-[10px] font-black text-gray-400 uppercase tracking-[0.4em] mb-6 flex items-center gap-3 ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
+          <div className="mt-16 sm:mt-24 pt-8 sm:pt-12 border-t border-gray-100">
+            <h3 className={`text-[10px] font-black text-gray-400 uppercase tracking-[0.4em] mb-4 sm:mb-6 flex items-center gap-3 ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
               <span className="w-8 h-[1px] bg-gray-200" />
               {t('otherBrands')}
             </h3>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2 sm:gap-3">
               {allBrands
                 .filter((b) => String(b.id) !== String(id))
                 .map((b) => (
                   <Link
                     key={b.id}
                     to={`/brands/${b.id}`}
-                    className="px-5 py-2.5 rounded-2xl border border-gray-100 bg-white text-[11px] font-black text-gray-500 hover:border-gray-900 hover:text-gray-900 hover:bg-gray-50 transition-all"
+                    className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl border border-gray-100 bg-white text-[10px] sm:text-[11px] font-black text-gray-500 hover:border-gray-900 hover:text-gray-900 hover:bg-gray-50 transition-all"
                   >
                     {b.name}
                   </Link>
