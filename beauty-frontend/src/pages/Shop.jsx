@@ -1,11 +1,11 @@
-// src/pages/Shop.jsx - النسخة النهائية مع الفلترة الهرمية السريعة ⚡
+// src/pages/Shop.jsx - النسخة المحسّنة للجوال والديسكتوب مع نظام فلترة ذكي 📱💻
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import SEO from "../components/SEO";
 import axios from "axios";
 import ProductCard from "../components/ProductCard";
 import { useLang } from "../context/LanguageContext";
-import { useTheme } from "../context/ThemeContext"; // ✅ إضافة جديدة لدعم الوضع الليلي
+import { useTheme } from "../context/ThemeContext";
 import { toast } from "sonner";
 
 const API_URL = import.meta.env?.VITE_API_URL || "http://localhost:3000";
@@ -14,22 +14,20 @@ const ITEMS_PER_PAGE = 20;
 const Shop = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { lang, t } = useLang();
-  const { isDark } = useTheme(); // ✅ إضافة جديدة
+  const { isDark } = useTheme();
 
-  // --- Data States ---
+  // --- States ---
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
-  
-  // --- Loading & Error States ---
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [totalProducts, setTotalProducts] = useState(0);
+  const [showFilters, setShowFilters] = useState(false); // ✅ جديد: التحكم بعرض الفلاتر على الجوال
 
-  // --- Filter States ---
   const [filters, setFilters] = useState(() => ({
     parent: searchParams.get("parent") ? Number(searchParams.get("parent")) : null,
     child: searchParams.get("child") ? Number(searchParams.get("child")) : null,
@@ -41,7 +39,7 @@ const Shop = () => {
     view: searchParams.get("view") || "grid"
   }));
 
-  // ✅ مزامنة الفلاتر مع الـ URL
+  // ✅ مزامنة الفلاتر مع URL
   useEffect(() => {
     const params = {};
     if (filters.parent !== null) params.parent = filters.parent;
@@ -55,7 +53,7 @@ const Shop = () => {
     setSearchParams(params, { replace: true });
   }, [filters, setSearchParams]);
 
-  // ✅ دالة جلب المنتجات - مع معالجة أخطاء محسّنة
+  // ✅ جلب المنتجات
   const fetchProducts = useCallback(async (page, reset = false) => {
     try {
       setError(null);
@@ -68,7 +66,7 @@ const Shop = () => {
 
       const finalCatId = filters.grandchild || filters.child || filters.parent;
       const queryParams = {
-        page: page,
+        page,
         limit: ITEMS_PER_PAGE,
         ...(finalCatId && { category: finalCatId }),
         ...(filters.brand && { brand: filters.brand }),
@@ -77,9 +75,7 @@ const Shop = () => {
         ...(filters.maxPrice < 300 && { max: filters.maxPrice })
       };
 
-      console.log("🔍 Fetching products with params:", queryParams);
       const res = await axios.get(`${API_URL}/products`, { params: queryParams });
-      console.log("✅ API Response:", res.data);
       
       let productsData = [];
       let paginationData = { currentPage: 1, totalPages: 1, totalProducts: 0, hasNextPage: false };
@@ -91,8 +87,6 @@ const Shop = () => {
       } else if (res.data?.products) {
         productsData = res.data.products;
         paginationData = res.data.pagination || paginationData;
-      } else {
-        console.warn("⚠️ Unexpected API response structure:", res.data);
       }
       
       if (reset) {
@@ -105,12 +99,6 @@ const Shop = () => {
       setCurrentPage(paginationData.currentPage + 1);
       
     } catch (err) {
-      console.error("❌ Fetch products error:", {
-        message: err.message,
-        status: err.response?.status,
-        data: err.response?.data,
-        url: err.config?.url
-      });
       setError(err.response?.status === 404 
         ? "السيرفر غير متصل - تأكد من تشغيل backend" 
         : "فشل تحميل المنتجات، حاول مرة أخرى");
@@ -120,7 +108,7 @@ const Shop = () => {
     }
   }, [filters]);
 
-  // ✅ جلب الـ Meta Data مع معالجة الأخطاء
+  // ✅ جلب البيانات الثابتة
   useEffect(() => {
     const fetchMeta = async () => {
       try {
@@ -130,7 +118,6 @@ const Shop = () => {
         ]);
         setCategories(catsRes.data);
         setBrands(brndsRes.data);
-        console.log("✅ Meta data loaded:", { categories: catsRes.data.length, brands: brndsRes.data.length });
       } catch (err) {
         console.error("❌ Meta fetch error:", err);
       }
@@ -138,11 +125,9 @@ const Shop = () => {
     fetchMeta();
   }, []);
 
-  // ✅ جلب المنتجات عند تغيير الفلتر - مع تحسين الـ Debounce
+  // ✅ جلب المنتجات عند تغيير الفلتر
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchProducts(1, true);
-    }, 300);
+    const timer = setTimeout(() => fetchProducts(1, true), 300);
     return () => clearTimeout(timer);
   }, [filters, fetchProducts]);
 
@@ -152,7 +137,6 @@ const Shop = () => {
   const childCats = useMemo(() => categories.filter(c => c.parent_id === filters.parent), [categories, filters.parent]);
   const grandChildCats = useMemo(() => categories.filter(c => c.parent_id === filters.child), [categories, filters.child]);
 
-  // ✅ Active Filters Display
   const activeFilters = useMemo(() => {
     const list = [];
     if (filters.grandchild) {
@@ -181,7 +165,7 @@ const Shop = () => {
   }, []);
 
   const clearFilter = useCallback((type) => {
-    if (type === "parent" || type === "child" || type === "grandchild") {
+    if (["parent", "child", "grandchild"].includes(type)) {
       setFilters(prev => ({ ...prev, parent: null, child: null, grandchild: null }));
     } else if (type === "brand") {
       setFilters(prev => ({ ...prev, brand: "" }));
@@ -220,9 +204,6 @@ const Shop = () => {
           >
             {t('tryAgain')}
           </button>
-          <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
-            💡 تأكد أن السيرفر يعمل على {API_URL} وأن MongoDB متصل
-          </p>
         </div>
       </div>
     );
@@ -253,9 +234,9 @@ const Shop = () => {
   return (
     <div className={`min-h-screen pt-32 ${isDark ? 'bg-gray-900' : 'bg-[#fcfcfc]'}`} dir={lang === "ar" ? "rtl" : "ltr"}>
       <div className="max-w-[1600px] mx-auto px-6 lg:px-12">
-        {/* ✅ SEO لصفحة المتجر */}
+        {/* ✅ SEO */}
         <SEO
-          title={activeFilters.find(f => f.type === "parent" || f.type === "child" || f.type === "grandchild")?.label || t("shop")}
+          title={activeFilters.find(f => ["parent", "child", "grandchild"].includes(f.type))?.label || t("shop")}
           description={lang === "ar"
             ? "تصفحي مجموعتنا الواسعة من منتجات العناية والجمال من أرقى الماركات العالمية. فلترة سهلة، أسعار منافسة، وشحن سريع."
             : "Browse our wide collection of beauty and care products from top global brands. Easy filtering, competitive prices, and fast shipping."}
@@ -270,20 +251,32 @@ const Shop = () => {
             <div className={`space-y-3 ${lang === "ar" ? "text-right" : "text-left"}`}>
               <nav className="flex items-center gap-2 text-[10px] font-bold text-pink-500 uppercase tracking-[0.2em]">
                 <span>{t("shop")}</span>
-                {activeFilters.find(f => f.type === "parent" || f.type === "child" || f.type === "grandchild") && (
+                {activeFilters.find(f => ["parent", "child", "grandchild"].includes(f.type)) && (
                   <>
                     <span className={isDark ? 'text-gray-600' : 'text-gray-200'}>/</span>
-                    <span className={isDark ? 'text-gray-300' : 'text-gray-900'}>{activeFilters.find(f => f.type === "parent" || f.type === "child" || f.type === "grandchild")?.label}</span>
+                    <span className={isDark ? 'text-gray-300' : 'text-gray-900'}>{activeFilters.find(f => ["parent", "child", "grandchild"].includes(f.type))?.label}</span>
                   </>
                 )}
               </nav>
               <h1 className={`text-4xl md:text-5xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                {activeFilters.find(f => f.type === "parent" || f.type === "child" || f.type === "grandchild")?.label || t("shop")}
+                {activeFilters.find(f => ["parent", "child", "grandchild"].includes(f.type))?.label || t("shop")}
               </h1>
               <p className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
                 {totalProducts} {totalProducts === 1 ? t("item") : t("items")}
               </p>
             </div>
+
+            {/* ✅ زر الفلترة للجوال */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="md:hidden flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border transition-colors"
+              aria-label={t("filter")}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.707A1 1 0 013 7V4z" />
+              </svg>
+              {t("filter")}
+            </button>
           </div>
 
           {/* Search & Brand Filter */}
@@ -334,12 +327,11 @@ const Shop = () => {
           )}
         </div>
 
-        {/* ===== ✅ NEW: Quick Hierarchical Filter (Chips) ===== */}
+        {/* ===== Quick Hierarchical Filter (Chips) ===== */}
         {filters.parent && (
           <div className={`mb-8 p-5 rounded-[2rem] border shadow-sm transition-colors ${
             isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
           }`}>
-            {/* عنوان القسم الفرعي */}
             <div className="flex items-center gap-2 mb-4">
               <span className={`text-xs font-black uppercase tracking-widest ${isDark ? 'text-pink-400' : 'text-pink-500'}`}>
                 {lang === "ar" ? "🗂️ تصفح الأقسام الفرعية:" : "🗂️ Browse Sub-categories:"}
@@ -347,15 +339,14 @@ const Shop = () => {
               <div className={`flex-1 h-px ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}></div>
             </div>
             
-            {/* أزرار الأقسام الفرعية (Children) */}
-            <div className="flex flex-wrap gap-2">
-              {/* زر "الكل" - لعرض كل منتجات الأب */}
+            {/* ✅ Scrollbar أفقي للتصنيفات الفرعية */}
+            <div className="flex overflow-x-auto pb-2 scrollbar-hide gap-2">
               <button
                 onClick={() => {
                   updateFilter("child", null);
                   updateFilter("grandchild", null);
                 }}
-                className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all border ${
+                className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all border whitespace-nowrap ${
                   !filters.child
                     ? (isDark ? "bg-gray-100 text-gray-900 border-gray-100 shadow-md" : "bg-gray-900 text-white border-gray-900 shadow-md")
                     : `${isDark ? 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500' : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300'}`
@@ -364,7 +355,6 @@ const Shop = () => {
                 {lang === "ar" ? "الكل" : "All"}
               </button>
               
-              {/* أزرار الأقسام الفرعية */}
               {childCats.map(child => (
                 <button
                   key={child.id}
@@ -372,7 +362,7 @@ const Shop = () => {
                     updateFilter("child", child.id);
                     updateFilter("grandchild", null);
                   }}
-                  className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-2 ${
+                  className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-2 whitespace-nowrap ${
                     filters.child === child.id
                       ? "bg-pink-600 text-white border-pink-600 shadow-md shadow-pink-500/20"
                       : `${isDark ? 'bg-gray-700 border-gray-600 text-gray-300 hover:border-pink-500/50' : 'bg-white border-gray-200 text-gray-600 hover:border-pink-300 hover:text-pink-600'}`
@@ -386,7 +376,6 @@ const Shop = () => {
               ))}
             </div>
 
-            {/* ✅ عرض الأحفاد (Grandchildren) إذا تم اختيار قسم فرعي */}
             {filters.child && grandChildCats.length > 0 && (
               <div className={`mt-4 pt-4 border-t border-dashed ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
                 <div className="flex items-center gap-2 mb-3">
@@ -395,12 +384,12 @@ const Shop = () => {
                   </span>
                   <div className={`flex-1 h-px ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}></div>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex overflow-x-auto pb-2 scrollbar-hide gap-2">
                   {grandChildCats.map(grand => (
                     <button
                       key={grand.id}
                       onClick={() => updateFilter("grandchild", grand.id)}
-                      className={`px-4 py-2 rounded-lg text-[11px] font-bold transition-all border ${
+                      className={`px-4 py-2 rounded-lg text-[11px] font-bold transition-all border whitespace-nowrap ${
                         filters.grandchild === grand.id
                           ? (isDark ? "bg-gray-100 text-gray-900 border-gray-100" : "bg-gray-900 text-white border-gray-900")
                           : `${isDark ? 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-500' : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300'}`
@@ -414,88 +403,88 @@ const Shop = () => {
             )}
           </div>
         )}
-        {/* ===== END: Quick Hierarchical Filter ===== */}
 
         <div className="flex flex-col lg:flex-row gap-16">
-          {/* ===== Sidebar Filters ===== */}
-          <aside className="w-full lg:w-72 shrink-0">
-            <div className="sticky top-36 space-y-8">
-              
-              {/* Categories Tree */}
-              <div className={`rounded-[2rem] p-6 border shadow-sm transition-colors ${
-                isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-50'
-              }`}>
-                <h3 className={`text-[10px] font-black uppercase tracking-[0.3em] mb-5 ${isDark ? 'text-white' : 'text-gray-900'}`}>{t("categories")}</h3>
-                <div className="space-y-1 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
-                  {mainCats.map(cat => (
-                    <div key={cat.id} className="space-y-1">
-                      <button
-                        onClick={() => updateFilter("parent", cat.id)}
-                        className={`w-full ${lang === "ar" ? "text-right" : "text-left"} px-4 py-3 rounded-xl text-[13px] font-bold transition-all flex justify-between items-center group
-                        ${filters.parent === cat.id 
-                          ? (isDark ? "bg-pink-600 text-white" : "bg-gray-900 text-white") 
-                          : `${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-50'}`}`}
-                      >
-                        {getCategoryName(cat)}
-                        <span className={`w-2 h-2 rounded-full ${filters.parent === cat.id ? "bg-pink-500" : (isDark ? "bg-gray-600" : "bg-gray-200")}`} />
-                      </button>
-                      {filters.parent === cat.id && childCats.length > 0 && (
-                        <div className={`${lang === "ar" ? "mr-4" : "ml-4"} space-y-1 py-1`}>
-                          {childCats.map(child => (
-                            <div key={child.id}>
-                              <button
-                                onClick={() => updateFilter("child", child.id)}
-                                className={`w-full ${lang === "ar" ? "text-right" : "text-left"} py-2 px-2 text-xs font-semibold rounded-lg transition-all
-                                ${filters.child === child.id 
-                                  ? (isDark ? "text-pink-400 bg-pink-900/30 font-bold" : "text-pink-600 bg-pink-50 font-bold") 
-                                  : `${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-700'}`}`}
-                              >
-                                {getCategoryName(child)}
-                              </button>
-                              {filters.child === child.id && grandChildCats.length > 0 && (
-                                <div className={`${lang === "ar" ? "mr-3" : "ml-3"} space-y-1 mt-1`}>
-                                  {grandChildCats.map(grand => (
-                                    <button
-                                      key={grand.id}
-                                      onClick={() => updateFilter("grandchild", grand.id)}
-                                      className={`w-full ${lang === "ar" ? "text-right" : "text-left"} py-1 px-2 text-[10px] rounded transition-all
-                                      ${filters.grandchild === grand.id 
-                                        ? (isDark ? "text-white font-bold bg-gray-700" : "text-gray-900 font-bold bg-gray-100") 
-                                        : `${isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-300 hover:text-gray-500'}`}`}
-                                    >
-                                      {getCategoryName(grand)}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Price Range */}
-              <div className={`rounded-[2rem] p-6 border shadow-sm transition-colors ${
-                isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-50'
-              }`}>
-                <h3 className={`text-[10px] font-black uppercase tracking-[0.3em] mb-5 ${isDark ? 'text-white' : 'text-gray-900'}`}>{t("priceRange")}</h3>
-                <div className="space-y-4">
-                  <div className={`flex justify-between text-sm font-bold ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
-                    <span>₪{filters.minPrice}</span>
-                    <span>₪{filters.maxPrice}</span>
+          {/* ===== Sidebar Filters (مخفي على الجوال) ===== */}
+          {(showFilters || window.innerWidth >= 768) && (
+            <aside className="w-full lg:w-72 shrink-0">
+              <div className="sticky top-36 space-y-8">
+                {/* Categories Tree */}
+                <div className={`rounded-[2rem] p-6 border shadow-sm transition-colors ${
+                  isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-50'
+                }`}>
+                  <h3 className={`text-[10px] font-black uppercase tracking-[0.3em] mb-5 ${isDark ? 'text-white' : 'text-gray-900'}`}>{t("categories")}</h3>
+                  <div className="space-y-1 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
+                    {mainCats.map(cat => (
+                      <div key={cat.id} className="space-y-1">
+                        <button
+                          onClick={() => updateFilter("parent", cat.id)}
+                          className={`w-full ${lang === "ar" ? "text-right" : "text-left"} px-4 py-3 rounded-xl text-[13px] font-bold transition-all flex justify-between items-center group
+                          ${filters.parent === cat.id 
+                            ? (isDark ? "bg-pink-600 text-white" : "bg-gray-900 text-white") 
+                            : `${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-500 hover:bg-gray-50'}`}`}
+                        >
+                          {getCategoryName(cat)}
+                          <span className={`w-2 h-2 rounded-full ${filters.parent === cat.id ? "bg-pink-500" : (isDark ? "bg-gray-600" : "bg-gray-200")}`} />
+                        </button>
+                        {filters.parent === cat.id && childCats.length > 0 && (
+                          <div className={`${lang === "ar" ? "mr-4" : "ml-4"} space-y-1 py-1`}>
+                            {childCats.map(child => (
+                              <div key={child.id}>
+                                <button
+                                  onClick={() => updateFilter("child", child.id)}
+                                  className={`w-full ${lang === "ar" ? "text-right" : "text-left"} py-2 px-2 text-xs font-semibold rounded-lg transition-all
+                                  ${filters.child === child.id 
+                                    ? (isDark ? "text-pink-400 bg-pink-900/30 font-bold" : "text-pink-600 bg-pink-50 font-bold") 
+                                    : `${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-700'}`}`}
+                                >
+                                  {getCategoryName(child)}
+                                </button>
+                                {filters.child === child.id && grandChildCats.length > 0 && (
+                                  <div className={`${lang === "ar" ? "mr-3" : "ml-3"} space-y-1 mt-1`}>
+                                    {grandChildCats.map(grand => (
+                                      <button
+                                        key={grand.id}
+                                        onClick={() => updateFilter("grandchild", grand.id)}
+                                        className={`w-full ${lang === "ar" ? "text-right" : "text-left"} py-1 px-2 text-[10px] rounded transition-all
+                                        ${filters.grandchild === grand.id 
+                                          ? (isDark ? "text-white font-bold bg-gray-700" : "text-gray-900 font-bold bg-gray-100") 
+                                          : `${isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-300 hover:text-gray-500'}`}`}
+                                      >
+                                        {getCategoryName(grand)}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                  <input
-                    type="range" min="0" max="300" value={filters.maxPrice}
-                    onChange={(e) => updateFilter("maxPrice", Number(e.target.value))}
-                    className="w-full accent-pink-500"
-                  />
+                </div>
+
+                {/* Price Range */}
+                <div className={`rounded-[2rem] p-6 border shadow-sm transition-colors ${
+                  isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-50'
+                }`}>
+                  <h3 className={`text-[10px] font-black uppercase tracking-[0.3em] mb-5 ${isDark ? 'text-white' : 'text-gray-900'}`}>{t("priceRange")}</h3>
+                  <div className="space-y-4">
+                    <div className={`flex justify-between text-sm font-bold ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
+                      <span>₪{filters.minPrice}</span>
+                      <span>₪{filters.maxPrice}</span>
+                    </div>
+                    <input
+                      type="range" min="0" max="300" value={filters.maxPrice}
+                      onChange={(e) => updateFilter("maxPrice", Number(e.target.value))}
+                      className="w-full accent-pink-500"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          </aside>
+            </aside>
+          )}
 
           {/* ===== Products Grid ===== */}
           <main className="flex-1 pb-20">
@@ -534,6 +523,14 @@ const Shop = () => {
             )}
           </main>
         </div>
+
+        {/* ✅ Overlay لفلترة الجوال */}
+        {showFilters && window.innerWidth < 768 && (
+          <div 
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
+            onClick={() => setShowFilters(false)}
+          />
+        )}
       </div>
     </div>
   );
