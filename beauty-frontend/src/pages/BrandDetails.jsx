@@ -1,4 +1,4 @@
-// src/pages/BrandDetails.jsx - النسخة النهائية المتجاوبة تماماً 📱💻✨
+// src/pages/BrandDetails.jsx - النسخة النهائية: صورة كاملة خلف النص ✨
 import SEO from "../components/SEO";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
@@ -174,114 +174,111 @@ const BrandDetails = () => {
           brandData={brandSeoData.brandData}
         />
       )}
-    {/* ===== Hero Banner - النسخة المنقذة (Split Layout) ✨ ===== */}
-    {/* ✅ الحاوية: تأخذ ارتفاعاً ثابتاً على الديسكتوب فقط، وعلى الهاتف تتمدد حسب المحتوى */}
-    <div className="relative bg-gray-900 overflow-hidden md:h-[75vh] md:min-h-[550px] md:max-h-[900px]">
-      
-      {/* ✅ 1️⃣ صورة الهيدر - تظهر كخلفية على الديسكتوب فقط */}
-      {brand.header_image ? (
-        <img
-          src={getImageUrl(brand.header_image)}
-          alt={`${brandDisplayName} Header`}
-          className="hidden md:block absolute inset-0 w-full h-full object-cover object-center transition-transform duration-[2000ms] ease-out hover:scale-105"
-          loading="eager"
-        />
-      ) : null}
 
-      {/* ✅ 2️⃣ طبقات التعتيم - تظهر على الديسكتوب فقط (لأن الهاتف خلفيته صلبة) */}
-      <div className="hidden md:block absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.3)_100%)]" />
-      <div className="hidden md:block absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
-      <div className="hidden md:block absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-pink-900/30 to-transparent" />
-      <div 
-        className="hidden md:block absolute inset-0 opacity-[0.02] pointer-events-none"
-        style={{
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px)`,
-          backgroundSize: '60px 60px'
-        }}
-      />
-
-      {/* ✅ 3️⃣ محتوى الهيدر (النص والأزرار) */}
-      {/* ✅ على الديسكتوب: يتمركز في الأسفل (Absolute). على الهاتف: يتمركز في الأعلى (Normal Flow) */}
-      <div className={`
-        relative z-10 max-w-[1400px] mx-auto px-6 lg:px-12 
-        pt-32 pb-8 md:pt-40 md:pb-16 
-        flex flex-col md:flex-row items-start md:items-end justify-between gap-6 md:gap-8
-        ${lang === "ar" ? "text-right" : "text-left"}
-        md:absolute md:bottom-0 md:left-0 md:right-0
-      `}>
+      {/* ===== Hero Banner - النسخة النهائية: صورة كاملة خلف النص ✨ ===== */}
+      <div className="relative bg-gray-900 overflow-hidden md:h-[75vh] md:min-h-[550px] md:max-h-[900px]">
         
-        {/* الجانب الأول: المعلومات */}
-        <div className={`space-y-5 w-full ${lang === "ar" ? "text-right" : "text-left"}`}>
-          
-          {/* Breadcrumb */}
-          <nav className={`flex items-center gap-2 text-[10px] font-bold text-white/70 uppercase tracking-[0.3em] ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
-            <Link to="/" className="hover:text-white transition-colors">{t('shop')}</Link>
-            <span className="text-white/30">/</span>
-            <Link to="/brands" className="hover:text-white transition-colors">{t('brands')}</Link>
-            <span className="text-white/30">/</span>
-            <span className="text-pink-400">{brandDisplayName.toUpperCase()}</span>
-          </nav>
+        {/* ✅ 1️⃣ صورة الهيدر */}
+        {brand.header_image ? (
+          <img
+            src={getImageUrl(brand.header_image)}
+            alt={`${brandDisplayName} Header`}
+            // ✅ على الموبايل: w-full h-auto block (تظهر كاملة بنسبتها الأصلية وتحدد ارتفاع الحاوية)
+            // ✅ على الديسكتوب: absolute inset-0 object-cover (تملأ الحاوية كخلفية)
+            className="w-full h-auto block md:absolute md:inset-0 md:w-full md:h-full md:object-cover md:object-center transition-transform duration-[2000ms] ease-out hover:scale-105"
+            loading="eager"
+          />
+        ) : (
+          // ✅ Fallback: خلفية سوداء مع تأثيرات ضوئية
+          <div className="w-full aspect-[2.5/1] md:absolute md:inset-0 bg-gradient-to-br from-gray-900 via-black to-gray-800">
+            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-pink-500/10 rounded-full blur-[180px] animate-pulse-slow" />
+            <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[150px] animate-pulse-slow" />
+          </div>
+        )}
 
-          {/* اللوجو + اسم البراند */}
-          <div className="flex items-center gap-4 md:gap-6">
-            {brand.image && (
-              <div className="w-14 h-14 md:w-24 md:h-24 rounded-xl md:rounded-3xl bg-white/10 backdrop-blur-2xl border border-white/30 flex items-center justify-center p-2 md:p-4 shadow-2xl ring-1 ring-white/10">
-                <img
-                  src={getImageUrl(brand.image)}
-                  alt={brandDisplayName}
-                  className="max-w-full max-h-full object-contain drop-shadow-[0_5px_15px_rgba(0,0,0,0.3)]"
-                />
-              </div>
-            )}
+        {/* ✅ 2️⃣ طبقات التعتيم الذكية - تركز التعتيم في الأسفل حيث النص */}
+        {/* طبقة Vignette خفيفة (تعتيم زوايا) */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]" />
+        
+        {/* ✅ طبقة التعتيم السفلي (حيث النص) - تدرج قوي من الأسفل */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent" />
+        
+        {/* طبقة لمسة لونية فاخرة في الأسفل */}
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-pink-900/30 to-transparent" />
+
+        {/* ✅ تأثير Grid Pattern خفيف جداً */}
+        <div 
+          className="absolute inset-0 opacity-[0.02] pointer-events-none"
+          style={{
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px)`,
+            backgroundSize: '60px 60px'
+          }}
+        />
+
+        {/* ✅ 3️⃣ محتوى الهيدر (النص والأزرار) - يتمركز في الأسفل فوق الصورة */}
+        <div className={`
+          absolute bottom-0 left-0 right-0 z-10
+          max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 
+          pb-8 md:pb-16 pt-24 md:pt-40 
+          flex flex-col md:flex-row items-start md:items-end justify-between gap-6 md:gap-8
+          ${lang === "ar" ? "text-right" : "text-left"}
+        `}>
+          
+          {/* الجانب الأول: المعلومات */}
+          <div className={`space-y-5 w-full ${lang === "ar" ? "text-right" : "text-left"}`}>
             
-            <div>
-              <h1 className="text-4xl md:text-6xl lg:text-8xl font-black text-white tracking-tighter leading-none italic drop-shadow-[0_5px_20px_rgba(0,0,0,0.6)]">
-                {brandDisplayName}
-              </h1>
-              <div className={`mt-2 md:mt-3 h-1 w-16 md:w-24 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full shadow-lg shadow-pink-500/50 ${lang === "ar" ? "ml-auto" : "mr-auto"}`} />
+            {/* Breadcrumb */}
+            <nav className={`flex items-center gap-2 text-[10px] font-bold text-white/70 uppercase tracking-[0.3em] ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
+              <Link to="/" className="hover:text-white transition-colors">{t('shop')}</Link>
+              <span className="text-white/30">/</span>
+              <Link to="/brands" className="hover:text-white transition-colors">{t('brands')}</Link>
+              <span className="text-white/30">/</span>
+              <span className="text-pink-400">{brandDisplayName.toUpperCase()}</span>
+            </nav>
+
+            {/* اللوجو + اسم البراند */}
+            <div className="flex items-center gap-4 md:gap-6">
+              {brand.image && (
+                <div className="w-14 h-14 md:w-24 md:h-24 rounded-xl md:rounded-3xl bg-white/10 backdrop-blur-2xl border border-white/30 flex items-center justify-center p-2 md:p-4 shadow-2xl ring-1 ring-white/10">
+                  <img
+                    src={getImageUrl(brand.image)}
+                    alt={brandDisplayName}
+                    className="max-w-full max-h-full object-contain drop-shadow-[0_5px_15px_rgba(0,0,0,0.3)]"
+                  />
+                </div>
+              )}
+              
+              <div>
+                <h1 className="text-4xl md:text-6xl lg:text-8xl font-black text-white tracking-tighter leading-none italic drop-shadow-[0_5px_20px_rgba(0,0,0,0.8)]">
+                  {brandDisplayName}
+                </h1>
+                <div className={`mt-2 md:mt-3 h-1 w-16 md:w-24 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full shadow-lg shadow-pink-500/50 ${lang === "ar" ? "ml-auto" : "mr-auto"}`} />
+              </div>
+            </div>
+
+            {/* عدد المنتجات */}
+            <div className={`flex items-center gap-3 ${lang === "ar" ? "flex-row-reverse" : ""}`}>
+              <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse shadow-lg shadow-pink-500/50" />
+              <p className="text-white/90 text-sm font-medium drop-shadow-md">
+                <span className="text-white font-black text-xl">{totalProducts}</span> {t('productsInCollection')}
+              </p>
             </div>
           </div>
 
-          {/* عدد المنتجات */}
-          <div className={`flex items-center gap-3 ${lang === "ar" ? "flex-row-reverse" : ""}`}>
-            <div className="w-2 h-2 rounded-full bg-pink-500 animate-pulse shadow-lg shadow-pink-500/50" />
-            <p className="text-white/90 text-sm font-medium drop-shadow-md">
-              <span className="text-white font-black text-xl">{totalProducts}</span> {t('productsInCollection')}
-            </p>
-          </div>
+          {/* الجانب الثاني: زر العودة */}
+          <button
+            onClick={() => navigate("/brands")}
+            className={`group flex items-center gap-3 bg-white/10 backdrop-blur-2xl border border-white/30 text-white px-5 py-3 rounded-2xl text-[10px] md:text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-gray-900 transition-all shrink-0 shadow-2xl ring-1 ring-white/10 ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={lang === "en" ? "rotate-180" : ""}>
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            {t('allBrands')}
+          </button>
         </div>
 
-        {/* الجانب الثاني: زر العودة */}
-        <button
-          onClick={() => navigate("/brands")}
-          className={`group flex items-center gap-3 bg-white/10 backdrop-blur-2xl border border-white/30 text-white px-5 py-3 rounded-2xl text-[10px] md:text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-gray-900 transition-all shrink-0 shadow-2xl ring-1 ring-white/10 ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={lang === "en" ? "rotate-180" : ""}>
-            <path d="M19 12H5M12 19l-7-7 7-7" />
-          </svg>
-          {t('allBrands')}
-        </button>
       </div>
 
-      {/* ✅ ✅ ✅ 4️⃣ الحل السحري للهاتف: عرض الصورة كـ "بطاقة مقدمة" (Foreground Card) */}
-      {/* ✅ تظهر فقط على الهاتف (md:hidden)، وتأخذ العرض بالكامل بارتفاعها الطبيعي دون أي قص */}
-      {brand.header_image && (
-        <div className="md:hidden w-full px-4 pb-8 pt-2">
-          <div className="relative w-full rounded-[2rem] overflow-hidden shadow-2xl ring-1 ring-white/10 bg-black/40">
-            {/* الصورة هنا w-full h-auto مما يعني أنها ستأخذ عرض الهاتف وترتفع تلقائياً بنسبة 2.5:1 دون قص */}
-            <img
-              src={getImageUrl(brand.header_image)}
-              alt={`${brandDisplayName} Showcase`}
-              className="w-full h-auto object-contain block"
-              loading="eager"
-            />
-            {/* لمسة فاخرة: تدرج خفيف في أسفل الصورة ليدمجها مع خلفية الصفحة */}
-            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-gray-900/80 to-transparent pointer-events-none" />
-          </div>
-        </div>
-      )}
-
-    </div>
       {/* ===== باقي المحتوى ===== */}
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 mt-8 sm:mt-12">
         {/* ===== Toolbar ===== */}
