@@ -230,6 +230,7 @@ const parseFormData = (req, res, next) => {
     
     console.log("📦 FormData parsed:", {
       resourceType: req._uploadData.resourceType,
+      isHeader: req._uploadData.isHeader, // ✅ للتشخيص
       hasFile: !!req.file,
       fileSize: req.file?.size
     });
@@ -256,12 +257,12 @@ const uploadCompressed = (fieldName = "image", { required = true } = {}) => {
       
       // 2️⃣ ✅ إذا كان هناك ملف، نرفعه لـ Cloudinary
       if (req._uploadData?.file) {
-        const { file, resourceType, brandName, categoryName, brandId, sku, productName } = req._uploadData;
+        const { file, resourceType, brandName, categoryName, brandId, sku, productName, isHeader } = req._uploadData;
         
         const uploadResult = await uploadToCloudinary(
           file.buffer,
           file.originalname,
-          { resourceType, brandName, categoryName, brandId, sku, productName }
+          { resourceType, brandName, categoryName, brandId, sku, productName, isHeader }
         );
         
         req.uploadedPath = uploadResult.secure_url;
