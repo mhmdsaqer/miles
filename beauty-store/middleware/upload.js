@@ -172,7 +172,6 @@ const uploadToCloudinary = async (fileBuffer, originalName, uploadParams) => {
       {
         folder: cloudinaryFolder,
         public_id: publicId,
-        format: isHeaderImage ? "auto" : "webp",
         resource_type: "image",
       transformation: isHeaderImage 
         ? [] // مصفوفة فارغة = رفع الصورة كما هي بجودتها الأصلية 100%
