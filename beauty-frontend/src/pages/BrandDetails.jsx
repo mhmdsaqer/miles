@@ -1,4 +1,4 @@
-// src/pages/BrandDetails.jsx - النسخة النهائية الفاخرة والمعدلة للأبعاد العرضية ✨
+// src/pages/BrandDetails.jsx - النسخة النهائية الفاخرة المضيئة ✨
 import SEO from "../components/SEO";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
@@ -175,98 +175,87 @@ const BrandDetails = () => {
         />
       )}
 
-      {/* ===== Hero Banner - النسخة الفاخرة المتجاوبة مع الأبعاد العرضية 1632x656 ✨ ===== */}
-      <div className="relative bg-gray-950 overflow-hidden pt-16 md:pt-20">
+      {/* ===== Hero Banner - نسخة مضيئة ومحسنة لتفاصيل الصورة بالكامل 1632x656 ✨ ===== */}
+      <div className="relative bg-white overflow-hidden pt-16 md:pt-20">
         
-        {/* الحاوية المتجاوبة تماماً مع النسبة العرضية للصورة بدون أي قص */}
-        <div className="relative w-full aspect-[16/9] sm:aspect-[16/7] md:aspect-[16/6] lg:max-h-[550px] flex items-center">
+        {/* حاوية الصورة المتجاوبة تماماً */}
+        <div className="relative w-full aspect-[16/9] sm:aspect-[16/7] md:aspect-[16/6] lg:max-h-[500px] flex items-center bg-gray-50">
           
           {brand.header_image ? (
             <img
               src={getImageUrl(brand.header_image)}
               alt={`${brandDisplayName} Header`}
-              // contain يضمن ظهور كامل الصورة على الهواتف واللابتوب بدون خسارة أي بكسل
-              className="absolute inset-0 w-full h-full object-contain md:object-cover object-center transition-transform duration-[2000ms] ease-out hover:scale-102"
+              className="absolute inset-0 w-full h-full object-contain md:object-cover object-center transition-transform duration-[2000ms] ease-out hover:scale-101"
               loading="eager"
               decoding="async"
             />
           ) : (
-            /* Fallback المتدرج الفاخر */
-            <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-black to-gray-800" />
+            <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200" />
           )}
 
-          {/* 1️⃣ تظليل علوي لحماية الـ NavBar وإعطاء مظهر جمالي متناسق */}
-          <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black/80 to-transparent pointer-events-none z-10" />
+          {/* 1️⃣ تظليل علوي ناعم جداً ومخفف لتداخل الـ NavBar بدون حواف قاسية */}
+          <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/25 to-transparent pointer-events-none z-10" />
 
-          {/* 2️⃣ طبقات تعتيم ذكية سفلية وجانبية لضمان وضوح النصوص والشعارات */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10 z-0" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-black/30 z-0" />
+          {/* 2️⃣ تظليل سفلي خفيف وذكي (تم تقليله من 90% إلى 45%) ليوضح النصوص مع إبقاء الصورة ساطعة */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent z-0" />
 
-          {/* Grid Pattern ناعم للمسة جمالية متكاملة */}
-          <div 
-            className="absolute inset-0 opacity-[0.03] pointer-events-none z-0"
-            style={{
-              backgroundImage: `linear-gradient(rgba(255,255,255,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.2) 1px, transparent 1px)`,
-              backgroundSize: '40px 40px'
-            }}
-          />
-
-          {/* 3️⃣ محتوى الهيدر - يتموضع بذكاء فوق التعتيم */}
+          {/* 3️⃣ محتوى الهيدر المتناسق */}
           <div className={`
             absolute bottom-0 left-0 right-0 z-10
             max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 
-            pb-4 sm:pb-8 md:pb-12 pt-16
+            pb-4 sm:pb-6 md:pb-8 pt-12
             flex flex-col md:flex-row items-start md:items-end justify-between gap-4 md:gap-8
             ${lang === "ar" ? "text-right" : "text-left"}
           `}>
             
             {/* الجانب الأيمن/الأيسر: البيانات والشعار */}
-            <div className={`space-y-3 sm:space-y-4 w-full ${lang === "ar" ? "text-right" : "text-left"}`}>
+            <div className={`space-y-2.5 sm:space-y-3.5 w-full ${lang === "ar" ? "text-right" : "text-left"}`}>
               
-              {/* Breadcrumb */}
-              <nav className={`flex items-center gap-2 text-[9px] sm:text-[10px] font-bold text-white/80 uppercase tracking-[0.2em] ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
-                <Link to="/" className="hover:text-white transition-colors">{t('shop')}</Link>
-                <span className="text-white/40">/</span>
-                <Link to="/brands" className="hover:text-white transition-colors">{t('brands')}</Link>
-                <span className="text-white/40">/</span>
-                <span className="text-pink-400">{brandDisplayName.toUpperCase()}</span>
+              {/* Breadcrumb - نصوص بيضاء محمية بظل ناعم */}
+              <nav className={`flex items-center gap-2 text-[9px] sm:text-[10px] font-bold text-white/90 uppercase tracking-[0.2em] drop-shadow-sm ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
+                <Link to="/" className="hover:text-pink-300 transition-colors">{t('shop')}</Link>
+                <span className="text-white/50">/</span>
+                <Link to="/brands" className="hover:text-pink-300 transition-colors">{t('brands')}</Link>
+                <span className="text-white/50">/</span>
+                <span className="text-pink-300 font-black">{brandDisplayName.toUpperCase()}</span>
               </nav>
 
               {/* اللوجو + اسم البراند */}
               <div className="flex items-center gap-3 sm:gap-4">
                 {brand.image && (
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl sm:rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center p-1.5 sm:p-2.5 shadow-2xl">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-white/90 backdrop-blur-sm border border-gray-200/50 flex items-center justify-center p-1.5 shadow-lg">
                     <img
                       src={getImageUrl(brand.image)}
                       alt={brandDisplayName}
-                      className="max-w-full max-h-full object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)]"
+                      className="max-w-full max-h-full object-contain"
                     />
                   </div>
                 )}
                 
                 <div>
-                  <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-7xl font-black text-white tracking-tighter leading-none italic drop-shadow-[0_4px_15px_rgba(0,0,0,0.7)]">
+                  {/* اسم البراند بظل ناعم لضمان القراءة على الخلفيات المضيئة */}
+                  <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tighter leading-none italic drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]">
                     {brandDisplayName}
                   </h1>
-                  <div className={`mt-1.5 sm:mt-2 h-1 w-10 sm:w-16 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full ${lang === "ar" ? "ml-auto" : "mr-auto"}`} />
+                  <div className={`mt-1.5 h-1 w-10 sm:w-14 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full shadow-md ${lang === "ar" ? "ml-auto" : "mr-auto"}`} />
                 </div>
               </div>
 
               {/* عدد المنتجات */}
               <div className={`flex items-center gap-2 ${lang === "ar" ? "flex-row-reverse" : ""}`}>
-                <div className="w-1.5 h-1.5 rounded-full bg-pink-500 animate-pulse" />
-                <p className="text-white/90 text-xs font-medium drop-shadow-sm">
+                <div className="w-1.5 h-1.5 rounded-full bg-pink-500 animate-pulse shadow-sm" />
+                <p className="text-white text-xs font-bold drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]">
                   <span className="text-white font-black text-sm sm:text-lg">{totalProducts}</span> {t('productsInCollection')}
                 </p>
               </div>
             </div>
 
-            {/* الجانب الآخر: زر العودة */}
+            {/* الجانب الآخر: زر العودة (تم تحويله لتصميم زجاجي داكن خفيف ليتناسق مع السطوع) */}
             <button
               onClick={() => navigate("/brands")}
-              className={`group flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-3 sm:px-5 py-2 sm:py-3 rounded-xl text-[9px] sm:text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-gray-900 transition-all shrink-0 shadow-xl ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}
+              className={`group flex items-center gap-2 bg-black/20 backdrop-blur-md border border-white/20 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-gray-900 hover:border-gray-900 transition-all shrink-0 shadow-md ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}
             >
-              <svg width="12" height="12" className="sm:w-3.5 sm:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={lang === "en" ? "rotate-180" : ""}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={lang === "en" ? "rotate-180" : ""}>
                 <path d="M19 12H5M12 19l-7-7 7-7" />
               </svg>
               {t('allBrands')}
