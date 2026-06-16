@@ -1,4 +1,4 @@
-// src/pages/BrandDetails.jsx - نسخة الدقة الفائقة والوضوح التام البانورامي ✨
+// src/pages/BrandDetails.jsx - نسخة الدقة الفائقة والوضوح البانورامي المعتمد (1920x822) 💎
 import SEO from "../components/SEO";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
@@ -117,7 +117,7 @@ const BrandDetails = () => {
     return (
       <div className="min-h-screen bg-[#FAFAFA] pt-32 px-6 lg:px-12" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
         <div className="max-w-[1400px] mx-auto space-y-10 animate-pulse">
-          <div className="w-full h-[350px] bg-gray-100 rounded-[2rem]" />
+          <div className="w-full aspect-[1920/822] bg-gray-100 rounded-[2rem]" />
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-8">
             {[...Array(8)].map((_, i) => (
               <div key={i} className="aspect-[4/5] bg-gray-100 rounded-[2.5rem]" />
@@ -175,56 +175,55 @@ const BrandDetails = () => {
         />
       )}
 
-      {/* ===== Hero Banner - تصميم البكسل المثالي الفائق الوضوح (1632x656) ✨ ===== */}
-      <div className="relative bg-gray-900 overflow-hidden pt-16 md:pt-20">
+      {/* ===== Hero Banner - مضبوط بالكامل لأبعاد النسبة الذهبية الجديدة 1920x822 🌟 ===== */}
+      <div className="relative bg-gray-950 overflow-hidden pt-16 md:pt-20">
         
-        {/* حاوية مغلقة الارتفاع ومحسوبة هندسياً لمنع تمدد البكسلات المزعج */}
-        <div className="relative w-full h-[240px] sm:h-[340px] md:h-[420px] lg:h-[480px] xl:h-[540px] max-h-[656px] flex items-center justify-center overflow-hidden">
+        {/* الحاوية البانورامية - تحاكي بدقة نسبة الأبعاد الأصلية للصورة وتمنع أي اقتصاص غير مرغوب */}
+        <div className="relative w-full aspect-[16/8] sm:aspect-[1920/822] max-h-[540px] flex items-center justify-center overflow-hidden">
           
           {brand.header_image ? (
             <>
-              {/* 1️⃣ خلفية سينمائية ذكية مموهة لملء أي فراغ على الشاشات العملاقة دون لمس جودة الصورة الأساسية */}
+              {/* 1️⃣ طبقة خلفية ممتدة ومموهة لملء الشاشات الأعرض من 1920 بكسل بنعومة */}
               <img
                 src={getImageUrl(brand.header_image)}
                 alt=""
-                className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-105 select-none pointer-events-none"
+                className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-35 scale-105 select-none pointer-events-none"
               />
 
-              {/* 2️⃣ الصورة الأساسية الحادة والمحافظة على دقتها وبكسلاتها الأصلية 100% */}
+              {/* 2️⃣ الصورة الأساسية الحادة بالدقة الكاملة وبدون تمدد البكسلات */}
               <img
                 src={getImageUrl(brand.header_image)}
                 alt={`${brandDisplayName} Header`}
-                // تمنع object-contain التمدد العشوائي بينما تحافظ الحواف المتجاوبة على توازن الأبعاد
                 className="relative z-10 w-full h-full object-contain md:object-cover xl:object-contain object-center select-none"
-                style={{ imageRendering: 'auto' }} // لضمان معالجة المتصفح للصورة بأعلى جودة عرض
+                style={{ imageRendering: 'high-quality' }} // إجبار المتصفح على معالجة الصورة بأعلى دقة ممكنة
                 loading="eager"
                 decoding="async"
               />
             </>
           ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900" />
+            <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-black" />
           )}
 
-          {/* 3️⃣ تظليل علوي ناعم جداً ومنساب للـ NavBar لمنع أي حواف حادة هابطة */}
-          <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/20 to-transparent pointer-events-none z-20" />
+          {/* 3️⃣ حماية وتدرج علوي خفيف جداً لتأمين تداخل الـ NavBar */}
+          <div className="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-black/25 to-transparent pointer-events-none z-20" />
 
-          {/* 4️⃣ تظليل سفلي خفيف سينمائي يعزل نصوص وعناصر التحكم لتبدو واضحة فوق الصورة المضيئة */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent z-15 pointer-events-none" />
+          {/* 4️⃣ تدرج سفلي سينمائي مخفف ومحسّن لعزل النصوص والمحافظة على ألوان الصورة ساطعة */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent z-15 pointer-events-none" />
 
-          {/* 5️⃣ محتوى الواجهة التفاعلي الفاخر */}
+          {/* 5️⃣ واجهة المحتوى وعناصر التحكم التفاعلية */}
           <div className={`
             absolute bottom-0 left-0 right-0 z-30
             max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 
-            pb-4 sm:pb-6 md:pb-8 pt-16
+            pb-4 sm:pb-6 md:pb-8 pt-20
             flex flex-col md:flex-row items-start md:items-end justify-between gap-4 md:gap-8
             ${lang === "ar" ? "text-right" : "text-left"}
           `}>
             
-            {/* الجانب الأول: البيانات والشعار */}
-            <div className={`space-y-3 w-full ${lang === "ar" ? "text-right" : "text-left"}`}>
+            {/* البيانات التعريفية والشعار */}
+            <div className={`space-y-3.5 w-full ${lang === "ar" ? "text-right" : "text-left"}`}>
               
-              {/* Breadcrumb محمية بظلال ناعمة */}
-              <nav className={`flex items-center gap-2 text-[9px] sm:text-[10px] font-bold text-white uppercase tracking-[0.2em] drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)] ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
+              {/* الروابط الانتقالية بظل خفيف جداً لضمان المقروئية العالية */}
+              <nav className={`flex items-center gap-2 text-[9px] sm:text-[10px] font-bold text-white uppercase tracking-[0.2em] drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)] ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}>
                 <Link to="/" className="hover:text-pink-400 transition-colors">{t('shop')}</Link>
                 <span className="text-white/60">/</span>
                 <Link to="/brands" className="hover:text-pink-400 transition-colors">{t('brands')}</Link>
@@ -232,7 +231,7 @@ const BrandDetails = () => {
                 <span className="text-pink-400 font-black">{brandDisplayName.toUpperCase()}</span>
               </nav>
 
-              {/* اللوجو + اسم البراند */}
+              {/* اللوجو المستقل + اسم الماركة الفاخر */}
               <div className="flex items-center gap-3 sm:gap-4">
                 {brand.image && (
                   <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-white/95 backdrop-blur-md border border-gray-200/40 flex items-center justify-center p-1.5 shadow-xl">
@@ -245,26 +244,26 @@ const BrandDetails = () => {
                 )}
                 
                 <div>
-                  <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tighter leading-none italic drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]">
+                  <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tighter leading-none italic drop-shadow-[0_2px_12px_rgba(0,0,0,0.7)]">
                     {brandDisplayName}
                   </h1>
                   <div className={`mt-2 h-1 w-10 sm:w-14 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full ${lang === "ar" ? "ml-auto" : "mr-auto"}`} />
                 </div>
               </div>
 
-              {/* عدد المنتجات */}
+              {/* عداد التشكيلة الإجمالي */}
               <div className={`flex items-center gap-2 ${lang === "ar" ? "flex-row-reverse" : ""}`}>
                 <div className="w-1.5 h-1.5 rounded-full bg-pink-500 animate-pulse shadow-sm" />
-                <p className="text-white text-xs font-bold drop-shadow-[0_1px_5px_rgba(0,0,0,0.7)]">
+                <p className="text-white text-xs font-bold drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]">
                   <span className="text-white font-black text-sm sm:text-lg">{totalProducts}</span> {t('productsInCollection')}
                 </p>
               </div>
             </div>
 
-            {/* الجانب الآخر: زر العودة */}
+            {/* أزرار التحكم الجانبية بالتصميم الزجاجي الأنيق */}
             <button
               onClick={() => navigate("/brands")}
-              className={`group flex items-center gap-2 bg-black/30 backdrop-blur-md border border-white/20 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-gray-900 hover:border-gray-900 transition-all shrink-0 shadow-lg ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}
+              className={`group flex items-center gap-2 bg-black/25 backdrop-blur-md border border-white/20 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-gray-950 hover:border-gray-950 transition-all shrink-0 shadow-lg ${lang === "ar" ? "flex-row" : "flex-row-reverse"}`}
             >
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={lang === "en" ? "rotate-180" : ""}>
                 <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -275,7 +274,7 @@ const BrandDetails = () => {
         </div>
       </div>
 
-      {/* ===== باقي المحتوى ===== */}
+      {/* ===== باقي محتوى الصفحة التفاعلي والمميز وجريد المنتجات ===== */}
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 mt-8 sm:mt-12">
         {/* ===== Toolbar ===== */}
         <div className="flex items-center justify-between mb-8 sm:mb-10 flex-wrap gap-4">
