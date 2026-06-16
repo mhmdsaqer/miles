@@ -167,17 +167,20 @@ const uploadToCloudinary = async (fileBuffer, originalName, uploadParams) => {
 
   // ✅ الرفع الفعلي لـ Cloudinary
   return new Promise((resolve, reject) => {
+  const isHeaderImage = uploadParams.isHeader === true || uploadParams.isHeader === "true";
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder: cloudinaryFolder,
         public_id: publicId,
-        format: "webp",
+        format: isHeaderImage ? "auto" : "webp",
         resource_type: "image",
-        transformation: [
-          { width: 1200, height: 1200, crop: "limit" },
-          { quality: "auto:good" },
-          { fetch_format: "auto" }
-        ]
+      transformation: isHeaderImage 
+        ? [] // مصفوفة فارغة = رفع الصورة كما هي بجودتها الأصلية 100%
+        : [
+            { width: 1200, height: 1200, crop: "limit" },
+            { quality: "auto:good" },
+            { fetch_format: "auto" }
+          ]
       },
       (error, result) => {
         if (error) {
