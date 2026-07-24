@@ -1177,7 +1177,7 @@ router.post("/brands",
   
   async (req, res) => {
     try {
-      const { id, name, code, image, header_image } = req.body; // ✅ إضافة header_image
+      const { id, name, code, image, header_image, description_ar, description_en  } = req.body; // ✅ إضافة header_image
       
       // ✅ التحقق اليدوي من أن الصورة الرئيسية رابط HTTPS
       if (!image || !/^https:\/\//i.test(image)) {
@@ -1198,7 +1198,9 @@ router.post("/brands",
 
       const newBrand = await Brand.create({
         id, name, code, image,
-        header_image: header_image || "" // ✅ حفظ صورة الهيدر (فارغة إذا لم تُرفع)
+        header_image: header_image || "", // ✅ حفظ صورة الهيدر (فارغة إذا لم تُرفع)
+      	description_ar: description_ar || "",
+        description_en: description_en || ""
       });
       
       await audit.create(req.user, "brand", newBrand.toObject(), req);
@@ -1221,7 +1223,7 @@ router.put("/brands/:id",
   validate(schemas.brand.fork(["id"], field => field.optional()), "body"),
   async (req, res) => {
     try {
-      const { image, header_image, ...updateData } = req.body; // ✅ استخراج header_image
+      const { image, header_image, description_ar, description_en, ...updateData } = req.body; // ✅ استخراج header_image
       
       // 1️⃣ جلب بيانات البراند القديمة أولاً لمعرفة رابط الصورة القديمة
       const oldBrand = await Brand.findOne({ id: Number(req.params.id) });
@@ -1237,6 +1239,8 @@ router.put("/brands/:id",
       if (header_image !== undefined) {
         updateData.header_image = header_image || "";
       }
+      if (description_ar !== undefined) updateData.description_ar = description_ar || "";
+      if (description_en !== undefined) updateData.description_en = description_en || "";
       
       // 3️⃣ تحديث البيانات في MongoDB
       const brand = await Brand.findOneAndUpdate(

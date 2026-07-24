@@ -237,6 +237,20 @@ const BrandDetails = () => {
                     {brandDisplayName}
                   </h1>
                   <div className={`mt-1.5 h-0.5 w-10 sm:w-12 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full ${lang === "ar" ? "ml-auto" : "mr-auto"}`} />
+                  {/* ✅ ✅ ✅ جديد: عرض وصف البراند */}
+                  {(() => {
+                    const description = lang === "ar" ? brand.description_ar : brand.description_en;
+                    if (!description?.trim()) return null;
+                    return (
+                      <p className={`
+                        mt-3 text-xs sm:text-sm text-white/90 font-medium leading-relaxed
+                        max-w-2xl drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]
+                        ${lang === "ar" ? "text-right" : "text-left"}
+                      `}>
+                        {description}
+                      </p>
+                    );
+                  })()}
                 </div>
               </div>
 

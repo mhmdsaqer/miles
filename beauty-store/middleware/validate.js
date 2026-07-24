@@ -178,6 +178,22 @@ const brandSchema = Joi.object({
   ).allow("").optional().messages({
     "any.only": "مسار صورة الهيدر يجب أن يكون إما رابط HTTPS صحيح أو مسار محلي",
   }),
+  description_ar: Joi.string()
+    .min(0)
+    .max(2000)
+    .allow("")
+    .optional()
+    .messages({
+      "string.max": "الوصف العربي طويل جداً (الحد الأقصى 2000 حرف)"
+    }),
+  description_en: Joi.string()
+    .min(0)
+    .max(2000)
+    .allow("")
+    .optional()
+    .messages({
+      "string.max": "الوصف الإنجليزي طويل جداً (الحد الأقصى 2000 حرف)"
+    })
 });
 
 // ============================================

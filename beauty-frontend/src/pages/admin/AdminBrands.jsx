@@ -25,7 +25,9 @@ const AdminBrands = () => {
     name: "",
     code: "",
     image: "",
-    header_image: "" // ✅ إضافة الحقل الجديد
+    header_image: "", // ✅ إضافة الحقل الجديد
+    description_ar: "",
+    description_en: ""
   });
 
   // ✅ ✅ ✅ دوال التحقق من الصلاحيات (مبسطة وسهلة الاستخدام)
@@ -94,10 +96,11 @@ const AdminBrands = () => {
 
     if (brand) {
       setEditingId(brand.id);
-      setFormData({ ...brand, header_image: brand.header_image || "" });
+      setFormData({ ...brand, header_image: brand.header_image || "", description_ar: brand.description_ar || "",
+      description_en: brand.description_en || "" });
     } else {
       setEditingId(null);
-      setFormData({ id: "", name: "", code: "", image: "" });
+      setFormData({ id: "", name: "", code: "", image: "", description_ar: "", description_en: ""});
     }
     setShowModal(true);
   }, [canCreate, canUpdate, lang]);
@@ -444,6 +447,62 @@ const AdminBrands = () => {
 		  }}
 		  onImageSelect={(path) => setFormData(prev => ({ ...prev, header_image: path }))}
 		/>
+		{/* ✅ ✅ ✅ جديد: قسم وصف البراند */}
+		<div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+		  <p className={`text-[10px] font-black uppercase tracking-widest mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+		    {lang === "ar" ? "📝 وصف البراند (اختياري)" : "📝 Brand Description (Optional)"}
+		  </p>
+
+		  {/* الوصف العربي */}
+		  <div className="mb-3">
+		    <label className={`block text-[10px] font-bold mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+		      {lang === "ar" ? "الوصف بالعربية" : "Description (Arabic)"}
+		    </label>
+		    <textarea
+		      name="description_ar"
+		      value={formData.description_ar}
+		      onChange={handleChange}
+		      rows="3"
+		      maxLength={2000}
+		      placeholder={lang === "ar"
+			? "اكتب وصفاً جذاباً للبراند... (يظهر في صفحة تفاصيل البراند)"
+			: "Write an attractive description for the brand..."}
+		      dir="rtl"
+		      className={`w-full border rounded-xl px-4 py-2.5 text-sm resize-none transition-colors ${
+			isDark
+			  ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30'
+			  : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
+		      }`}
+		    />
+		    <p className={`text-[9px] mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+		      {formData.description_ar.length}/2000
+		    </p>
+		  </div>
+
+		  {/* الوصف الإنجليزي */}
+		  <div>
+		    <label className={`block text-[10px] font-bold mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+		      {lang === "ar" ? "Description (English)" : "الوصف بالإنجليزية"}
+		    </label>
+		    <textarea
+		      name="description_en"
+		      value={formData.description_en}
+		      onChange={handleChange}
+		      rows="3"
+		      maxLength={2000}
+		      placeholder="Write an attractive description in English..."
+		      dir="ltr"
+		      className={`w-full border rounded-xl px-4 py-2.5 text-sm resize-none transition-colors ${
+			isDark
+			  ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30'
+			  : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
+		      }`}
+		    />
+		    <p className={`text-[9px] mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+		      {formData.description_en.length}/2000
+		    </p>
+		  </div>
+		</div>
               
               <div className="flex gap-3 pt-2">
                 <button 

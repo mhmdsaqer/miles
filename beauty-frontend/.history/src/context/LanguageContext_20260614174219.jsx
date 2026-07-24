@@ -5,14 +5,7 @@ const LanguageContext = createContext();
 
 // ✅ فصل كائن الترجمات خارج المكون لتحسين الأداء
 const TRANSLATIONS = {
-// === Brand Description ===
-brandDescription: { ar: "وصف البراند", en: "Brand Description" },
-brandDescriptionAr: { ar: "الوصف بالعربية", en: "Description (Arabic)" },
-brandDescriptionEn: { ar: "الوصف بالإنجليزية", en: "Description (English)" },
-brandDescriptionPlaceholder: {
-  ar: "اكتب وصفاً جذاباً للبراند...",
-  en: "Write an attractive description for the brand..."
-},
+
 readOnly  : { ar: " ", en: " " },
 // في كائن TRANSLATIONS
 outOfStock: { ar: "نفذت الكمية", en: "Out of Stock" },
