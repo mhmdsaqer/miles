@@ -1,9 +1,9 @@
-// src/pages/admin/AdminBrands.jsx - النسخة مع نظام الصلاحيات + دعم الوضع الليلي
+// src/pages/admin/AdminBrands.jsx - النسخة المُحسّنة (Scrollable Modal + Descriptions)
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { adminApi } from "../../utils/adminAuth";
 import { useLang } from "../../context/LanguageContext";
 import { useAuth } from "../../context/AuthContext";
-import { useTheme } from "../../context/ThemeContext"; // ✅ إضافة جديدة
+import { useTheme } from "../../context/ThemeContext";
 import { toast } from "sonner";
 import ImageUploader from "../../components/ImageUploader";
 import { getImageUrl } from "../../utils/imageUtils";
@@ -11,7 +11,7 @@ import { getImageUrl } from "../../utils/imageUtils";
 const AdminBrands = () => {
   const { lang } = useLang();
   const { user, hasPermission } = useAuth();
-  const { isDark } = useTheme(); // ✅ إضافة جديدة
+  const { isDark } = useTheme();
   
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,25 +25,23 @@ const AdminBrands = () => {
     name: "",
     code: "",
     image: "",
-    header_image: "", // ✅ إضافة الحقل الجديد
+    header_image: "",
     description_ar: "",
     description_en: ""
   });
 
-  // ✅ ✅ ✅ دوال التحقق من الصلاحيات (مبسطة وسهلة الاستخدام)
+  // ✅ دوال التحقق من الصلاحيات
   const canCreate = useMemo(() => hasPermission("brands:create"), [hasPermission]);
   const canUpdate = useMemo(() => hasPermission("brands:update"), [hasPermission]);
   const canDelete = useMemo(() => hasPermission("brands:delete"), [hasPermission]);
   const canRead = useMemo(() => hasPermission("brands:read"), [hasPermission]);
 
-  // ✅ جلب البراندات من الـ Backend
+  // ✅ جلب البراندات
   const fetchBrands = useCallback(async () => {
-    // ✅ التحقق من صلاحية القراءة أولاً
     if (!canRead) {
       toast.error(lang === "ar" ? "❌ غير مصرح بعرض البراندات" : "❌ Forbidden - No read permission");
       return;
     }
-
     setLoading(true);
     try {
       const res = await adminApi.get("/brands");
@@ -80,15 +78,12 @@ const AdminBrands = () => {
     );
   }, [brands, search]);
 
-  // ✅ فتح/إغلاق النموذج (Modal) - مع التحقق من الصلاحيات
+  // ✅ فتح/إغلاق النموذج
   const openModal = useCallback((brand = null) => {
-    // ✅ عند التعديل: التحقق من صلاحية التحديث
     if (brand && !canUpdate) {
       toast.error(lang === "ar" ? "❌ غير مصرح بتعديل البراندات" : "❌ Forbidden - No update permission");
       return;
     }
-    
-    // ✅ عند الإضافة: التحقق من صلاحية الإنشاء
     if (!brand && !canCreate) {
       toast.error(lang === "ar" ? "❌ غير مصرح بإضافة براندات" : "❌ Forbidden - No create permission");
       return;
@@ -96,22 +91,28 @@ const AdminBrands = () => {
 
     if (brand) {
       setEditingId(brand.id);
-      setFormData({ ...brand, header_image: brand.header_image || "", description_ar: brand.description_ar || "",
-      description_en: brand.description_en || "" });
+      setFormData({ 
+        ...brand, 
+        header_image: brand.header_image || "", 
+        description_ar: brand.description_ar || "",
+        description_en: brand.description_en || "" 
+      });
     } else {
       setEditingId(null);
-      setFormData({ id: "", name: "", code: "", image: "", description_ar: "", description_en: ""});
+      setFormData({ 
+        id: "", name: "", code: "", image: "", header_image: "", 
+        description_ar: "", description_en: "" 
+      });
     }
     setShowModal(true);
   }, [canCreate, canUpdate, lang]);
 
   const closeModal = useCallback(() => setShowModal(false), []);
 
-  // ✅ حفظ البراند (إضافة أو تعديل) - مع التحقق من الصلاحيات
+  // ✅ حفظ البراند
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // ✅ التحقق من الصلاحية قبل الحفظ
     if (editingId && !canUpdate) {
       toast.error(lang === "ar" ? "❌ غير مصرح بتحديث البراندات" : "❌ Forbidden - No update permission");
       return;
@@ -133,6 +134,7 @@ const AdminBrands = () => {
       );
       return;
     }
+    
     setSubmitting(true);
     try {
       const payload = { ...formData, id: Number(formData.id) };
@@ -183,9 +185,8 @@ const AdminBrands = () => {
     }
   };
 
-  // ✅ حذف براند - مع التحقق من الصلاحية
+  // ✅ حذف براند
   const handleDelete = async (id) => {
-    // ✅ التحقق من صلاحية الحذف أولاً
     if (!canDelete) {
       toast.error(lang === "ar" ? "❌ غير مصرح بحذف البراندات" : "❌ Forbidden - No delete permission");
       return;
@@ -223,7 +224,7 @@ const AdminBrands = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // ✅ حالة عدم وجود صلاحية القراءة - مع دعم الوضع الليلي
+  // ✅ حالة عدم وجود صلاحية القراءة
   if (!canRead) {
     return (
       <div className={`flex items-center justify-center min-h-[60vh] text-center transition-colors duration-300 ${isDark ? 'bg-gray-900' : 'bg-white'}`} dir={lang === "ar" ? "rtl" : "ltr"}>
@@ -261,7 +262,6 @@ const AdminBrands = () => {
                 : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
             }`} 
           />
-          {/* ✅ زر الإضافة - يظهر فقط لمن لديه صلاحية الإنشاء */}
           {canCreate && (
             <button 
               onClick={() => openModal()} 
@@ -322,7 +322,6 @@ const AdminBrands = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
-                        {/* ✅ زر التعديل - يظهر فقط لمن لديه صلاحية التحديث */}
                         {canUpdate && (
                           <button 
                             onClick={() => openModal(b)} 
@@ -333,7 +332,6 @@ const AdminBrands = () => {
                             {lang === "ar" ? "تعديل" : "Edit"}
                           </button>
                         )}
-                        {/* ✅ زر الحذف - يظهر فقط لمن لديه صلاحية الحذف */}
                         {canDelete && (
                           <button 
                             onClick={() => handleDelete(b.id)} 
@@ -343,12 +341,6 @@ const AdminBrands = () => {
                           >
                             {lang === "ar" ? "حذف" : "Delete"}
                           </button>
-                        )}
-                        {/* ✅ رسالة توضيحية إذا لم تكن هناك صلاحيات */}
-                        {!canUpdate && !canDelete && (
-                          <span className={`text-[10px] italic ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                            {lang === "ar" ? " " : " "}
-                          </span>
                         )}
                       </div>
                     </td>
@@ -360,13 +352,16 @@ const AdminBrands = () => {
         )}
       </div>
       
-      {/* ===== Modal: Add/Edit Brand ===== */}
+      {/* ===== Modal: Add/Edit Brand (✅ مُحسّن بالكامل للتمرير والعرض) ===== */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className={`rounded-[2.5rem] w-full max-w-lg shadow-2xl border transition-colors duration-300 ${
+          {/* ✅ تم زيادة العرض إلى max-w-2xl وإضافة max-h-[90vh] مع overflow-y-auto للتمرير الداخلي */}
+          <div className={`rounded-[2.5rem] w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl border transition-colors duration-300 ${
             isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
           }`}>
-            <div className={`p-6 border-b flex justify-between items-center sticky top-0 rounded-t-[2.5rem] z-10 transition-colors ${
+            
+            {/* ✅ رأس ثابت (Sticky Header) يظهر دائماً أثناء التمرير */}
+            <div className={`p-6 border-b flex justify-between items-center sticky top-0 rounded-t-[2.5rem] z-20 transition-colors ${
               isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
             }`}>
               <h2 className={`text-xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -383,20 +378,39 @@ const AdminBrands = () => {
                 ✕
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <input 
-                name="id" 
-                type="number" 
-                value={formData.id} 
-                onChange={handleChange} 
-                placeholder="ID (رقم فريد)" 
-                required 
-                className={`w-full border rounded-xl px-4 py-2.5 text-sm transition-colors ${
-                  isDark 
-                    ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30' 
-                    : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
-                }`} 
-              />
+
+            {/* ✅ جسم النموذج القابل للتمرير */}
+            <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto custom-scrollbar">
+              
+              {/* ✅ شبكة لتوفير المساحة العمودية */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input 
+                  name="id" 
+                  type="number" 
+                  value={formData.id} 
+                  onChange={handleChange} 
+                  placeholder="ID (رقم فريد)" 
+                  required 
+                  className={`w-full border rounded-xl px-4 py-2.5 text-sm transition-colors ${
+                    isDark 
+                      ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30' 
+                      : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
+                  }`} 
+                />
+                <input 
+                  name="code" 
+                  value={formData.code} 
+                  onChange={handleChange} 
+                  placeholder={lang === "ar" ? "Code (اختصار) *" : "Code (abbreviation) *"} 
+                  required 
+                  className={`w-full border rounded-xl px-4 py-2.5 text-sm uppercase transition-colors ${
+                    isDark 
+                      ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30' 
+                      : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
+                  }`} 
+                />
+              </div>
+
               <input 
                 name="name" 
                 value={formData.name} 
@@ -404,18 +418,6 @@ const AdminBrands = () => {
                 placeholder={lang === "ar" ? "اسم البراند *" : "Brand name *"} 
                 required 
                 className={`w-full border rounded-xl px-4 py-2.5 text-sm transition-colors ${
-                  isDark 
-                    ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30' 
-                    : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
-                }`} 
-              />
-              <input 
-                name="code" 
-                value={formData.code} 
-                onChange={handleChange} 
-                placeholder={lang === "ar" ? "Code (اختصار) *" : "Code (abbreviation) *"} 
-                required 
-                className={`w-full border rounded-xl px-4 py-2.5 text-sm uppercase transition-colors ${
                   isDark 
                     ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30' 
                     : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
@@ -429,87 +431,103 @@ const AdminBrands = () => {
                 resourceType="brands"
                 resourceData={{ 
                   name: formData.name,
-                  name_ar: formData.name,  // للأمان
-                  name_en: formData.name   // للأمان
-                }}  // ✅ تأكد من وجود }} هنا
+                  name_ar: formData.name,
+                  name_en: formData.name
+                }}
                 onImageSelect={(path) => setFormData(prev => ({ ...prev, image: path }))}
               />
-              {/* ✅ ✅ ✅ مكون رفع صورة الهيدر الجديد */}
-		<ImageUploader
-		  label={lang === "ar" ? "صورة الهيدر الخلفية (اختياري)" : "Header Background Image (Optional)"}
-		  currentImage={formData.header_image}
-		  resourceType="brands"
-		  resourceData={{
-		    name: formData.name,
-		    name_ar: formData.name,
-		    name_en: formData.name,
-		    isHeader: true // ✅ هذا السطر هو ما سيجعل الـ Backend يسمي الملف nevertti-header
-		  }}
-		  onImageSelect={(path) => setFormData(prev => ({ ...prev, header_image: path }))}
-		/>
-		{/* ✅ ✅ ✅ جديد: قسم وصف البراند */}
-		<div className="pt-2 border-t border-gray-100 dark:border-gray-700">
-		  <p className={`text-[10px] font-black uppercase tracking-widest mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-		    {lang === "ar" ? "📝 وصف البراند (اختياري)" : "📝 Brand Description (Optional)"}
-		  </p>
 
-		  {/* الوصف العربي */}
-		  <div className="mb-3">
-		    <label className={`block text-[10px] font-bold mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-		      {lang === "ar" ? "الوصف بالعربية" : "Description (Arabic)"}
-		    </label>
-		    <textarea
-		      name="description_ar"
-		      value={formData.description_ar}
-		      onChange={handleChange}
-		      rows="3"
-		      maxLength={2000}
-		      placeholder={lang === "ar"
-			? "اكتب وصفاً جذاباً للبراند... (يظهر في صفحة تفاصيل البراند)"
-			: "Write an attractive description for the brand..."}
-		      dir="rtl"
-		      className={`w-full border rounded-xl px-4 py-2.5 text-sm resize-none transition-colors ${
-			isDark
-			  ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30'
-			  : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
-		      }`}
-		    />
-		    <p className={`text-[9px] mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-		      {formData.description_ar.length}/2000
-		    </p>
-		  </div>
+              {/* ✅ مكون رفع صورة الهيدر */}
+              <ImageUploader
+                label={lang === "ar" ? "صورة الهيدر الخلفية (اختياري)" : "Header Background Image (Optional)"}
+                currentImage={formData.header_image}
+                resourceType="brands"
+                resourceData={{
+                  name: formData.name,
+                  name_ar: formData.name,
+                  name_en: formData.name,
+                  isHeader: true
+                }}
+                onImageSelect={(path) => setFormData(prev => ({ ...prev, header_image: path }))}
+              />
 
-		  {/* الوصف الإنجليزي */}
-		  <div>
-		    <label className={`block text-[10px] font-bold mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-		      {lang === "ar" ? "Description (English)" : "الوصف بالإنجليزية"}
-		    </label>
-		    <textarea
-		      name="description_en"
-		      value={formData.description_en}
-		      onChange={handleChange}
-		      rows="3"
-		      maxLength={2000}
-		      placeholder="Write an attractive description in English..."
-		      dir="ltr"
-		      className={`w-full border rounded-xl px-4 py-2.5 text-sm resize-none transition-colors ${
-			isDark
-			  ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30'
-			  : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
-		      }`}
-		    />
-		    <p className={`text-[9px] mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-		      {formData.description_en.length}/2000
-		    </p>
-		  </div>
-		</div>
-              
-              <div className="flex gap-3 pt-2">
+              {/* ✅ ✅ ✅ قسم وصف البراند (مُحسّن بشبكة جانبية على الشاشات الكبيرة) */}
+              <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
+                <p className={`text-[10px] font-black uppercase tracking-widest mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {lang === "ar" ? "📝 وصف البراند (اختياري)" : "📝 Brand Description (Optional)"}
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* الوصف العربي */}
+                  <div>
+                    <label className={`block text-[10px] font-bold mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {lang === "ar" ? "الوصف بالعربية" : "Description (Arabic)"}
+                    </label>
+                    <textarea
+                      name="description_ar"
+                      value={formData.description_ar}
+                      onChange={handleChange}
+                      rows="4"
+                      maxLength={2000}
+                      placeholder={lang === "ar"
+                        ? "اكتب وصفاً جذاباً للبراند..."
+                        : "Write an attractive description..."}
+                      dir="rtl"
+                      className={`w-full border rounded-xl px-4 py-2.5 text-sm resize-none transition-colors ${
+                        isDark
+                          ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30'
+                          : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
+                      }`}
+                    />
+                    <p className={`text-[9px] mt-1 text-left ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {formData.description_ar.length}/2000
+                    </p>
+                  </div>
+
+                  {/* الوصف الإنجليزي */}
+                  <div>
+                    <label className={`block text-[10px] font-bold mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {lang === "ar" ? "Description (English)" : "الوصف بالإنجليزية"}
+                    </label>
+                    <textarea
+                      name="description_en"
+                      value={formData.description_en}
+                      onChange={handleChange}
+                      rows="4"
+                      maxLength={2000}
+                      placeholder="Write an attractive description in English..."
+                      dir="ltr"
+                      className={`w-full border rounded-xl px-4 py-2.5 text-sm resize-none transition-colors ${
+                        isDark
+                          ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30'
+                          : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
+                      }`}
+                    />
+                    <p className={`text-[9px] mt-1 text-right ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {formData.description_en.length}/2000
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </form>
+
+            {/* ✅ ذيل ثابت (Sticky Footer) لأزرار الحفظ والإلغاء تظهر دائماً */}
+            <div className={`p-6 border-t sticky bottom-0 z-20 transition-colors rounded-b-[2.5rem] ${
+              isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
+            }`}>
+              <div className="flex gap-3">
                 <button 
                   type="submit" 
+                  onClick={handleSubmit}
                   disabled={submitting} 
-                  className="flex-1 bg-gray-900 dark:bg-gray-700 text-white py-3 rounded-xl font-black text-sm hover:bg-pink-600 transition-all disabled:opacity-50"
+                  className="flex-1 bg-gray-900 dark:bg-gray-700 text-white py-3 rounded-xl font-black text-sm hover:bg-pink-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
+                  {submitting && (
+                    <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                  )}
                   {submitting 
                     ? (lang === "ar" ? "جاري الحفظ..." : "Saving...") 
                     : (editingId ? (lang === "ar" ? "تحديث" : "Update") : (lang === "ar" ? "إضافة" : "Add"))}
@@ -524,7 +542,8 @@ const AdminBrands = () => {
                   {lang === "ar" ? "إلغاء" : "Cancel"}
                 </button>
               </div>
-            </form>
+            </div>
+
           </div>
         </div>
       )}
