@@ -289,26 +289,6 @@ const ProductDetails = () => {
                   <span className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded-full">❌ {t("outOfStock")}</span>
                 )}
               </div>
-              {/* ✅ ✅ ✅ جديد: عرض الـ Barcode أو SKU */}
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${
-                isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'
-              }`}>
-                <svg className={`w-4 h-4 ${isDark ? 'text-pink-400' : 'text-pink-600'}`} 
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
-                <span className={`text-[10px] font-bold uppercase tracking-widest ${
-                  isDark ? 'text-gray-400' : 'text-gray-500'
-                }`}>
-                  {(selectedVariant?.barcode || product.barcode) ? 'Barcode' : 'SKU'}:
-                </span>
-                <span className={`text-xs font-mono font-bold ${
-                  isDark ? 'text-white' : 'text-gray-900'
-                }`}>
-                  {selectedVariant?.barcode || product.barcode || selectedVariant?.sku || product.sku}
-                </span>
-              </div>
             </header>
             
             <p className="text-gray-500 leading-relaxed text-base font-medium text-right border-r-4 border-pink-100 pr-5">{getProductDescription(product)}</p>

@@ -24,11 +24,6 @@ const app = express();
 // 🔗 الاتصال بقاعدة البيانات
 connectDB();
 
-
-// ✅ إضافة مؤقتة لمرة واحدة: لمزامنة الـ Indexes الجديدة (بما فيها sparse: true) بأمان
-Product.syncIndexes().catch(err => console.log("⚠️ Product indexes sync note:", err.message));
-Variant.syncIndexes().catch(err => console.log("⚠️ Variant indexes sync note:", err.messag
-
 // 🛡️ إعدادات الأمان
 app.use(helmet({
   crossOriginResourcePolicy: false,
@@ -167,12 +162,7 @@ app.get("/products", async (req, res) => {
 
 	    // ✅ 3️⃣ ادمج كل الـ IDs (بدون تكرار)
 	    const allMatchingIds = [
-	      ...new Set([
-          ...matchingVariantProductIds,
-          ...matchingAttributeProductIds,
-          ...matchingBarcodeProductIds,
-          ...matchingBarcodeVariantIds    
-        ])
+	      ...new Set([...matchingVariantProductIds, ...matchingAttributeProductIds])
 	    ];
 
 	    // ✅ 4️⃣ ابني شرط الـ $or الشامل
@@ -180,8 +170,7 @@ app.get("/products", async (req, res) => {
 	      { name_ar: { $regex: s, $options: "i" } },
 	      { name_en: { $regex: s, $options: "i" } },
 	      { sku: { $regex: s, $options: "i" } },  // SKU المنتج الأساسي
-	      { barcode: { $regex: s, $options: "i" } },  // ✅ جديد
-        { id: { $in: allMatchingIds } }          // المنتجات اللي عندها متغيرات مطابقة
+	      { id: { $in: allMatchingIds } }          // المنتجات اللي عندها متغيرات مطابقة
 	    ];
 
 	  } catch (err) {

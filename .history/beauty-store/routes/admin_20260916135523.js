@@ -294,9 +294,8 @@ router.put("/products/:id",
         }
         productData.sku = normalizedSku;
       }
-      
-      // ✅ ✅ ✅ جديد: التحقق من عدم تكرار الـ Barcode
 
+      // ✅ ✅ ✅ جديد: التحقق من عدم تكرار الـ Barcode
       if (req.body.barcode !== undefined) {
           const newBarcode = req.body.barcode?.trim()?.toUpperCase() || null;
           if (newBarcode) {
@@ -555,24 +554,7 @@ if (req.uploadedPath && oldProduct.image && oldProduct.image !== req.uploadedPat
           const isTemp = v.id?.startsWith?.('temp_');
           const variantId = isTemp ? null : (v.id ? Number(v.id) : null);
           const rawSku = v.sku?.trim();
-          // داخل for (const v of variants):
-          const rawBarcode = v.barcode?.trim()?.toUpperCase() || null;
-
-          if (rawBarcode) {
-            const existingBarcode = await Variant.findOne({
-              barcode: rawBarcode,
-              product_id: productId,
-              id: variantId ? { $ne: variantId } : { $exists: false }
-            });
-            if (existingBarcode) {
-              throw new Error(`⚠️ Barcode "${rawBarcode}" مستخدم لمتغير آخر في هذا المنتج`);
-            }
-            // التحقق أيضاً من المنتجات
-            const existingInProducts = await Product.findOne({ barcode: rawBarcode });
-            if (existingInProducts) {
-              throw new Error(`⚠️ Barcode "${rawBarcode}" مستخدم لمنتج آخر`);
-            }
-          }
+          
           if (rawSku) {
             const variantSku = rawSku.toUpperCase();
             const existingInDb = await Variant.findOne({
@@ -592,7 +574,6 @@ if (req.uploadedPath && oldProduct.image && oldProduct.image !== req.uploadedPat
 
           const updatePayload = {
             sku: rawSku ? rawSku.toUpperCase() : `SKU-${productId}-${Date.now()}`,
-            barcode: rawBarcode,  // ✅ جديد
             price: Number(v.price) || product.price,
             image: finalImage, // ✅ استخدام الصورة المحدّثة
             attributes: v.attributes || {},
@@ -727,7 +708,6 @@ router.post("/products/:productId/variants",
           return res.status(400).json({ message: "⚠️ Variant بهذا المعرف موجود مسبقاً" });
         }
       }
-
       
       // ✅ 3. التحقق من تكرار الـ SKU لنفس المنتج فقط
       if (sku) {
@@ -739,31 +719,12 @@ router.post("/products/:productId/variants",
           });
         }
       }
-      // ✅ ✅ ✅ جديد: التحقق من الـ Barcode
-      let finalBarcode = null;
-      if (req.body.barcode?.trim()) {
-        finalBarcode = req.body.barcode.trim().toUpperCase();
-        const barcodeExists = await Variant.findOne({ barcode: finalBarcode });
-        if (barcodeExists) {
-          return res.status(400).json({
-            message: `⚠️ Barcode "${finalBarcode}" مستخدم مسبقاً`
-          });
-        }
-        const barcodeInProducts = await Product.findOne({ barcode: finalBarcode });
-        if (barcodeInProducts) {
-          return res.status(400).json({
-            message: `⚠️ Barcode "${finalBarcode}" مستخدم لمنتج آخر`
-          });
-        }
-      }
-
 
       // ✅ 4. إنشاء المتغير الجديد (مع ضمان أنواع البيانات الصحيحة)
       const newVariant = new Variant({
         id: id ? Number(id) : Date.now(), // ضمان أنه رقم
         product_id: productId,
         sku: sku ? sku.toUpperCase().trim() : `SKU-${productId}-${Date.now()}`,
-        barcode: finalBarcode,  // ✅ جديد
         price: Number(price) || parentProduct.price, // استخدام سعر المنتج الأب كـ fallback
         image: image || parentProduct.image, // استخدام صورة المنتج الأب كـ fallback
         attributes: attributes || {},
@@ -827,34 +788,11 @@ router.put("/variants/:id",
       // ✅ 3️⃣ بناء payload التحديث
       const updatePayload = {
         ...(sku && { sku: sku.toUpperCase().trim() }),
-        ...(req.body.barcode !== undefined && { 
-            barcode: req.body.barcode?.trim()?.toUpperCase() || null 
-          }),
         price,
         image,
         attributes,
         ...(req.body.isAvailable !== undefined && { isAvailable: req.body.isAvailable })
       };
-
-      // ✅ ✅ ✅ جديد: التحقق من عدم تكرار الـ Barcode
-      if (req.body.barcode !== undefined && req.body.barcode?.trim()) {
-        const newBarcode = req.body.barcode.trim().toUpperCase();
-        const existing = await Variant.findOne({
-          barcode: newBarcode,
-          id: { $ne: variantId }
-        });
-        if (existing) {
-          return res.status(400).json({
-            message: `⚠️ Barcode "${newBarcode}" مستخدم لمتغير آخر`
-          });
-        }
-        const existingInProducts = await Product.findOne({ barcode: newBarcode });
-        if (existingInProducts) {
-          return res.status(400).json({
-            message: `⚠️ Barcode "${newBarcode}" مستخدم لمنتج آخر`
-          });
-        }
-      }
 
       // ✅ 4️⃣ تحديث المتغير في MongoDB
       const updatedVariant = await Variant.findOneAndUpdate(

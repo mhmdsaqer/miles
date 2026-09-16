@@ -19,8 +19,7 @@ const variantSchema = new mongoose.Schema(
     trim: true,
     uppercase: true,
     sparse: true,
-    index: true,
-    unique: true        // ✅ فريد عالمياً (أبسط وأأمن)
+    unique: true         // ✅ فريد عالمياً (أبسط وأأمن)
   },
   
   price: { type: Number, required: true },

@@ -955,10 +955,6 @@ const AdminProducts = () => {
                   <div className={`w-2 h-2 rounded-full ${p.isAvailable !== false ? 'bg-green-500' : 'bg-red-500'}`}></div>
                 </div>
                 <h3 className={`font-bold text-sm truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{lang === "ar" ? p.name_ar : p.name_en}</h3>
-                {/* ✅ ✅ ✅ جديد: عرض الـ Barcode/SKU */}
-                <p className={`text-[9px] font-mono mt-0.5 truncate ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                  {p.barcode ? `🏷️ ${p.barcode}` : `SKU: ${p.sku}`}
-                </p>
                 <div className="flex justify-between items-center mt-2">
                   <span className={`font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>₪{p.price}</span>
                   {canUpdate && (

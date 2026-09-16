@@ -91,17 +91,7 @@ const productSchema = Joi.object({
       "string.max": "SKU طويل جداً (الحد الأقصى 100 حرف)",
       "string.pattern.base": "SKU يجب أن يحتوي على أحرف إنجليزية كبيرة وأرقام فقط (بدون مسافات أو رموز خاصة)"
     }),
-  // ✅ ✅ ✅ جديد: حقل الـ Barcode
-  barcode: Joi.string()
-  .trim()
-  .max(100)
-  .pattern(/^[A-Z0-9\-_.]*$/)   // ✅ نفس نمط الـ SKU
-  .allow("")                      // ✅ يسمح بالفارغ
-  .optional()
-  .messages({
-    "string.pattern.base": "Barcode يجب أن يحتوي على أحرف كبيرة وأرقام وشرطات فقط",
-    "string.max": "Barcode طويل جداً (الحد الأقصى 100 حرف)"
-  }),  
+    
   name_ar: Joi.string().min(2).max(200).required(),
   name_en: Joi.string().min(2).max(200).required(),
   description_ar: Joi.string().min(10).max(2000).allow(""),
@@ -138,16 +128,6 @@ const productSchema = Joi.object({
           .allow("")  // ✅ السماح بحقل فارغ للمتغيرات
           .messages({
             "string.pattern.base": "SKU يجب أن يحتوي على أحرف إنجليزية كبيرة وأرقام فقط",
-          }),
-         // ✅ ✅ ✅ جديد: barcode للمتغيرات
-        barcode: Joi.string()
-          .trim()
-          .max(100)
-          .pattern(/^[A-Z0-9\-_.]*$/)
-          .allow("")
-          .optional()
-          .messages({
-            "string.pattern.base": "Barcode يجب أن يحتوي على أحرف كبيرة وأرقام وشرطات فقط",
           }),
           
         price: Joi.number().min(0).max(10000).precision(2),

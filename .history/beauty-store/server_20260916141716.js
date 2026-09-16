@@ -24,11 +24,6 @@ const app = express();
 // 🔗 الاتصال بقاعدة البيانات
 connectDB();
 
-
-// ✅ إضافة مؤقتة لمرة واحدة: لمزامنة الـ Indexes الجديدة (بما فيها sparse: true) بأمان
-Product.syncIndexes().catch(err => console.log("⚠️ Product indexes sync note:", err.message));
-Variant.syncIndexes().catch(err => console.log("⚠️ Variant indexes sync note:", err.messag
-
 // 🛡️ إعدادات الأمان
 app.use(helmet({
   crossOriginResourcePolicy: false,

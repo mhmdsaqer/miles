@@ -14,16 +14,6 @@ const productSchema = new mongoose.Schema(
     trim: true,
     uppercase: true
   },
-   // ✅ ✅ ✅ جديد: حقل الـ Barcode (فريد + يسمح بالفراغ)
-  barcode: {
-    type: String,
-    default: null,       // ✅ null بدلاً من "" ليعمل مع sparse index
-    trim: true,
-    uppercase: true,
-    sparse: true,        // ✅ يسمح بعدة قيم null/فارغة
-    unique: true,        // ✅ فريد - يمنع التكرار على مستوى الداتابيس
-    index: true          // ✅ فهرس للبحث السريع
-  },
   
   name_ar: { type: String, required: true },
   name_en: { type: String, required: true },
@@ -41,7 +31,5 @@ const productSchema = new mongoose.Schema(
 productSchema.index({ sku: "text" });
 // ✅ فهرس للبحث بالاسم
 productSchema.index({ name_ar: "text", name_en: "text" });
-productSchema.index({ barcode: "text" }); // ✅ فهرس نصي للبحث بالـ barcode
-
 
 module.exports = mongoose.model("Product", productSchema);

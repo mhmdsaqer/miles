@@ -412,8 +412,7 @@ const AdminProducts = () => {
   const addVariant = useCallback(() => {
     const newVariant = {
       id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      sku: "", barcode: "",  // ✅ جديد
-      price: "", image: "", attributes: [],
+      sku: "", price: "", image: "", attributes: [],
       isAvailable: true
     };
     setVariants(prev => [...prev, newVariant]);
@@ -581,7 +580,6 @@ const AdminProducts = () => {
             return {
               id: isTemp ? undefined : (v.id ? Number(v.id) : undefined),
               sku: finalSku,
-              barcode: v.barcode?.trim()?.toUpperCase() || null,  // ✅ جديد
               price: Number(v.price) || Number(formData.price),
               image: v.image || formData.image,
               attributes: attributesToObject(v.attributes),
@@ -955,10 +953,6 @@ const AdminProducts = () => {
                   <div className={`w-2 h-2 rounded-full ${p.isAvailable !== false ? 'bg-green-500' : 'bg-red-500'}`}></div>
                 </div>
                 <h3 className={`font-bold text-sm truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{lang === "ar" ? p.name_ar : p.name_en}</h3>
-                {/* ✅ ✅ ✅ جديد: عرض الـ Barcode/SKU */}
-                <p className={`text-[9px] font-mono mt-0.5 truncate ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                  {p.barcode ? `🏷️ ${p.barcode}` : `SKU: ${p.sku}`}
-                </p>
                 <div className="flex justify-between items-center mt-2">
                   <span className={`font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>₪{p.price}</span>
                   {canUpdate && (
@@ -1010,34 +1004,6 @@ const AdminProducts = () => {
                       ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30' 
                       : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
                   }`} />
-
-                  {/* ✅ ✅ ✅ جديد: حقل الـ Barcode */}
-                  <div>
-                    <label className={`block text-[10px] font-black uppercase tracking-widest mb-1.5 ${
-                      isDark ? 'text-gray-400' : 'text-gray-500'
-                    }`}>
-                      🏷️ Barcode / الرمز الشريطي (اختياري - فريد)
-                    </label>
-                    <input
-                      name="barcode"
-                      type="text"
-                      value={formData.barcode || ""}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        barcode: e.target.value.toUpperCase().replace(/[^A-Z0-9\-_.]/g, '')
-                      }))}
-                      placeholder="مثال: 6291108500123"
-                      maxLength={100}
-                      className={`border rounded-xl px-4 py-2.5 text-sm font-mono uppercase transition-colors ${
-                        isDark
-                          ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30'
-                          : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
-                      }`}
-                    />
-                    <p className={`text-[9px] mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                      💡 إذا تُرك فارغاً، سيظهر الـ SKU بدلاً منه في صفحة المنتج
-                    </p>
-                  </div>
                   
                   {/* ✅ NEW: Checkbox التوفر للمنتج الرئيسي */}
                   <div 
@@ -1315,19 +1281,6 @@ const AdminProducts = () => {
                                   ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400' 
                                   : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
                               }`} 
-                            />
-                              {/* ✅ ✅ ✅ جديد: حقل Barcode للمتغير */}
-                            <input
-                              type="text"
-                              value={variant.barcode || ""}
-                              onChange={(e) => updateVariant(variant.id, "barcode", 
-                                e.target.value.toUpperCase().replace(/[^A-Z0-9\-_.]/g, ''))}
-                              placeholder="Barcode (اختياري)"
-                              maxLength={100}
-                              className={`border rounded-lg px-3 py-2 text-xs font-mono uppercase transition-colors ${
-                                isDark ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400'
-                                      : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
-                              }`}
                             />
                             <input 
                               type="number" step="0.5" 

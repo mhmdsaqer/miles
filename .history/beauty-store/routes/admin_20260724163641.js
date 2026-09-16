@@ -173,24 +173,6 @@ router.post("/products",
           message: `⚠️ SKU "${finalSku}" مستخدم مسبقاً لمنتج آخر (ID: ${existsSku.id})`
         });
       }
-            // ✅ ✅ ✅ جديد: التحقق من عدم تكرار الـ Barcode
-      const finalBarcode = req.body.barcode?.trim()?.toUpperCase() || null;
-      if (finalBarcode) {
-        const existsBarcode = await Product.findOne({ barcode: finalBarcode });
-        if (existsBarcode) {
-          return res.status(400).json({
-            message: `⚠️ Barcode "${finalBarcode}" مستخدم مسبقاً لمنتج آخر (ID: ${existsBarcode.id})`
-          });
-        }
-        // ✅ التحقق أيضاً من عدم تكراره في المتغيرات
-        const existsInVariants = await Variant.findOne({ barcode: finalBarcode });
-        if (existsInVariants) {
-          return res.status(400).json({
-            message: `⚠️ Barcode "${finalBarcode}" مستخدم مسبقاً لمتغير آخر (ID: ${existsInVariants.id})`
-          });
-        }
-      }
-
 
       const newProduct = new Product({
         id, brand_id, category_id, name_ar, name_en,
@@ -198,7 +180,6 @@ router.post("/products",
         image,
         price,
         sku: finalSku,
-        barcode: finalBarcode,  // ✅ ✅ ✅ جديد
         has_variants: has_variants || (variants?.length > 0) || false,
         isAvailable: req.body.isAvailable !== undefined ? req.body.isAvailable : true 
       });
@@ -210,28 +191,15 @@ router.post("/products",
         const variantsToSave = variants.map((v, index) => {
           const variantSku = v.sku?.trim()?.toUpperCase() ||
             `${finalSku}-${String(index + 1).padStart(3, '0')}`;
-            // ✅ ✅ ✅ جديد: معالجة الـ Barcode
-          const variantBarcode = v.barcode?.trim()?.toUpperCase() || null;  
           return {
             id: v.id || (Date.now() + index),
             product_id: id,
             sku: variantSku,
-            barcode: variantBarcode,  // ✅ جديد
             price: Number(v.price) || Number(price),
             image: v.image || image,
             attributes: v.attributes || {}
           };
         });
-
-        // ✅ ✅ ✅ جديد: التحقق من عدم تكرار الـ Barcode بين المتغيرات
-        const barcodeList = variantsToSave.map(v => v.barcode).filter(Boolean);
-        const duplicateBarcodes = barcodeList.filter((b, i) => barcodeList.indexOf(b) !== i);
-        if (duplicateBarcodes.length > 0) {
-          await Product.findOneAndDelete({ id });
-          return res.status(400).json({
-            message: `⚠️ تكرار في الـ Barcode للمتغيرات: ${[...new Set(duplicateBarcodes)].join(', ')}`
-          });
-        }
 
         const skuList = variantsToSave.map(v => v.sku);
         const duplicates = skuList.filter((s, i) => skuList.indexOf(s) !== i);
@@ -294,32 +262,6 @@ router.put("/products/:id",
         }
         productData.sku = normalizedSku;
       }
-      
-      // ✅ ✅ ✅ جديد: التحقق من عدم تكرار الـ Barcode
-
-      if (req.body.barcode !== undefined) {
-          const newBarcode = req.body.barcode?.trim()?.toUpperCase() || null;
-          if (newBarcode) {
-            // التحقق من المنتجات الأخرى
-            const existsInProducts = await Product.findOne({ 
-              barcode: newBarcode, 
-              id: { $ne: productId } 
-            });
-            if (existsInProducts) {
-              return res.status(400).json({
-                message: `⚠️ Barcode "${newBarcode}" مستخدم لمنتج آخر (ID: ${existsInProducts.id})`
-              });
-            }
-            // التحقق من المتغيرات
-            const existsInVariants = await Variant.findOne({ barcode: newBarcode });
-            if (existsInVariants) {
-              return res.status(400).json({
-                message: `⚠️ Barcode "${newBarcode}" مستخدم لمتغير آخر`
-              });
-            }
-          }
-          productData.barcode = newBarcode;
-        }
 
       // ✅ 2. إذا تم رفع صورة جديدة، نستخدمها مباشرة
       if (req.uploadedPath) {
@@ -555,24 +497,7 @@ if (req.uploadedPath && oldProduct.image && oldProduct.image !== req.uploadedPat
           const isTemp = v.id?.startsWith?.('temp_');
           const variantId = isTemp ? null : (v.id ? Number(v.id) : null);
           const rawSku = v.sku?.trim();
-          // داخل for (const v of variants):
-          const rawBarcode = v.barcode?.trim()?.toUpperCase() || null;
-
-          if (rawBarcode) {
-            const existingBarcode = await Variant.findOne({
-              barcode: rawBarcode,
-              product_id: productId,
-              id: variantId ? { $ne: variantId } : { $exists: false }
-            });
-            if (existingBarcode) {
-              throw new Error(`⚠️ Barcode "${rawBarcode}" مستخدم لمتغير آخر في هذا المنتج`);
-            }
-            // التحقق أيضاً من المنتجات
-            const existingInProducts = await Product.findOne({ barcode: rawBarcode });
-            if (existingInProducts) {
-              throw new Error(`⚠️ Barcode "${rawBarcode}" مستخدم لمنتج آخر`);
-            }
-          }
+          
           if (rawSku) {
             const variantSku = rawSku.toUpperCase();
             const existingInDb = await Variant.findOne({
@@ -592,7 +517,6 @@ if (req.uploadedPath && oldProduct.image && oldProduct.image !== req.uploadedPat
 
           const updatePayload = {
             sku: rawSku ? rawSku.toUpperCase() : `SKU-${productId}-${Date.now()}`,
-            barcode: rawBarcode,  // ✅ جديد
             price: Number(v.price) || product.price,
             image: finalImage, // ✅ استخدام الصورة المحدّثة
             attributes: v.attributes || {},
@@ -727,7 +651,6 @@ router.post("/products/:productId/variants",
           return res.status(400).json({ message: "⚠️ Variant بهذا المعرف موجود مسبقاً" });
         }
       }
-
       
       // ✅ 3. التحقق من تكرار الـ SKU لنفس المنتج فقط
       if (sku) {
@@ -739,31 +662,12 @@ router.post("/products/:productId/variants",
           });
         }
       }
-      // ✅ ✅ ✅ جديد: التحقق من الـ Barcode
-      let finalBarcode = null;
-      if (req.body.barcode?.trim()) {
-        finalBarcode = req.body.barcode.trim().toUpperCase();
-        const barcodeExists = await Variant.findOne({ barcode: finalBarcode });
-        if (barcodeExists) {
-          return res.status(400).json({
-            message: `⚠️ Barcode "${finalBarcode}" مستخدم مسبقاً`
-          });
-        }
-        const barcodeInProducts = await Product.findOne({ barcode: finalBarcode });
-        if (barcodeInProducts) {
-          return res.status(400).json({
-            message: `⚠️ Barcode "${finalBarcode}" مستخدم لمنتج آخر`
-          });
-        }
-      }
-
 
       // ✅ 4. إنشاء المتغير الجديد (مع ضمان أنواع البيانات الصحيحة)
       const newVariant = new Variant({
         id: id ? Number(id) : Date.now(), // ضمان أنه رقم
         product_id: productId,
         sku: sku ? sku.toUpperCase().trim() : `SKU-${productId}-${Date.now()}`,
-        barcode: finalBarcode,  // ✅ جديد
         price: Number(price) || parentProduct.price, // استخدام سعر المنتج الأب كـ fallback
         image: image || parentProduct.image, // استخدام صورة المنتج الأب كـ fallback
         attributes: attributes || {},
@@ -827,34 +731,11 @@ router.put("/variants/:id",
       // ✅ 3️⃣ بناء payload التحديث
       const updatePayload = {
         ...(sku && { sku: sku.toUpperCase().trim() }),
-        ...(req.body.barcode !== undefined && { 
-            barcode: req.body.barcode?.trim()?.toUpperCase() || null 
-          }),
         price,
         image,
         attributes,
         ...(req.body.isAvailable !== undefined && { isAvailable: req.body.isAvailable })
       };
-
-      // ✅ ✅ ✅ جديد: التحقق من عدم تكرار الـ Barcode
-      if (req.body.barcode !== undefined && req.body.barcode?.trim()) {
-        const newBarcode = req.body.barcode.trim().toUpperCase();
-        const existing = await Variant.findOne({
-          barcode: newBarcode,
-          id: { $ne: variantId }
-        });
-        if (existing) {
-          return res.status(400).json({
-            message: `⚠️ Barcode "${newBarcode}" مستخدم لمتغير آخر`
-          });
-        }
-        const existingInProducts = await Product.findOne({ barcode: newBarcode });
-        if (existingInProducts) {
-          return res.status(400).json({
-            message: `⚠️ Barcode "${newBarcode}" مستخدم لمنتج آخر`
-          });
-        }
-      }
 
       // ✅ 4️⃣ تحديث المتغير في MongoDB
       const updatedVariant = await Variant.findOneAndUpdate(

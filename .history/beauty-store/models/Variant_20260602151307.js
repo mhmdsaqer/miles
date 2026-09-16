@@ -12,16 +12,6 @@ const variantSchema = new mongoose.Schema(
     trim: true,
     uppercase: true
   },
-   // ✅ ✅ ✅ جديد: حقل الـ Barcode (فريد ضمن المنتج فقط)
-  barcode: {
-    type: String,
-    default: null,
-    trim: true,
-    uppercase: true,
-    sparse: true,
-    index: true,
-    unique: true        // ✅ فريد عالمياً (أبسط وأأمن)
-  },
   
   price: { type: Number, required: true },
   image: { type: String, required: true },
