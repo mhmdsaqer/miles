@@ -601,7 +601,6 @@ const AdminProducts = () => {
         image: formData.image,
         price: Number(formData.price),
         sku: cleanMainSku,
-        // ✅ ✅ ✅ تم الإضافة هنا: إرسال الباركود للـ Backend
         barcode: formData.barcode?.trim()?.toUpperCase() || null, 
         has_variants: variants.length > 0,
         variants: variantsPayload,
