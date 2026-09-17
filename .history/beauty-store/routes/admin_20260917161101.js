@@ -1030,8 +1030,8 @@ router.post("/variants/:id/promote",
         barcode: finalBarcode, 
         name_ar: name_ar || parentProduct.name_ar,
         name_en: name_en || parentProduct.name_en,
-        description_ar: description_ar !== undefined ? (description_ar?.trim() || null) : (parentProduct.description_ar || null),
-        description_en: description_en !== undefined ? (description_en?.trim() || null) : (parentProduct.description_en || null),
+        description_ar: description_ar !== undefined ? description_ar : parentProduct.description_ar,
+        description_en: description_en !== undefined ? description_en : parentProduct.description_en,
         
         // ✅ ✅ ✅ جديد: توريث المكونات وطريقة الاستخدام من المنتج الأب
         ingredients_ar: parentProduct.ingredients_ar || null,

@@ -398,9 +398,6 @@ const ProductDetails = () => {
 
           // إذا لم يكن هناك سوى الوصف، اعرضه مباشرة بدون تابات
           if (!hasIngredients && !hasUsage) {
-            // ✅ ✅ ✅ جديد: إذا لم يكن هناك وصف أيضاً، لا تعرض شيئاً (return null)
-            if (!hasDescription) return null; 
-            
             return (
               <div className="text-right text-gray-600 leading-relaxed space-y-4">
                 <p className="text-base">{getProductDescription(product)}</p>
