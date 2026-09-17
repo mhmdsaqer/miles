@@ -606,11 +606,6 @@ const AdminProducts = () => {
         name_en: formData.name_en,
         description_ar: formData.description_ar || "",
         description_en: formData.description_en || "",
-        // ✅ ✅ ✅ جديد: تحويل الفراغ إلى null
-        ingredients_ar: formData.ingredients_ar?.trim() || null,
-        ingredients_en: formData.ingredients_en?.trim() || null,
-        usage_ar: formData.usage_ar?.trim() || null,
-        usage_en: formData.usage_en?.trim() || null,
         image: formData.image,
         price: Number(formData.price),
         sku: cleanMainSku,
@@ -1165,120 +1160,6 @@ const AdminProducts = () => {
                   }`} 
                 />
                 
-                
-
-                {/* ✅ ✅ ✅ جديد: قسم المكونات وطريقة الاستخدام (تمت إضافته هنا) */}
-                <div className="pt-4 border-t border-gray-100 dark:border-gray-700 space-y-6">
-                  
-                  {/* قسم المكونات */}
-                  <div>
-                    <p className={`text-[10px] font-black uppercase tracking-widest mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      🧪 {lang === "ar" ? "المكونات (اختياري)" : "Ingredients (Optional)"}
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className={`block text-[10px] font-bold mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {lang === "ar" ? "المكونات بالعربية" : "Ingredients (Arabic)"}
-                        </label>
-                        <textarea
-                          name="ingredients_ar"
-                          value={formData.ingredients_ar}
-                          onChange={handleChange}
-                          rows="3"
-                          maxLength={2000}
-                          placeholder={lang === "ar" ? "اكتب المكونات بالعربية..." : "Write ingredients in Arabic..."}
-                          dir="rtl"
-                          className={`w-full border rounded-xl px-4 py-2.5 text-sm resize-none transition-colors ${
-                            isDark
-                              ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30'
-                              : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
-                          }`}
-                        />
-                        <p className={`text-[9px] mt-1 text-left ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                          {(formData.ingredients_ar || "").length}/2000
-                        </p>
-                      </div>
-                      <div>
-                        <label className={`block text-[10px] font-bold mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {lang === "ar" ? "Ingredients (English)" : "المكونات بالإنجليزية"}
-                        </label>
-                        <textarea
-                          name="ingredients_en"
-                          value={formData.ingredients_en}
-                          onChange={handleChange}
-                          rows="3"
-                          maxLength={2000}
-                          placeholder="Write ingredients in English..."
-                          dir="ltr"
-                          className={`w-full border rounded-xl px-4 py-2.5 text-sm resize-none transition-colors ${
-                            isDark
-                              ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30'
-                              : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
-                          }`}
-                        />
-                        <p className={`text-[9px] mt-1 text-right ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                          {(formData.ingredients_en || "").length}/2000
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* قسم طريقة الاستخدام */}
-                  <div>
-                    <p className={`text-[10px] font-black uppercase tracking-widest mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      📖 {lang === "ar" ? "طريقة الاستخدام (اختياري)" : "How to Use (Optional)"}
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className={`block text-[10px] font-bold mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {lang === "ar" ? "طريقة الاستخدام بالعربية" : "Usage Instructions (Arabic)"}
-                        </label>
-                        <textarea
-                          name="usage_ar"
-                          value={formData.usage_ar}
-                          onChange={handleChange}
-                          rows="3"
-                          maxLength={2000}
-                          placeholder={lang === "ar" ? "اكتب طريقة الاستخدام بالعربية..." : "Write usage instructions in Arabic..."}
-                          dir="rtl"
-                          className={`w-full border rounded-xl px-4 py-2.5 text-sm resize-none transition-colors ${
-                            isDark
-                              ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30'
-                              : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
-                          }`}
-                        />
-                        <p className={`text-[9px] mt-1 text-left ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                          {(formData.usage_ar || "").length}/2000
-                        </p>
-                      </div>
-                      <div>
-                        <label className={`block text-[10px] font-bold mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {lang === "ar" ? "Usage Instructions (English)" : "طريقة الاستخدام بالإنجليزية"}
-                        </label>
-                        <textarea
-                          name="usage_en"
-                          value={formData.usage_en}
-                          onChange={handleChange}
-                          rows="3"
-                          maxLength={2000}
-                          placeholder="Write usage instructions in English..."
-                          dir="ltr"
-                          className={`w-full border rounded-xl px-4 py-2.5 text-sm resize-none transition-colors ${
-                            isDark
-                              ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400 focus:ring-pink-500/30'
-                              : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:ring-pink-500/30'
-                          }`}
-                        />
-                        <p className={`text-[9px] mt-1 text-right ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-                          {(formData.usage_en || "").length}/2000
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-                {/* ✅ نهاية قسم المكونات وطريقة الاستخدام */}
-                
                 <ImageUploader
                   label={t("productImage")}
                   currentImage={formData.image}
@@ -1291,7 +1172,6 @@ const AdminProducts = () => {
                   }}
                   onImageSelect={(path) => setFormData(prev => ({ ...prev, image: path }))}
                 />
-
               </div>
                   {/* قسم المتغيرات */}
               <div className="space-y-4">
