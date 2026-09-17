@@ -406,59 +406,61 @@ const ProductDetails = () => {
         </div>
       </section>
       
-        {/* ===== Product Info Tabs ===== */}
+           {/* ===== Product Info Tabs ===== */}
       <section className="max-w-[1000px] mx-auto px-6 lg:px-12 py-16">
+        {/* ✅ ✅ ✅ الجديد: عرض التابات فقط إذا كانت البيانات موجودة */}
         {(() => {
           const hasDescription = product?.[lang === "ar" ? "description_ar" : "description_en"]?.trim();
           const hasIngredients = product?.[lang === "ar" ? "ingredients_ar" : "ingredients_en"]?.trim();
           const hasUsage = product?.[lang === "ar" ? "usage_ar" : "usage_en"]?.trim();
 
-          // 1️⃣ إذا كان كل شيء فارغ، لا تعرض القسم نهائياً (يمنع الشاشة البيضاء)
-          if (!hasDescription && !hasIngredients && !hasUsage) {
-            return null;
+          // إذا لم يكن هناك سوى الوصف، اعرضه مباشرة بدون تابات
+          if (!hasIngredients && !hasUsage) {
+            // ✅ ✅ ✅ جديد: إذا لم يكن هناك وصف أيضاً، لا تعرض شيئاً (return null)
+            if (!hasDescription) return null; 
+            
+            return (
+              <div className="text-right text-gray-600 leading-relaxed space-y-4">
+                <p className="text-base">{getProductDescription(product)}</p>
+              </div>
+            );
           }
 
-          // 2️⃣ بناء مصفوفة التابات المتاحة فقط (بالترتيب)
-          const availableTabs = [];
-          if (hasDescription) availableTabs.push({ id: "description", label: t("description") });
-          if (hasIngredients) availableTabs.push({ id: "ingredients", label: t("ingredients") });
-          if (hasUsage) availableTabs.push({ id: "usage", label: t("howToUse") });
+          // إذا كانت هناك بيانات إضافية، اعرض التابات
+          const tabs = [
+            { id: "description", label: t("description"), show: hasDescription },
+            { id: "ingredients", label: t("ingredients"), show: hasIngredients },
+            { id: "usage", label: t("howToUse"), show: hasUsage }
+          ].filter(tab => tab.show);
 
           return (
             <>
-              {/* عرض أزرار التابات فقط إذا كان هناك أكثر من تاب متاح */}
-              {availableTabs.length > 1 && (
-                <div className="border-b border-gray-100 mb-8">
-                  <div className="flex gap-1 overflow-x-auto scrollbar-hide">
-                    {availableTabs.map((tab) => (
-                      <button 
-                        key={tab.id} 
-                        onClick={() => setActiveTab(tab.id)} 
-                        className={`px-6 py-4 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${
-                          activeTab === tab.id ? "border-black text-gray-900" : "border-transparent text-gray-400 hover:text-gray-600"
-                        }`}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
-                  </div>
+              <div className="border-b border-gray-100 mb-8">
+                <div className="flex gap-1 overflow-x-auto scrollbar-hide">
+                  {tabs.map((tab) => (
+                    <button 
+                      key={tab.id} 
+                      onClick={() => setActiveTab(tab.id)} 
+                      className={`px-6 py-4 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${
+                        activeTab === tab.id ? "border-black text-gray-900" : "border-transparent text-gray-400 hover:text-gray-600"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
                 </div>
-              )}
-
-              {/* 3️⃣ عرض محتوى التاب النشط فقط */}
-              <div className="text-right text-gray-600 leading-relaxed space-y-4 animate-fadeIn">
+              </div>
+              <div className="text-right text-gray-600 leading-relaxed space-y-4">
                 {activeTab === "description" && hasDescription && (
                   <p className="text-base">{getProductDescription(product)}</p>
                 )}
-                
                 {activeTab === "ingredients" && hasIngredients && (
-                  <p className="text-base whitespace-pre-line">
+                  <p className="text-base">
                     {product?.[lang === "ar" ? "ingredients_ar" : "ingredients_en"]}
                   </p>
                 )}
-                
                 {activeTab === "usage" && hasUsage && (
-                  <p className="text-base whitespace-pre-line">
+                  <p className="text-base">
                     {product?.[lang === "ar" ? "usage_ar" : "usage_en"]}
                   </p>
                 )}
@@ -467,6 +469,7 @@ const ProductDetails = () => {
           );
         })()}
       </section>
+      
       {/* ===== Discovery Sections ===== */}
       <footer className="py-20 space-y-32 bg-[#FAFAFA]">
         {brandProducts.length > 0 && (
