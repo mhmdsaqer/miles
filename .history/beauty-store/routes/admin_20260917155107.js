@@ -974,20 +974,14 @@ router.post("/variants/:id/promote",
       const parentProduct = await Product.findOne({ id: variant.product_id });
       if (!parentProduct) return res.status(400).json({ message: "Parent product not found" });
 
-      // ✅ 1️⃣ استقبال البيانات المعدّلة من الفرونت إند (تمت إضافة barcode)
+      // ✅ 1️⃣ استقبال البيانات المعدّلة من الفرونت إند (مع Fallback للقيم التلقائية)
       const { 
         name_ar, name_en, description_ar, description_en, 
-        sku, barcode, price, image, category_id, brand_id, isAvailable 
+        sku, price, image, category_id, brand_id, isAvailable 
       } = req.body || {};
 
       // ✅ 2️⃣ تحديد القيم النهائية (المعدّلة > التلقائية)
       const finalSku = sku?.trim() ? sku.toUpperCase().trim() : (variant.sku?.trim() ? variant.sku.toUpperCase().trim() : `PROMO-${Date.now()}`);
-      
-      // ✅ معالجة الـ Barcode: المدخل من المستخدم > باركود المتغير الأصلي > null
-      const finalBarcode = barcode !== undefined 
-        ? (barcode?.trim() ? barcode.trim().toUpperCase() : null) 
-        : (variant.barcode?.trim() ? variant.barcode.trim().toUpperCase() : null);
-
       const finalPrice = price !== undefined ? Number(price) : variant.price;
       const finalImage = image || variant.image;
       const finalBrandId = brand_id ? Number(brand_id) : parentProduct.brand_id;
@@ -1002,41 +996,20 @@ router.post("/variants/:id/promote",
         }
       }
 
-      // ✅ 3.5️⃣ التحقق من عدم تكرار الـ Barcode (جديد ومهم جداً)
-      if (finalBarcode) {
-        const existingBarcodeInProducts = await Product.findOne({ barcode: finalBarcode });
-        if (existingBarcodeInProducts) {
-          return res.status(400).json({ message: `⚠️ Barcode "${finalBarcode}" مستخدم مسبقاً لمنتج آخر (ID: ${existingBarcodeInProducts.id})` });
-        }
-        // التأكد أيضاً من عدم وجوده في متغيرات أخرى (باستثناء المتغير الحالي الذي سيتم حذفه)
-        const existingBarcodeInVariants = await Variant.findOne({ barcode: finalBarcode, id: { $ne: variant.id } });
-        if (existingBarcodeInVariants) {
-          return res.status(400).json({ message: `⚠️ Barcode "${finalBarcode}" مستخدم مسبقاً لمتغير آخر` });
-        }
-      }
-
       // ✅ 4️⃣ توليد ID جديد للمنتج
       const lastProduct = await Product.findOne().sort({ id: -1 });
       const newProductId = lastProduct ? lastProduct.id + 1 : 10000;
 
-      // ✅ 5️⃣ إنشاء المنتج الجديد (مع توريث المكونات وطريقة الاستخدام)
+      // ✅ 5️⃣ إنشاء المنتج الجديد
       const newProduct = new Product({
         id: newProductId,
         brand_id: finalBrandId,
         category_id: finalCategoryId,
         sku: finalSku,
-        barcode: finalBarcode, 
         name_ar: name_ar || parentProduct.name_ar,
         name_en: name_en || parentProduct.name_en,
         description_ar: description_ar !== undefined ? description_ar : parentProduct.description_ar,
         description_en: description_en !== undefined ? description_en : parentProduct.description_en,
-        
-        // ✅ ✅ ✅ جديد: توريث المكونات وطريقة الاستخدام من المنتج الأب
-        ingredients_ar: parentProduct.ingredients_ar || null,
-        ingredients_en: parentProduct.ingredients_en || null,
-        usage_ar: parentProduct.usage_ar || null,
-        usage_en: parentProduct.usage_en || null,
-
         image: finalImage,
         price: finalPrice,
         has_variants: false,
@@ -1048,17 +1021,25 @@ router.post("/variants/:id/promote",
       // ✅ 6️⃣ حذف المتغير الأصلي من الداتابيس
       await Variant.deleteOne({ id: variant.id });
 
-      // ✅ 6.5 حذف صورة المتغير القديمة من Cloudinary إذا تم تغييرها
-      if (image && variant.image && image !== variant.image && variant.image.startsWith("https://res.cloudinary.com/")) {
-        const oldPublicId = extractPublicIdFromUrl(variant.image);
-        const newPublicId = extractPublicIdFromUrl(image);
-        
-        if (oldPublicId && newPublicId && oldPublicId !== newPublicId) {
-          deleteFromCloudinary(variant.image).then((success) => {
-            if (success) console.log(`✅ Deleted old variant image from Cloudinary during promotion: ${variant.image}`);
-          }).catch(err => console.error("❌ Error deleting old variant image during promotion:", err));
-        }
+// في الخطوة 6.5 من promote
+if (image && variant.image && image !== variant.image && variant.image.startsWith("https://res.cloudinary.com/")) {
+  const oldPublicId = extractPublicIdFromUrl(variant.image);
+  const newPublicId = extractPublicIdFromUrl(image);
+  
+  if (oldPublicId && newPublicId && oldPublicId !== newPublicId) {
+    deleteFromCloudinary(variant.image).then((success) => {
+      if (success) {
+        console.log(`✅ Deleted old variant image from Cloudinary during promotion: ${variant.image}`);
+      } else {
+        console.warn(`⚠️ Failed to delete old variant image during promotion: ${variant.image}`);
       }
+    }).catch(err => {
+      console.error("❌ Error deleting old variant image during promotion:", err);
+    });
+  } else {
+    console.log(`⏭️ Skipping deletion: Same public_id (${oldPublicId}) - image was overwritten`);
+  }
+}
 
       // ✅ 7️⃣ تحديث حالة المنتج الأب إذا لم يتبقى متغيرات
       const remainingVariants = await Variant.countDocuments({ product_id: parentProduct.id });
@@ -1080,7 +1061,6 @@ router.post("/variants/:id/promote",
         product: { 
           id: newProduct.id, 
           sku: newProduct.sku, 
-          barcode: newProduct.barcode, 
           name_ar: newProduct.name_ar, 
           name_en: newProduct.name_en 
         }
