@@ -777,7 +777,25 @@ router.put("/variants/:id",
         ...(req.body.isAvailable !== undefined && { isAvailable: req.body.isAvailable })
       };
 
-      
+      // ✅ ✅ ✅ جديد: التحقق من عدم تكرار الـ Barcode
+      if (req.body.barcode !== undefined && req.body.barcode?.trim()) {
+        const newBarcode = req.body.barcode.trim().toUpperCase();
+        const existing = await Variant.findOne({
+          barcode: newBarcode,
+          id: { $ne: variantId }
+        });
+        if (existing) {
+          return res.status(400).json({
+            message: `⚠️ Barcode "${newBarcode}" مستخدم لمتغير آخر`
+          });
+        }
+        const existingInProducts = await Product.findOne({ barcode: newBarcode });
+        if (existingInProducts) {
+          return res.status(400).json({
+            message: `⚠️ Barcode "${newBarcode}" مستخدم لمنتج آخر`
+          });
+        }
+      }
 
       // ✅ 4️⃣ تحديث المتغير في MongoDB
       const updatedVariant = await Variant.findOneAndUpdate(
@@ -907,6 +925,19 @@ router.post("/variants/:id/promote",
         const existingSku = await Product.findOne({ sku: finalSku });
         if (existingSku) {
           return res.status(400).json({ message: `⚠️ SKU "${finalSku}" مستخدم مسبقاً لمنتج آخر (ID: ${existingSku.id})` });
+        }
+      }
+
+      // ✅ 3.5️⃣ التحقق من عدم تكرار الـ Barcode (جديد ومهم جداً)
+      if (finalBarcode) {
+        const existingBarcodeInProducts = await Product.findOne({ barcode: finalBarcode });
+        if (existingBarcodeInProducts) {
+          return res.status(400).json({ message: `⚠️ Barcode "${finalBarcode}" مستخدم مسبقاً لمنتج آخر (ID: ${existingBarcodeInProducts.id})` });
+        }
+        // التأكد أيضاً من عدم وجوده في متغيرات أخرى (باستثناء المتغير الحالي الذي سيتم حذفه)
+        const existingBarcodeInVariants = await Variant.findOne({ barcode: finalBarcode, id: { $ne: variant.id } });
+        if (existingBarcodeInVariants) {
+          return res.status(400).json({ message: `⚠️ Barcode "${finalBarcode}" مستخدم مسبقاً لمتغير آخر` });
         }
       }
 

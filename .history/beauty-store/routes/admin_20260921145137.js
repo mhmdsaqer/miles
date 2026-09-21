@@ -910,6 +910,19 @@ router.post("/variants/:id/promote",
         }
       }
 
+      // ✅ 3.5️⃣ التحقق من عدم تكرار الـ Barcode (جديد ومهم جداً)
+      if (finalBarcode) {
+        const existingBarcodeInProducts = await Product.findOne({ barcode: finalBarcode });
+        if (existingBarcodeInProducts) {
+          return res.status(400).json({ message: `⚠️ Barcode "${finalBarcode}" مستخدم مسبقاً لمنتج آخر (ID: ${existingBarcodeInProducts.id})` });
+        }
+        // التأكد أيضاً من عدم وجوده في متغيرات أخرى (باستثناء المتغير الحالي الذي سيتم حذفه)
+        const existingBarcodeInVariants = await Variant.findOne({ barcode: finalBarcode, id: { $ne: variant.id } });
+        if (existingBarcodeInVariants) {
+          return res.status(400).json({ message: `⚠️ Barcode "${finalBarcode}" مستخدم مسبقاً لمتغير آخر` });
+        }
+      }
+
       // ✅ 4️⃣ توليد ID جديد للمنتج
       const lastProduct = await Product.findOne().sort({ id: -1 });
       const newProductId = lastProduct ? lastProduct.id + 1 : 10000;

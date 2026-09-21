@@ -215,6 +215,15 @@ router.post("/products",
           };
         });
 
+        // ✅ ✅ ✅ جديد: التحقق من عدم تكرار الـ Barcode بين المتغيرات
+        const barcodeList = variantsToSave.map(v => v.barcode).filter(Boolean);
+        const duplicateBarcodes = barcodeList.filter((b, i) => barcodeList.indexOf(b) !== i);
+        if (duplicateBarcodes.length > 0) {
+          await Product.findOneAndDelete({ id });
+          return res.status(400).json({
+            message: `⚠️ تكرار في الـ Barcode للمتغيرات: ${[...new Set(duplicateBarcodes)].join(', ')}`
+          });
+        }
 
         const skuList = variantsToSave.map(v => v.sku);
         const duplicates = skuList.filter((s, i) => skuList.indexOf(s) !== i);
@@ -286,10 +295,32 @@ router.put("/products/:id",
         productData.sku = normalizedSku;
       }
       
-      // ✅ السماح بتكرار الباركود عند التعديل
+      
+      // ✅ ✅ ✅ جديد: التحقق من عدم تكرار الـ Barcode
+
       if (req.body.barcode !== undefined) {
-        productData.barcode = req.body.barcode?.trim()?.toUpperCase() || null;
-      }
+          const newBarcode = req.body.barcode?.trim()?.toUpperCase() || null;
+          if (newBarcode) {
+            // التحقق من المنتجات الأخرى
+            const existsInProducts = await Product.findOne({ 
+              barcode: newBarcode, 
+              id: { $ne: productId } 
+            });
+            if (existsInProducts) {
+              return res.status(400).json({
+                message: `⚠️ Barcode "${newBarcode}" مستخدم لمنتج آخر (ID: ${existsInProducts.id})`
+              });
+            }
+            // التحقق من المتغيرات
+            const existsInVariants = await Variant.findOne({ barcode: newBarcode });
+            if (existsInVariants) {
+              return res.status(400).json({
+                message: `⚠️ Barcode "${newBarcode}" مستخدم لمتغير آخر`
+              });
+            }
+          }
+          productData.barcode = newBarcode;
+        }
 
       // ✅ 2. إذا تم رفع صورة جديدة، نستخدمها مباشرة
       if (req.uploadedPath) {
@@ -528,6 +559,21 @@ if (req.uploadedPath && oldProduct.image && oldProduct.image !== req.uploadedPat
           // داخل for (const v of variants):
           const rawBarcode = v.barcode?.trim()?.toUpperCase() || null;
 
+          if (rawBarcode) {
+            const existingBarcode = await Variant.findOne({
+              barcode: rawBarcode,
+              product_id: productId,
+              id: variantId ? { $ne: variantId } : { $exists: false }
+            });
+            if (existingBarcode) {
+              throw new Error(`⚠️ Barcode "${rawBarcode}" مستخدم لمتغير آخر في هذا المنتج`);
+            }
+            // التحقق أيضاً من المنتجات
+            const existingInProducts = await Product.findOne({ barcode: rawBarcode });
+            if (existingInProducts) {
+              throw new Error(`⚠️ Barcode "${rawBarcode}" مستخدم لمنتج آخر`);
+            }
+          }
           if (rawSku) {
             const variantSku = rawSku.toUpperCase();
             const existingInDb = await Variant.findOne({
@@ -695,8 +741,22 @@ router.post("/products/:productId/variants",
         }
       }
       // ✅ ✅ ✅ جديد: التحقق من الـ Barcode
-            let finalBarcode = req.body.barcode?.trim()?.toUpperCase() || null;
-      
+      let finalBarcode = null;
+      if (req.body.barcode?.trim()) {
+        finalBarcode = req.body.barcode.trim().toUpperCase();
+        const barcodeExists = await Variant.findOne({ barcode: finalBarcode });
+        if (barcodeExists) {
+          return res.status(400).json({
+            message: `⚠️ Barcode "${finalBarcode}" مستخدم مسبقاً`
+          });
+        }
+        const barcodeInProducts = await Product.findOne({ barcode: finalBarcode });
+        if (barcodeInProducts) {
+          return res.status(400).json({
+            message: `⚠️ Barcode "${finalBarcode}" مستخدم لمنتج آخر`
+          });
+        }
+      }
 
 
       // ✅ 4. إنشاء المتغير الجديد (مع ضمان أنواع البيانات الصحيحة)
@@ -777,7 +837,25 @@ router.put("/variants/:id",
         ...(req.body.isAvailable !== undefined && { isAvailable: req.body.isAvailable })
       };
 
-      
+      // ✅ ✅ ✅ جديد: التحقق من عدم تكرار الـ Barcode
+      if (req.body.barcode !== undefined && req.body.barcode?.trim()) {
+        const newBarcode = req.body.barcode.trim().toUpperCase();
+        const existing = await Variant.findOne({
+          barcode: newBarcode,
+          id: { $ne: variantId }
+        });
+        if (existing) {
+          return res.status(400).json({
+            message: `⚠️ Barcode "${newBarcode}" مستخدم لمتغير آخر`
+          });
+        }
+        const existingInProducts = await Product.findOne({ barcode: newBarcode });
+        if (existingInProducts) {
+          return res.status(400).json({
+            message: `⚠️ Barcode "${newBarcode}" مستخدم لمنتج آخر`
+          });
+        }
+      }
 
       // ✅ 4️⃣ تحديث المتغير في MongoDB
       const updatedVariant = await Variant.findOneAndUpdate(
@@ -907,6 +985,19 @@ router.post("/variants/:id/promote",
         const existingSku = await Product.findOne({ sku: finalSku });
         if (existingSku) {
           return res.status(400).json({ message: `⚠️ SKU "${finalSku}" مستخدم مسبقاً لمنتج آخر (ID: ${existingSku.id})` });
+        }
+      }
+
+      // ✅ 3.5️⃣ التحقق من عدم تكرار الـ Barcode (جديد ومهم جداً)
+      if (finalBarcode) {
+        const existingBarcodeInProducts = await Product.findOne({ barcode: finalBarcode });
+        if (existingBarcodeInProducts) {
+          return res.status(400).json({ message: `⚠️ Barcode "${finalBarcode}" مستخدم مسبقاً لمنتج آخر (ID: ${existingBarcodeInProducts.id})` });
+        }
+        // التأكد أيضاً من عدم وجوده في متغيرات أخرى (باستثناء المتغير الحالي الذي سيتم حذفه)
+        const existingBarcodeInVariants = await Variant.findOne({ barcode: finalBarcode, id: { $ne: variant.id } });
+        if (existingBarcodeInVariants) {
+          return res.status(400).json({ message: `⚠️ Barcode "${finalBarcode}" مستخدم مسبقاً لمتغير آخر` });
         }
       }
 
