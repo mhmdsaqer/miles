@@ -519,29 +519,8 @@ if (req.uploadedPath && oldProduct.image && oldProduct.image !== req.uploadedPat
 
       await audit.update(req.user, "product", oldProduct, product, req);
 
-            // ✅ 6. تحديث المتغيرات (Variants)
+      // ✅ 6. تحديث المتغيرات (Variants)
       if (variants && Array.isArray(variants)) {
-        const parentSku = (productData.sku || oldProduct.sku)?.toUpperCase().trim();
-        
-        // ✅ أ) التحقق مما إذا كان المنتج الأصلي مرسلاً كمتغير من الواجهة
-        const hasParentInPayload = variants.some(v => v.sku?.toUpperCase().trim() === parentSku);
-
-        // ✅ ب) إذا كان المنتج سابقاً لا يملك متغيرات، والآن أضاف المستخدم متغيرات،
-        // نقوم تلقائياً بتحويل المنتج الأصلي نفسه إلى متغير أولي في قاعدة البيانات
-        if (!oldProduct.has_variants && !hasParentInPayload && variants.length > 0) {
-          const parentAsVariant = new Variant({
-            id: Date.now(),
-            product_id: productId,
-            sku: parentSku,
-            barcode: oldProduct.barcode || null,
-            price: oldProduct.price,
-            image: oldProduct.image,
-            attributes: {},
-            isAvailable: oldProduct.isAvailable !== false
-          });
-          await parentAsVariant.save();
-        }
-
         const permanentIds = variants
           .map(v => v.id)
           .filter(id => id && !String(id).startsWith('temp_'))
@@ -549,23 +528,32 @@ if (req.uploadedPath && oldProduct.image && oldProduct.image !== req.uploadedPat
           .filter(id => !isNaN(id));
 
         if (permanentIds.length > 0) {
-          // حذف المتغيرات القديمة التي لم يعد المستخدم يرسلها
           await Variant.deleteMany({ product_id: productId, id: { $nin: permanentIds } });
         } else if (variants.length === 0) {
-          // ✅ ج) المنطق المطلوب: إذا قام المستخدم بحذف جميع المتغيرات، نحذف كل المتغيرات
-          // (بما فيها المنتج الأصلي كمتغير) ليعود المنتج لحالته الطبيعية
           await Variant.deleteMany({ product_id: productId });
         }
 
-        // ✅ د) التحقق من تكرار SKU مع السماح بتطابق SKU المنتج الأصلي
+         // ✅ ✅ ✅ جديد: التحقق من تكرار SKU مع السماح بتطابق SKU المنتج الأصلي
         const skuMap = new Map();
+        const parentSku = productData.sku?.toUpperCase().trim() || oldProduct.sku?.toUpperCase().trim();
+        
         for (const v of variants) {
           const rawSku = v.sku?.trim()?.toUpperCase();
           if (rawSku) {
-            if (skuMap.has(rawSku)) {
-              throw new Error(`⚠️ تكرار الـ SKU "${rawSku}" في نفس الطلب`);
+            // ✅ إذا كان SKU المتغير يطابق SKU المنتج الأصلي، نسمح بذلك (للمتغير الأساسي)
+            if (rawSku === parentSku) {
+              // تحقق فقط من عدم وجود متغير آخر بنفس SKU في نفس الطلب
+              if (skuMap.has(rawSku)) {
+                throw new Error(`⚠️ تكرار الـ SKU "${rawSku}" في نفس الطلب`);
+              }
+              skuMap.set(rawSku, v.id);
+            } else {
+              // ✅ إذا كان SKU مختلفاً، نتحقق من عدم تكراره
+              if (skuMap.has(rawSku)) {
+                throw new Error(`⚠️ تكرار الـ SKU "${rawSku}" في نفس الطلب`);
+              }
+              skuMap.set(rawSku, v.id);
             }
-            skuMap.set(rawSku, v.id);
           }
         }
 
@@ -573,10 +561,25 @@ if (req.uploadedPath && oldProduct.image && oldProduct.image !== req.uploadedPat
           const isTemp = v.id?.startsWith?.('temp_');
           const variantId = isTemp ? null : (v.id ? Number(v.id) : null);
           const rawSku = v.sku?.trim();
+          // داخل for (const v of variants):
           const rawBarcode = v.barcode?.trim()?.toUpperCase() || null;
 
           if (rawSku) {
-            const variantSku = rawSku.toUpperCase();
+          const variantSku = rawSku.toUpperCase();
+          
+          // ✅ ✅ ✅ جديد: السماح بتطابق SKU المتغير مع SKU المنتج الأصلي
+          if (variantSku === parentSku) {
+            // تحقق فقط من عدم وجود متغير آخر بنفس SKU
+            const existingInDb = await Variant.findOne({
+              sku: variantSku,
+              product_id: productId,
+              id: variantId ? { $ne: variantId } : { $exists: false }
+            });
+            if (existingInDb) {
+              throw new Error(`⚠️ SKU "${variantSku}" مستخدم لمتغير آخر في هذا المنتج`);
+            }
+          } else {
+            // ✅ إذا كان SKU مختلفاً، نتحقق من عدم تكراره
             const existingInDb = await Variant.findOne({
               sku: variantSku,
               product_id: productId,
@@ -586,17 +589,20 @@ if (req.uploadedPath && oldProduct.image && oldProduct.image !== req.uploadedPat
               throw new Error(`⚠️ SKU "${variantSku}" مستخدم لمتغير آخر في هذا المنتج`);
             }
           }
+        }
 
+          // ✅ ✅ ✅ استخدام الصورة المحدّثة من نقل البراند إذا كانت موجودة
           let finalImage = v.image || product.image;
           if (variantId && variantImageUpdates.has(variantId)) {
             finalImage = variantImageUpdates.get(variantId);
+            console.log(`✅ Using updated image URL for variant ${variantId}: ${finalImage}`);
           }
 
           const updatePayload = {
             sku: rawSku ? rawSku.toUpperCase() : `SKU-${productId}-${Date.now()}`,
-            barcode: rawBarcode,
+            barcode: rawBarcode,  // ✅ جديد
             price: Number(v.price) || product.price,
-            image: finalImage,
+            image: finalImage, // ✅ استخدام الصورة المحدّثة
             attributes: v.attributes || {},
             isAvailable: v.isAvailable !== false
           };
@@ -616,7 +622,6 @@ if (req.uploadedPath && oldProduct.image && oldProduct.image !== req.uploadedPat
           }
         }
 
-        // ✅ هـ) تحديث حالة المنتج: إذا لم يتبقَ أي متغير، نعيد has_variants إلى false
         const remaining = await Variant.countDocuments({ product_id: productId });
         await Product.findOneAndUpdate(
           { id: productId },
