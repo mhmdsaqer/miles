@@ -177,24 +177,22 @@ const ProductDetails = () => {
 
   const currentPrice = selectedVariant?.price ?? product?.price;
 
-    // ✅ دالة الإضافة للسلة - مُصححة للتعامل مع "المتغير الأصلي"
+  // ✅ دالة الإضافة للسلة - مُصححة مع حماية التوفر
   const handleAddToCart = useCallback(() => {
     if (!product) return;
+
     if (!canAddToCart) {
       toast.error(t("outOfStock"));
       return;
     }
 
-    // ✅ إذا كان المتغير المختار هو "المنتج الأصلي"، نمرر null كـ variant للحفاظ على منطق السلة الحالي
-    const variantForCart = selectedVariant?.isParentDefault ? null : selectedVariant;
-
-    addToCart(product, variantForCart, quantity);
-    
+    addToCart(product, selectedVariant, quantity);
     const prodName = getProductName(product);
-    const variantText = variantForCart
-      ? getVariantText(variantForCart.attributes)
+    
+    const variantText = selectedVariant
+      ? getVariantText(selectedVariant.attributes)
       : (lang === "ar" ? "إصدار أساسي" : "Standard Version");
-      
+    
     toast.success(
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-lg bg-pink-50 flex items-center justify-center text-lg mt-0.5">✨</div>
@@ -207,14 +205,14 @@ const ProductDetails = () => {
         </div>
       </div>,
       {
-        action: {
-          label: <span className="font-bold text-pink-600">{t("viewCart")}</span>,
-          onClick: () => navigate("/cart")
+        action: { 
+          label: <span className="font-bold text-pink-600">{t("viewCart")}</span>, 
+          onClick: () => navigate("/cart") 
         },
         duration: 5000
       }
     );
-  }, [product, selectedVariant, quantity, addToCart, lang, currentPrice, t, navigate, getVariantText, canAddToCart, getProductName]);
+  }, [product, selectedVariant, quantity, addToCart, lang, currentPrice, t, navigate, getVariantText, canAddToCart]);
 
   if (!product) return ( 
     <div className="h-screen flex items-center justify-center bg-white">
