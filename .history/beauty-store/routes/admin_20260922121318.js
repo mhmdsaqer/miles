@@ -512,27 +512,12 @@ if (req.uploadedPath && oldProduct.image && oldProduct.image !== req.uploadedPat
           await Variant.deleteMany({ product_id: productId });
         }
 
-         // ✅ ✅ ✅ جديد: التحقق من تكرار SKU مع السماح بتطابق SKU المنتج الأصلي
         const skuMap = new Map();
-        const parentSku = productData.sku?.toUpperCase().trim() || oldProduct.sku?.toUpperCase().trim();
-        
         for (const v of variants) {
           const rawSku = v.sku?.trim()?.toUpperCase();
           if (rawSku) {
-            // ✅ إذا كان SKU المتغير يطابق SKU المنتج الأصلي، نسمح بذلك (للمتغير الأساسي)
-            if (rawSku === parentSku) {
-              // تحقق فقط من عدم وجود متغير آخر بنفس SKU في نفس الطلب
-              if (skuMap.has(rawSku)) {
-                throw new Error(`⚠️ تكرار الـ SKU "${rawSku}" في نفس الطلب`);
-              }
-              skuMap.set(rawSku, v.id);
-            } else {
-              // ✅ إذا كان SKU مختلفاً، نتحقق من عدم تكراره
-              if (skuMap.has(rawSku)) {
-                throw new Error(`⚠️ تكرار الـ SKU "${rawSku}" في نفس الطلب`);
-              }
-              skuMap.set(rawSku, v.id);
-            }
+            if (skuMap.has(rawSku)) throw new Error(`⚠️ تكرار الـ SKU "${rawSku}" في نفس الطلب`);
+            skuMap.set(rawSku, v.id);
           }
         }
 
@@ -544,31 +529,14 @@ if (req.uploadedPath && oldProduct.image && oldProduct.image !== req.uploadedPat
           const rawBarcode = v.barcode?.trim()?.toUpperCase() || null;
 
           if (rawSku) {
-          const variantSku = rawSku.toUpperCase();
-          
-          // ✅ ✅ ✅ جديد: السماح بتطابق SKU المتغير مع SKU المنتج الأصلي
-          if (variantSku === parentSku) {
-            // تحقق فقط من عدم وجود متغير آخر بنفس SKU
+            const variantSku = rawSku.toUpperCase();
             const existingInDb = await Variant.findOne({
               sku: variantSku,
               product_id: productId,
               id: variantId ? { $ne: variantId } : { $exists: false }
             });
-            if (existingInDb) {
-              throw new Error(`⚠️ SKU "${variantSku}" مستخدم لمتغير آخر في هذا المنتج`);
-            }
-          } else {
-            // ✅ إذا كان SKU مختلفاً، نتحقق من عدم تكراره
-            const existingInDb = await Variant.findOne({
-              sku: variantSku,
-              product_id: productId,
-              id: variantId ? { $ne: variantId } : { $exists: false }
-            });
-            if (existingInDb) {
-              throw new Error(`⚠️ SKU "${variantSku}" مستخدم لمتغير آخر في هذا المنتج`);
-            }
+            if (existingInDb) throw new Error(`⚠️ SKU "${variantSku}" مستخدم لمتغير آخر في هذا المنتج`);
           }
-        }
 
           // ✅ ✅ ✅ استخدام الصورة المحدّثة من نقل البراند إذا كانت موجودة
           let finalImage = v.image || product.image;

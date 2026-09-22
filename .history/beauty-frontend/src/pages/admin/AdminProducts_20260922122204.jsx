@@ -1349,23 +1349,12 @@ const AdminProducts = () => {
                     
                     {variants.map((variant, index) => {
                       const isSavedVariant = !String(variant.id).startsWith('temp_');
-                        // ✅ ✅ ✅ جديد: تحديد إذا كان هذا المتغير هو "المتغير الأساسي" (نفس SKU المنتج)
-                      const isPrimaryVariant = isSavedVariant && variant.sku?.toUpperCase() === formData.sku?.toUpperCase();
                       
                       return (
-                    <div key={variant.id} className={`relative rounded-xl p-4 border space-y-3 transition-colors ${
-                            isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-100'
-                          } ${variant.isAvailable === false ? 'opacity-70 grayscale-[0.2]' : ''} ${
-                            isPrimaryVariant ? 'ring-2 ring-pink-500/30' : ''
-                          }`}>
-                          {/* ✅ ✅ ✅ جديد: شارة "المتغير الأساسي" */}
-                        {isPrimaryVariant && (
-                          <div className={`absolute -top-2 ${lang === "ar" ? 'right-4' : 'left-4'} px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                            isDark ? 'bg-pink-900/30 text-pink-400 border border-pink-800' : 'bg-pink-50 text-pink-600 border border-pink-200'
-                          }`}>
-                            ⭐ {lang === "ar" ? "المتغير الأساسي" : "Primary Variant"}
-                          </div>
-                        )}
+                        <div key={variant.id} className={`relative rounded-xl p-4 border space-y-3 transition-colors ${
+                          isDark ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-100'
+                        } ${variant.isAvailable === false ? 'opacity-70 grayscale-[0.2]' : ''}`}>
+                          
                           {/* ✅ ✅ ✅ السطر الأول: العنوان + أزرار الإجراءات (للمتغيرات المحفوظة فقط) */}
                           {isSavedVariant && (
                             <div className={`flex items-center justify-between pb-3 border-b ${
