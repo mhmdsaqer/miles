@@ -309,14 +309,9 @@ router.put("/products/:id",
         productData.sku = normalizedSku;
       }
       
-            // ✅ السماح بتكرار الباركود عند التعديل
+      // ✅ السماح بتكرار الباركود عند التعديل
       if (req.body.barcode !== undefined) {
         productData.barcode = req.body.barcode?.trim()?.toUpperCase() || null;
-      }
-
-      // ✅ ✅ ✅ إضافة الصور الاختيارية للمنتج إلى productData
-      if (optionalImages !== undefined) {
-        productData.optionalImages = optionalImages;
       }
 
       // ✅ 2. إذا تم رفع صورة جديدة، نستخدمها مباشرة
@@ -770,7 +765,7 @@ router.post("/products/:productId/variants",
   checkPermission(PERMISSIONS.PRODUCTS.CREATE),
   async (req, res) => {
     try {
-      const { id, sku, price, image, attributes, isAvailable, optionalImages } = req.body;
+      const { id, sku, price, image, attributes, isAvailable } = req.body;
       const productId = Number(req.params.productId);
       
       // ✅ 1. التأكد من أن المنتج الأصلي موجود قبل إضافة متغير له
@@ -827,7 +822,6 @@ router.post("/products/:productId/variants",
         barcode: finalBarcode,  // ✅ جديد
         price: Number(price) || parentProduct.price, // استخدام سعر المنتج الأب كـ fallback
         image: image || parentProduct.image, // استخدام صورة المنتج الأب كـ fallback
-        optionalImages: optionalImages || [], // ✅ أضف هذا السطر
         attributes: attributes || {},
         isAvailable: isAvailable !== undefined ? Boolean(isAvailable) : true
       });
@@ -863,7 +857,7 @@ router.put("/variants/:id",
   async (req, res) => {
     try {
       const variantId = Number(req.params.id);
-      const { sku, price, image, attributes, optionalImages  } = req.body;
+      const { sku, price, image, attributes } = req.body;
 
       // ✅ 1️⃣ جلب المتغير القديم أولاً (للتحقق من وجوده ولحفظ صورته القديمة)
       const oldVariant = await Variant.findOne({ id: variantId });
@@ -895,9 +889,7 @@ router.put("/variants/:id",
         price,
         image,
         attributes,
-        ...(req.body.isAvailable !== undefined && { isAvailable: req.body.isAvailable }),
-        ...(optionalImages !== undefined && { optionalImages: optionalImages })
-
+        ...(req.body.isAvailable !== undefined && { isAvailable: req.body.isAvailable })
       };
 
       
@@ -928,15 +920,6 @@ router.put("/variants/:id",
           console.log(`⏭️ Skipping deletion: Same public_id (${oldPublicId}) - image was overwritten`);
         }
       }
-       // ✅ ✅ ✅ 7️⃣ جديد: حذف الصور الاختيارية القديمة للمتغير من Cloudinary
-      if (optionalImages !== undefined && oldVariant.optionalImages && Array.isArray(oldVariant.optionalImages)) {
-        oldVariant.optionalImages.forEach(oldImg => {
-          if (oldImg?.startsWith("https://res.cloudinary.com/") && !optionalImages.includes(oldImg)) {
-            deleteFromCloudinary(oldImg).catch(err => console.error("❌ Error deleting old variant optional image:", err));
-          }
-        });
-      }
-
 
       // ✅ 6️⃣ تسجيل العملية في الـ Audit Log
       await audit.update(
@@ -1502,17 +1485,22 @@ router.delete("/brands/:id",
     try {
       const brandId = Number(req.params.id);
       
-      // ✅ 1️⃣ جلب المنتجات مع الصور (الرئيسية + الاختيارية)
-      const products = await Product.find({ brand_id: brandId }).select('id image optionalImages');
+      // ✅ 1️⃣ جلب المنتجات مع الصور (لحذفها من Cloudinary)
+      const products = await Product.find({ brand_id: brandId }).select('id image');
       const productIds = products.map(p => p.id);
       
-      // ✅ 2️⃣ حذف صور المنتجات (الرئيسية + الاختيارية) من Cloudinary
+      // ✅ 2️⃣ حذف صور المنتجات من Cloudinary
       for (const product of products) {
         if (product.image?.startsWith("https://res.cloudinary.com/")) {
           const publicId = extractPublicIdFromUrl(product.image);
-          if (publicId) await deleteFromCloudinary(publicId);
+          if (publicId) {
+            await deleteFromCloudinary(publicId);
+            console.log(`🗑️ Deleted product image from Cloudinary: ${publicId}`);
+          }
         }
-        // حذف الصور الاختيارية للمنتج
+      }
+            // ✅ حذف الصور الاختيارية للمنتجات
+      for (const product of products) {
         if (product.optionalImages && Array.isArray(product.optionalImages)) {
           for (const img of product.optionalImages) {
             if (img?.startsWith("https://res.cloudinary.com/")) {
@@ -1523,23 +1511,29 @@ router.delete("/brands/:id",
         }
       }
 
-      // ✅ 3️⃣ جلب المتغيرات مع الصور (يجب أن يكون هنا قبل استخدامها)
+      // ✅ حذف الصور الاختيارية للمتغيرات
+      for (const variant of variants) {
+        if (variant.optionalImages && Array.isArray(variant.optionalImages)) {
+          for (const img of variant.optionalImages) {
+            if (img?.startsWith("https://res.cloudinary.com/")) {
+              const publicId = extractPublicIdFromUrl(img);
+              if (publicId) await deleteFromCloudinary(publicId);
+            }
+          }
+        }
+      }
+      
+      // ✅ 3️⃣ جلب المتغيرات مع الصور (لحذفها من Cloudinary)
       if (productIds.length > 0) {
-        const variants = await Variant.find({ product_id: { $in: productIds } }).select('image optionalImages');
+        const variants = await Variant.find({ product_id: { $in: productIds } }).select('image');
         
-        // ✅ 4️⃣ حذف صور المتغيرات (الرئيسية + الاختيارية) من Cloudinary
+        // ✅ 4️⃣ حذف صور المتغيرات من Cloudinary
         for (const variant of variants) {
           if (variant.image?.startsWith("https://res.cloudinary.com/")) {
             const publicId = extractPublicIdFromUrl(variant.image);
-            if (publicId) await deleteFromCloudinary(publicId);
-          }
-          // حذف الصور الاختيارية للمتغير
-          if (variant.optionalImages && Array.isArray(variant.optionalImages)) {
-            for (const img of variant.optionalImages) {
-              if (img?.startsWith("https://res.cloudinary.com/")) {
-                const publicId = extractPublicIdFromUrl(img);
-                if (publicId) await deleteFromCloudinary(publicId);
-              }
+            if (publicId) {
+              await deleteFromCloudinary(publicId);
+              console.log(`🗑️ Deleted variant image from Cloudinary: ${publicId}`);
             }
           }
         }

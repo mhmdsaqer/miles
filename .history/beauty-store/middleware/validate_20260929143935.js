@@ -204,16 +204,6 @@ const productSchema = Joi.object({
           Joi.string().pattern(/^(assets\/.+\.(jpg|jpeg|png|webp|gif))$/i)
         )
         .allow(""),
-        // ✅ أضف هذا الحقل الجديد:
-        optionalImages: Joi.array()
-          .items(
-            Joi.alternatives().try(
-              Joi.string().uri({ scheme: ['https'] }),
-              Joi.string().pattern(/^(assets\/.+\.(jpg|jpeg|png|webp|gif))$/i)
-            )
-          )
-          .max(3)
-          .default([]),
         
         attributes: Joi.object().pattern(Joi.string(), Joi.any()),
         isAvailable: Joi.boolean().default(true)

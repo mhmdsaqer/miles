@@ -1508,26 +1508,27 @@ const AdminProducts = () => {
                                   : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
                               }`} 
                             />
-                        {/* ✅ ✅ ✅ جديد: الصور الاختيارية للمتغير */}
-                            <div className="col-span-3 mt-2">
-                              <ImageUploader
-                                isMultiple={true}
-                                maxImages={3}
-                                label={lang === "ar" ? "صور اختيارية للمتغير (حد أقصى 3)" : "Optional Variant Images (Max 3)"}
-                                currentImages={variant.optionalImages || []}
-                                onImagesChange={(imgs) => updateVariant(variant.id, "optionalImages", imgs)}
+                            <div className="col-span-3">
+                              <ImageUploader 
+                                currentImage={variant.image} 
+                                onImageSelect={(p) => updateVariant(variant.id, "image", p)} 
                                 resourceType="products"
-                                resourceData={{
+                                resourceData={{ 
                                   brand_id: formData.brand_id,
                                   sku: (() => {
-                                    if (variant.sku?.trim()) return variant.sku.trim().toUpperCase();
-                                    if (formData.sku?.trim()) return `${formData.sku.trim().toUpperCase()}-${String(index + 1).padStart(3, '0')}`;
+                                    if (variant.sku?.trim()) {
+                                      return variant.sku.trim().toUpperCase();
+                                    }
+                                    if (formData.sku?.trim()) {
+                                      return `${formData.sku.trim().toUpperCase()}-${String(index + 1).padStart(3, '0')}`;
+                                    }
                                     return `VAR-${formData.id || Date.now()}-${String(index + 1).padStart(3, '0')}`;
                                   })(),
                                   name_en: formData.name_en,
                                   name_ar: formData.name_ar,
                                   isVariant: true
                                 }}
+                                label={null} 
                               />
                             </div>
                           </div>
