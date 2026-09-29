@@ -1,6 +1,8 @@
-// ✅ beauty-store/middleware/upload.js - النسخة النهائية الذكية ✅
+// ✅ beauty-store/middleware/upload.js - النسخة النهائية 100% ✅
 const cloudinary = require("cloudinary").v2;
 const multer = require("multer");
+const path = require("path");
+const fs = require("fs").promises;
 
 // تهيئة Cloudinary
 cloudinary.config({
@@ -9,31 +11,38 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// ✅ دالة slugify المُحسّنة - لإزالة الأحرف العربية والتشكيل
+// ✅ ✅ ✅ دالة slugify المُحسّنة جذرياً - لإزالة الأحرف العربية والتشكيل
 const slugify = (str) => {
   if (!str) return "";
+  
   return str
     .toString()
     .toLowerCase()
     .trim()
+    // ✅ 1. فصل الأحرف عن التشكيل (NFD Normalization)
     .normalize('NFD')
-    .replace(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g, '') 
-    .replace(/[\u0300-\u036f\u1AB0-\u1AFF\u1DC0-\u1DFF\u20D0-\u20FF\uFE20-\uFE2F]/g, '') 
+    // ✅ 2. إزالة جميع الأحرف العربية + التشكيل
+    .replace(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g, '') // إزالة العربية
+    .replace(/[\u0300-\u036f\u1AB0-\u1AFF\u1DC0-\u1DFF\u20D0-\u20FF\uFE20-\uFE2F]/g, '') // إزالة التشكيل
+    // ✅ 3. إزالة أي أحرف غير إنجليزية/أرقام/شرطات
     .replace(/[^a-z0-9\s\-_]/g, '')
+    // ✅ 4. تنظيف المسافات والشرطات المتعددة
     .replace(/[\s_-]+/g, '-')
+    // ✅ 5. إزالة الشرطات من البداية والنهاية
     .replace(/^-+|-+$/g, '')
+    // ✅ 6. Fallback آمن إذا كانت النتيجة فارغة
     .replace(/[^a-z0-9\-]/g, '') || `img-${Date.now()}`;
 };
 
-// ✅ دالة مساعدة لتنظيف الـ SKU بشكل صارم
+// ✅ دالة مساعدة لتنظيف الـ SKU بشكل صارم (للـ Products فقط)
 const cleanSKU = (sku) => {
   if (!sku) return "";
   return sku
-    .toUpperCase()
-    .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^A-Z0-9\-]/g, '');
+    .toUpperCase()           // تحويل لأحرف كبيرة
+    .trim()                  // إزالة المسافات
+    .normalize('NFD')        // فصل التشكيل
+    .replace(/[\u0300-\u036f]/g, '')  // إزالة علامات التشكيل
+    .replace(/[^A-Z0-9\-]/g, '');     // ✅ إبقاء فقط: أرقام، حروف إنجليزية، وشرطات
 };
 
 // دالة جلب Slug البراند
@@ -50,6 +59,8 @@ const getBrandSlugById = async (brandId) => {
 };
 
 // دالة استخراج public_id من الرابط
+// ✅ ✅ ✅ الدالة المُصححة لاستخراج public_id
+// ✅ ✅ ✅ الدالة المُحدّثة مع خيار إزالة baseUrl
 const extractPublicIdFromUrl = (url, removeBaseUrl = false) => {
   if (!url?.startsWith("https://res.cloudinary.com/")) return null;
   try {
@@ -59,20 +70,21 @@ const extractPublicIdFromUrl = (url, removeBaseUrl = false) => {
     
     if (!publicId) return null;
     
+    // ✅ إذا طُلب، نزيل الـ baseUrl من الـ public_id
     if (removeBaseUrl) {
       const baseUrl = process.env.CLOUDINARY_UPLOAD_FOLDER || "miles-beauty";
       if (publicId.startsWith(`${baseUrl}/`)) {
         publicId = publicId.replace(`${baseUrl}/`, '');
       }
     }
+    
     return publicId;
   } catch (err) {
     console.error("❌ Error extracting publicId:", err);
     return null;
   }
 };
-
-// ✅ ✅ ✅ الدالة الرئيسية للرفع اليدوي لـ Cloudinary (مُحدّثة)
+// ✅ ✅ ✅ الدالة الرئيسية للرفع اليدوي لـ Cloudinary
 const uploadToCloudinary = async (fileBuffer, originalName, uploadParams) => {
   const {
     resourceType = "assets",
@@ -82,12 +94,10 @@ const uploadToCloudinary = async (fileBuffer, originalName, uploadParams) => {
     brandId,
     isHeader,
     sku,
-    productName,
-    imageType = "main",      // ✅ الجديد: نوع الصورة
-    imageIndex = 1,          // ✅ الجديد: رقم الصورة الاختيارية
-    isVariant = false        // ✅ الجديد: هل هي صورة متغير؟
+    productName
   } = uploadParams;
 
+  // تحديد المجلد الرئيسي
   let resourceFolder = "assets";
   let subFolder = "";
   let filename = "";
@@ -95,8 +105,10 @@ const uploadToCloudinary = async (fileBuffer, originalName, uploadParams) => {
   if (resourceType === "brands") {
     resourceFolder = "brands";
     if (brandName) {
-      filename = slugify(brandName);
-      if (isHeader) filename += "-header";
+    filename = slugify(brandName);
+    if (isHeader) {
+        filename += "-header";
+      }
     }
   }
   else if (resourceType === "categories") {
@@ -106,25 +118,25 @@ const uploadToCloudinary = async (fileBuffer, originalName, uploadParams) => {
   else if (resourceType === "products") {
     resourceFolder = "products";
     
+    // جلب Slug البراند للمجلد الفرعي
     if (brandId) {
       const brandSlug = await getBrandSlugById(brandId);
       if (brandSlug) subFolder = brandSlug;
     }
     
-    // ✅ ✅ ✅ المنطق الذكي الجديد لتحديد اسم الملف
+    // ✅ ✅ ✅ تحديد اسم الملف - مع تطبيق cleanSKU على الـ SKU
     if (sku?.trim()) {
+      // ✅ الإصلاح الجذري: تنظيف الـ SKU قبل الاستخدام
       const cleanedSku = cleanSKU(sku);
+      filename = cleanedSku || `product-${Date.now()}`;
       
-      if (imageType === "optional") {
-        // للصور الاختيارية: SKU_opt1, SKU_opt2, إلخ
-        filename = `${cleanedSku}_opt${imageIndex}`;
-      } else if (isVariant) {
-        // للمتغيرات: نستخدم الـ SKU الخاص بالمتغير كما هو
-        filename = cleanedSku;
-      } else {
-        // للمنتج الرئيسي: الـ SKU الأساسي
-        filename = cleanedSku;
-      }
+          // ✅ Logging للتأكد من تطابق الـ SKU
+    console.log("🔍 Variant SKU Debug:", {
+      originalSku: sku,
+      cleanedSku: cleanedSku,
+      filename: filename,
+      isVariant: uploadParams.isVariant
+    });
     } else if (productName) {
       filename = slugify(productName);
     } else {
@@ -137,8 +149,11 @@ const uploadToCloudinary = async (fileBuffer, originalName, uploadParams) => {
     filename = `img-${Date.now()}`;
   }
 
+  // ✅ ✅ ✅ بناء المسار النهائي (بدون تكرار!)
+  // الهيكلية: miles-beauty/{resourceFolder}/{subFolder?}/{filename}
   const cloudinaryFolder = `${baseUrl}/${resourceFolder}`;
   
+  // public_id يبدأ من ما بعد resourceFolder فقط
   let publicId = "";
   if (subFolder) publicId += `${subFolder}/`;
   publicId += filename;
@@ -147,27 +162,24 @@ const uploadToCloudinary = async (fileBuffer, originalName, uploadParams) => {
     resourceType,
     folder: cloudinaryFolder,
     public_id: publicId,
-    imageType,
     expectedUrl: `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/${cloudinaryFolder}/${publicId}`
   });
 
   // ✅ الرفع الفعلي لـ Cloudinary
   return new Promise((resolve, reject) => {
-    const isHeaderImage = uploadParams.isHeader === true || uploadParams.isHeader === "true";
+  const isHeaderImage = uploadParams.isHeader === true || uploadParams.isHeader === "true";
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder: cloudinaryFolder,
         public_id: publicId,
         resource_type: "image",
-        overwrite: true, // ✅ ضمان استبدال الصورة القديمة إذا كان الـ public_id متطابقاً
-        invalidate: true, // ✅ إبطال الـ Cache فوراً ليظهر التحديث في المتجر
-        transformation: isHeaderImage 
-          ? [] 
-          : [
-              { width: 1200, height: 1200, crop: "limit" },
-              { quality: "auto:good" },
-              { fetch_format: "auto" }
-            ]
+      transformation: isHeaderImage 
+        ? [] // مصفوفة فارغة = رفع الصورة كما هي بجودتها الأصلية 100%
+        : [
+            { width: 1200, height: 1200, crop: "limit" },
+            { quality: "auto:good" },
+            { fetch_format: "auto" }
+          ]
       },
       (error, result) => {
         if (error) {
@@ -190,11 +202,13 @@ const uploadToCloudinary = async (fileBuffer, originalName, uploadParams) => {
 
 // ✅ Middleware للتعامل مع FormData واستخراج البيانات قبل الرفع
 const parseFormData = (req, res, next) => {
+  // إذا كان Content-Type ليس multipart/form-data، نمرر مباشرة
   const contentType = req.headers['content-type'] || '';
   if (!contentType.includes('multipart/form-data')) {
     return next();
   }
 
+  // نستخدم multer مع memoryStorage لقراءة الـ body والـ file معاً
   const upload = multer({ storage: multer.memoryStorage() });
   
   upload.single('image')(req, res, (err) => {
@@ -203,28 +217,35 @@ const parseFormData = (req, res, next) => {
       return next(err);
     }
     
+    // ✅ الآن لدينا الوصول الكامل لـ req.body و req.file
+    // نحفظ البيانات في req._uploadData للاستخدام لاحقاً
     req._uploadData = {
       resourceType: (req.body?.resourceType || "assets").toLowerCase().trim(),
       brandName: req.body?.name || req.body?.name_en || req.body?.name_ar,
       categoryName: req.body?.name_ar || req.body?.name_en,
       brandId: req.body?.brand_id,
       sku: req.body?.sku,
-      imageType: req.body?.imageType || "main",       // ✅ استخراج نوع الصورة
-      imageIndex: req.body?.imageIndex ? Number(req.body.imageIndex) : 1, // ✅ استخراج رقم الصورة
       productName: req.body?.name_en || req.body?.name_ar,
-      isHeader: req.body?.isHeader === "true" || req.body?.isHeader === true,
-      isVariant: req.body?.isVariant === "true" || req.body?.isVariant === true, // ✅ استخراج حالة المتغير
-      file: req.file
+      isHeader: req.body?.isHeader === "true" || req.body?.isHeader === true, // ✅ قراءة قيمة isHeader
+      file: req.file  // الملف في الذاكرة
     };
+    
+    console.log("📦 FormData parsed:", {
+      resourceType: req._uploadData.resourceType,
+      isHeader: req._uploadData.isHeader, // ✅ للتشخيص
+      hasFile: !!req.file,
+      fileSize: req.file?.size
+    });
     
     next();
   });
 };
 
-// ✅ ✅ ✅ Middleware النهائي للرفع
+// ✅ ✅ ✅ Middleware النهائي للرفع - يتعامل مع الملفات والروابط ✅
 const uploadCompressed = (fieldName = "image", { required = true } = {}) => {
   return async (req, res, next) => {
     try {
+      // 1️⃣ أولاً: نحلل الـ FormData فقط إذا كان Content-Type مناسباً
       const contentType = req.headers['content-type'] || '';
       
       if (contentType.includes('multipart/form-data')) {
@@ -236,36 +257,43 @@ const uploadCompressed = (fieldName = "image", { required = true } = {}) => {
         });
       }
       
+      // 2️⃣ ✅ إذا كان هناك ملف، نرفعه لـ Cloudinary
       if (req._uploadData?.file) {
-        const { 
-          file, resourceType, brandName, categoryName, brandId, sku, 
-          productName, isHeader, imageType, imageIndex, isVariant 
-        } = req._uploadData;
+        const { file, resourceType, brandName, categoryName, brandId, sku, productName, isHeader } = req._uploadData;
         
         const uploadResult = await uploadToCloudinary(
           file.buffer,
           file.originalname,
-          { 
-            resourceType, brandName, categoryName, brandId, sku, 
-            productName, isHeader, imageType, imageIndex, isVariant // ✅ تمرير المعاملات الجديدة
-          }
+          { resourceType, brandName, categoryName, brandId, sku, productName, isHeader }
         );
         
         req.uploadedPath = uploadResult.secure_url;
         req.cloudinaryPublicId = uploadResult.public_id;
         req.isNewImageUploaded = true; 
+        console.log("✅ File uploaded:", req.uploadedPath);
         return next();
       }
       
+      // 3️⃣ ✅ ✅ ✅ إذا لم يكن هناك ملف، ولكن هناك رابط صورة صحيح في الـ body، نستخدمه
       if (req.body?.image && /^https:\/\//i.test(req.body.image)) {
+        console.log("✅ Using existing image URL from body:", req.body.image);
         req.uploadedPath = req.body.image;
         req.isNewImageUploaded = false;
         return next();
       }
       
+      // 4️⃣ ✅ إذا كان الحقل اختياريًا، نمرر بدون صورة
       if (!required) {
+        console.log("✅ Image is optional, proceeding without image");
         return next();
       }
+      
+      // 5️⃣ ❌ إذا وصلنا هنا، يعني لا يوجد ملف ولا رابط صحيح
+      console.warn("⚠️ No image provided:", {
+        hasBodyImage: !!req.body?.image,
+        isHttps: req.body?.image?.startsWith('https://'),
+        hasFormData: !!req._uploadData?.file
+      });
       
       return res.status(400).json({
         message: "❌ No image provided - please upload a file or provide a valid HTTPS image URL"
@@ -287,6 +315,8 @@ const deleteFromCloudinary = async (imageUrlOrPublicId) => {
     if (!imageUrlOrPublicId) return false;
     
     let publicId = imageUrlOrPublicId;
+    
+    // إذا كان رابطاً، نستخرج الـ public_id
     if (imageUrlOrPublicId.startsWith("https://res.cloudinary.com/")) {
       publicId = extractPublicIdFromUrl(imageUrlOrPublicId);
       if (!publicId) return false;
@@ -309,7 +339,7 @@ module.exports = {
   cloudinary,
   deleteFromCloudinary,
   slugify,
-  cleanSKU,
+  cleanSKU,  // ✅ تصدير دالة cleanSKU للاستخدام الخارجي إذا لزم
   getBrandSlugById,
   extractPublicIdFromUrl,
   uploadToCloudinary
