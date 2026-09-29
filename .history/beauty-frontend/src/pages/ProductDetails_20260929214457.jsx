@@ -116,16 +116,13 @@ const ProductDetails = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [id]); // ✅ إزالة getImageUrl و shuffleArray من الاعتماديات
 
-  // ✅ ✅ ✅ الإصلاح: تحديث الصورة الرئيسية عند تغيير المتغير + Scroll للأعلى
+  // ✅ ✅ ✅ الإصلاح: تحديث الصورة الرئيسية عند تغيير المتغير
   useEffect(() => {
     if (selectedVariant?.image) {
       const newImage = getImageUrl(selectedVariant.image);
       setImageLoaded(false); 
       setImageError(false); 
       setMainImage(newImage); 
-      
-      // ✅ Scroll للأعلى بسلاسة عند تغيير المتغير
-      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [selectedVariant?.id]); // ✅ الاعتماد فقط على selectedVariant?.id
 
@@ -278,11 +275,15 @@ const ProductDetails = () => {
                   <span className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded-full">❌ {t("outOfStock")}</span>
                 )}
               </div>
+              
+              <div className="flex items-center justify-center py-2">
+                <SkuBarcodeToggle sku={selectedVariant?.sku || product.sku} barcode={selectedVariant?.barcode || product.barcode} />
+              </div>
             </header>
             
             <p className="text-gray-500 leading-relaxed text-base font-medium text-right border-r-4 border-pink-100 pr-5">{getProductDescription(product)}</p>
             
-            {/* ✅ ✅ ✅ Variants Selector - تم نقله ليكون قبل SKU */}
+            {/* Variants Selector */}
             {product.has_variants && product.options?.length > 0 && (
               <div className="space-y-4 text-right">
                 <div className="flex items-center justify-between">
@@ -321,11 +322,6 @@ const ProductDetails = () => {
                 </div>
               </div>
             )}
-            
-            {/* ✅ تم نقل SKU ليصبح بعد المتغيرات */}
-            <div className="flex items-center justify-center py-2">
-              <SkuBarcodeToggle sku={selectedVariant?.sku || product.sku} barcode={selectedVariant?.barcode || product.barcode} />
-            </div>
             
             {/* Quantity + Add to Cart */}
             <div className="space-y-4 pt-2">
