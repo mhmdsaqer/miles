@@ -429,7 +429,7 @@ const ProductDetails = () => {
                 <h2 className="text-3xl font-black text-gray-900 tracking-tight">🎲 {t("youMayAlsoLike")} {product.brand_name}</h2>
                 <p className="text-gray-400 text-[10px] font-bold uppercase tracking-[0.4em]">{t("curatedForYou")}</p>
               </div>
-              <Link to={`/brands/${product.brand_id}`} className="group flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all">
+              <Link to={`/?brand=${product.brand_id}`} className="group flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all">
                 {t("allProducts")}
                 <span className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center group-hover:bg-black group-hover:text-white transition-all">←</span>
               </Link>

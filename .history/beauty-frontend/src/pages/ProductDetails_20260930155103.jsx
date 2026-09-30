@@ -274,12 +274,11 @@ const ProductDetails = () => {
               <div className="flex items-baseline gap-4 flex-wrap">
                 <span className="text-4xl font-black text-gray-900 tracking-tight">₪{currentPrice}</span>
                 <span className="text-xs font-bold text-gray-300 uppercase tracking-widest">{t("taxIncluded")}</span>
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${canAddToCart ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]'}`}></span>
-                  <span className={`text-[11px] font-bold uppercase tracking-wider ${canAddToCart ? 'text-emerald-700' : 'text-red-600'}`}>
-                    {canAddToCart ? t("availableForShipping") : t("outOfStock")}
-                  </span>
-                </div>
+                {canAddToCart ? (
+                  <span className="text-xs font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full">✅ {t("availableForShipping")}</span>
+                ) : (
+                  <span className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded-full">❌ {t("outOfStock")}</span>
+                )}
               </div>
             </header>
             
@@ -429,7 +428,7 @@ const ProductDetails = () => {
                 <h2 className="text-3xl font-black text-gray-900 tracking-tight">🎲 {t("youMayAlsoLike")} {product.brand_name}</h2>
                 <p className="text-gray-400 text-[10px] font-bold uppercase tracking-[0.4em]">{t("curatedForYou")}</p>
               </div>
-              <Link to={`/brands/${product.brand_id}`} className="group flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all">
+              <Link to={`/?brand=${product.brand_id}`} className="group flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all">
                 {t("allProducts")}
                 <span className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center group-hover:bg-black group-hover:text-white transition-all">←</span>
               </Link>

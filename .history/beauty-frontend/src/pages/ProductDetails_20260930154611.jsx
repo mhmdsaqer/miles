@@ -264,26 +264,23 @@ const ProductDetails = () => {
         <div className="w-full lg:w-[45%] p-6 lg:p-16 flex flex-col justify-center bg-white">
           <div className="max-w-lg mx-auto w-full space-y-8">
             <header className="space-y-5 text-right">
-            <Link to={`/brands/${product.brand_id}`} className="group inline-flex items-center gap-2.5 bg-gradient-to-r from-gray-50 to-white border border-gray-100 px-4 py-2 rounded-full hover:border-pink-200 hover:shadow-md hover:shadow-pink-500/5 transition-all duration-300">
-              <span className="w-2 h-2 rounded-full bg-gradient-to-tr from-pink-500 to-purple-500 animate-pulse"></span>
-              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-800 group-hover:text-pink-600 transition-colors">
-                {product.brand_name}
-              </span>
-            </Link>
+              <Link to={`/brands/${product.brand_id}`}className="inline-flex items-center gap-2 bg-pink-50 text-pink-600 px-4 py-1.5 rounded-full hover:bg-pink-100 transition-colors">
+                <span className="w-1.5 h-1.5 rounded-full bg-pink-500 animate-pulse"></span>
+                <span className="text-[9px] font-black uppercase tracking-[0.3em]">{product.brand_name}</span>
+              </Link>
               <h1 className="text-4xl lg:text-5xl font-black text-gray-900 leading-[1.1] tracking-tight">{getProductName(product)}</h1>
               <div className="flex items-baseline gap-4 flex-wrap">
                 <span className="text-4xl font-black text-gray-900 tracking-tight">₪{currentPrice}</span>
                 <span className="text-xs font-bold text-gray-300 uppercase tracking-widest">{t("taxIncluded")}</span>
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${canAddToCart ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]'}`}></span>
-                  <span className={`text-[11px] font-bold uppercase tracking-wider ${canAddToCart ? 'text-emerald-700' : 'text-red-600'}`}>
-                    {canAddToCart ? t("availableForShipping") : t("outOfStock")}
-                  </span>
-                </div>
+                {canAddToCart ? (
+                  <span className="text-xs font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full">✅ {t("availableForShipping")}</span>
+                ) : (
+                  <span className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1 rounded-full">❌ {t("outOfStock")}</span>
+                )}
               </div>
             </header>
             
-            <div className="w-16 h-px bg-gradient-to-r from-pink-500 to-transparent my-2 opacity-50"></div>
+            <p className="text-gray-500 leading-relaxed text-base font-medium text-right border-r-4 border-pink-100 pr-5">{getProductDescription(product)}</p>
             
             {/* ✅ ✅ ✅ Variants Selector - تم نقله ليكون قبل SKU */}
             {product.has_variants && product.options?.length > 0 && (
@@ -429,7 +426,7 @@ const ProductDetails = () => {
                 <h2 className="text-3xl font-black text-gray-900 tracking-tight">🎲 {t("youMayAlsoLike")} {product.brand_name}</h2>
                 <p className="text-gray-400 text-[10px] font-bold uppercase tracking-[0.4em]">{t("curatedForYou")}</p>
               </div>
-              <Link to={`/brands/${product.brand_id}`} className="group flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all">
+              <Link to={`/?brand=${product.brand_id}`} className="group flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all">
                 {t("allProducts")}
                 <span className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center group-hover:bg-black group-hover:text-white transition-all">←</span>
               </Link>
